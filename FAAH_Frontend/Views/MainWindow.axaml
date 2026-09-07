@@ -1,0 +1,107 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
+        x:Class="FAAH_Frontend.Views.MainWindow"
+        Title="FAAH — Futures Arbitrage Assets Hub"
+        Width="1100" Height="700"
+        MinWidth="900" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource Surface}">
+
+    <DockPanel>
+
+        <!-- ================= BARRE DE NAVIGATION ================= -->
+        <Border DockPanel.Dock="Top" Height="64" IsVisible="{Binding IsLoggedIn}"
+                Background="{StaticResource Surface}">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="30,0">
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
+                    <Ellipse Width="13" Height="13" Fill="{StaticResource Amber}"/>
+                    <TextBlock VerticalAlignment="Center" FontSize="15">
+                        <Run Text="FAAH" FontWeight="Bold"/>
+                        <Run Text=" — " FontWeight="Bold"/>
+                        <Run Text="Futures Arbitrage Assets Hub" Foreground="#5B646F"/>
+                    </TextBlock>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
+                            Margin="34,0,0,0" Spacing="2">
+
+                    <Button Classes="navItem" Classes.active="{Binding IsPortfolioActive}"
+                            Command="{Binding ShowPortfoliosCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Classes="idx" Text="01"/>
+                            <TextBlock Text="PORTFOLIO"/>
+                        </StackPanel>
+                    </Button>
+
+                    <TextBlock Text="|" Foreground="{StaticResource Hairline}" VerticalAlignment="Center"/>
+
+                    <Button Classes="navItem" Classes.active="{Binding IsAssetsActive}"
+                            Command="{Binding ShowAssetsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Classes="idx" Text="02"/>
+                            <TextBlock Text="ASSETS"/>
+                        </StackPanel>
+                    </Button>
+
+                    <TextBlock Text="|" Foreground="{StaticResource Hairline}" VerticalAlignment="Center"/>
+
+                    <Button Classes="navItem" Classes.active="{Binding IsBotsActive}"
+                            Command="{Binding ShowBotsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Classes="idx" Text="03"/>
+                            <TextBlock Text="BOTS"/>
+                        </StackPanel>
+                    </Button>
+
+                    <TextBlock Text="|" Foreground="{StaticResource Hairline}" VerticalAlignment="Center"/>
+
+                    <Button Classes="navItem" Classes.active="{Binding IsNewsActive}"
+                            Command="{Binding ShowNewsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Classes="idx" Text="04"/>
+                            <TextBlock Text="NEWS"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="14">
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="7">
+                        <Ellipse Width="9" Height="9" Fill="{StaticResource Green}"/>
+                        <TextBlock Text="LIVE" FontSize="12" Foreground="{StaticResource Muted}"/>
+                    </StackPanel>
+
+                    <Button Classes="userChip">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="26" Height="26" CornerRadius="13" Background="{StaticResource Amber}">
+                                <TextBlock Text="{Binding Initials}" FontSize="11" FontWeight="Bold"
+                                           Foreground="#FFFFFF"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuItem Header="Admin Console" Command="{Binding ShowUsersCommand}"
+                                          IsVisible="{Binding IsAdmin}"/>
+                                <MenuItem Header="Settings"/>
+                                <MenuItem Header="Log out" Command="{Binding LogoutCommand}"
+                                          Foreground="{StaticResource Red}"/>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ================= PAGE COURANTE ================= -->
+        <ContentControl Content="{Binding CurrentPage}"/>
+
+    </DockPanel>
+</Window>

@@ -1,0 +1,160 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="640"
+             x:Class="FAAH_Frontend.Views.PortfolioView">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="42,26,42,30" RowDefinitions="Auto,Auto,*">
+
+            <TextBlock Grid.Row="0" Text="{Binding Name}" Classes="h1"/>
+            <Border Grid.Row="1" Classes="rule" Margin="0,12,0,0"/>
+
+            <Grid Grid.Row="2" ColumnDefinitions="1.15*,1*" Margin="0,24,0,0">
+
+                <!-- Colonne gauche : courbe + positions -->
+                <StackPanel Grid.Column="0" Margin="0,0,34,0" Spacing="18">
+
+                    <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
+                        <TextBlock Text="+1 434 $" FontSize="11" Classes="up"/>
+                        <TextBlock Text="+1,43 %" FontSize="11" Classes="up"/>
+                        <TextBlock Text="·" FontSize="11" Classes="muted"/>
+                        <TextBlock Text="max DD −150 $" FontSize="11" Classes="muted"/>
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="Auto,*">
+                        <StackPanel Grid.Column="0" Margin="0,0,10,18">
+                            <TextBlock Text="101 500" FontSize="9" Classes="muted"/>
+                            <TextBlock Text="101 000" FontSize="9" Classes="muted" Margin="0,26,0,0"/>
+                            <TextBlock Text="100 500" FontSize="9" Classes="muted" Margin="0,26,0,0"/>
+                            <TextBlock Text="100 000" FontSize="9" Classes="muted" Margin="0,26,0,0"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1">
+                            <Canvas Height="130" ClipToBounds="True">
+                                <Polygon Fill="#5C4CAF7D"
+                                         Points="0,105 20,98 40,101 60,88 80,92 100,78 120,84 140,70 160,80 180,62 200,72 220,55 240,64 260,46 280,56 300,40 320,50 340,34 360,42 380,26 400,18 400,130 0,130"/>
+                                <Polyline Stroke="#2E9E63" StrokeThickness="1.6" Fill="Transparent"
+                                          Points="0,105 20,98 40,101 60,88 80,92 100,78 120,84 140,70 160,80 180,62 200,72 220,55 240,64 260,46 280,56 300,40 320,50 340,34 360,42 380,26 400,18"/>
+                            </Canvas>
+
+                            <Grid ColumnDefinitions="*,*,*,Auto" Margin="0,8,0,0">
+                                <TextBlock Grid.Column="0" Text="3-24" FontSize="9" Classes="muted"/>
+                                <TextBlock Grid.Column="1" Text="3-16" FontSize="9" Classes="muted"/>
+                                <TextBlock Grid.Column="2" Text="3-8" FontSize="9" Classes="muted"/>
+                                <TextBlock Grid.Column="3" Text="3-1" FontSize="9" Classes="muted"/>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Spacing="2" Margin="0,10,0,0">
+
+                        <Border Classes="row" CornerRadius="4" Padding="6,10">
+                            <Grid ColumnDefinitions="1.6*,1*,1*,1*">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Border Width="20" Height="20" CornerRadius="10" Background="#F7931A">
+                                        <TextBlock Text="₿" FontSize="11" FontWeight="Bold" Foreground="#FFFFFF"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Classes="cell" Text="BTC-USD"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Classes="cell" Text="$96,412" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Classes="cell up" Text="+2.14%" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Classes="cell" Text="4.2B" HorizontalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row" CornerRadius="4" Padding="6,10">
+                            <Grid ColumnDefinitions="1.6*,1*,1*,1*">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Border Width="20" Height="20" CornerRadius="10" Background="#4B5A78">
+                                        <TextBlock Text="Ξ" FontSize="11" FontWeight="Bold" Foreground="#FFFFFF"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Classes="cell" Text="ETH-USD"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Classes="cell" Text="$3,284" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Classes="cell down" Text="−0.68%" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Classes="cell" Text="1.8B" HorizontalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row" CornerRadius="4" Padding="6,10">
+                            <Grid ColumnDefinitions="1.6*,1*,1*,1*">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Border Width="20" Height="20" CornerRadius="4" Background="{StaticResource Navy}">
+                                        <TextBlock Text="ES" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <TextBlock Classes="cell" Text="ES-FUT"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Classes="cell" Text="$5,921.50" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Classes="cell up" Text="+0.31%" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Classes="cell" Text="612K" HorizontalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Colonne droite -->
+                <StackPanel Grid.Column="1" Spacing="16">
+
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="BTC-USD :" FontSize="14" FontWeight="Bold"/>
+                            <TextBlock Text="Momentum strengthening, holding long bias." FontSize="13" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="ES-FUT :" FontSize="14" FontWeight="Bold"/>
+                            <TextBlock Text="Range-bound, low conviction signal." FontSize="13" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="ETH-USD :" FontSize="14" FontWeight="Bold"/>
+                            <TextBlock Text="Weakening trend, reducing exposure." FontSize="13" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Classes="rule" Margin="0,6,0,6"/>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="Trading Bot" Classes="h2" VerticalAlignment="Center"/>
+                        <Border Grid.Column="1" Classes="pill green">
+                            <TextBlock Text="{Binding StatusDisplay}"/>
+                        </Border>
+                    </Grid>
+
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Types of covered assets" FontSize="13"/>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Classes="pill"><TextBlock Text="CRYPTO"/></Border>
+                            <Border Classes="pill"><TextBlock Text="STOCKS"/></Border>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Classes="card" Padding="16,14" HorizontalAlignment="Left">
+                        <Grid Width="150" Height="100">
+                            <Canvas Width="150" Height="96" VerticalAlignment="Top">
+                                <Path Stroke="#D14343" StrokeThickness="10" Data="M 13,78 A 62,62 0 0 1 44,24.3"/>
+                                <Path Stroke="#F0A020" StrokeThickness="10" Data="M 44,24.3 A 62,62 0 0 1 106,24.3"/>
+                                <Path Stroke="#2E9E63" StrokeThickness="10" Data="M 106,24.3 A 62,62 0 0 1 137,78"/>
+                            </Canvas>
+
+                            <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Spacing="1"
+                                        Margin="0,0,6,6">
+                                <TextBlock Text="{Binding ReturnDisplay}" FontSize="21" FontWeight="Bold"
+                                           Foreground="{StaticResource Green}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Total return" FontSize="10" Classes="muted"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="↗ +2.31% vs. previous 7 days" FontSize="9"
+                                           Foreground="{StaticResource Green}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Button Classes="primary" Content="Paramètre" HorizontalAlignment="Left" Width="150"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

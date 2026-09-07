@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="620"
+             x:Class="FAAH_Frontend.Views.BotsView">
+
+    <Grid Margin="42,26,42,20" RowDefinitions="Auto,Auto,*">
+        <TextBlock Grid.Row="0" Text="Bots" Classes="h1"/>
+        <Border Grid.Row="1" Classes="rule" Margin="0,12,0,0"/>
+        <TextBlock Grid.Row="2" Classes="muted" Margin="0,40,0,0"
+                   Text="Aucune maquette fournie pour cette section."/>
+    </Grid>
+</UserControl>

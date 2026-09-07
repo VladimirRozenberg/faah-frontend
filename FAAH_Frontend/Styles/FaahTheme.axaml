@@ -1,0 +1,406 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============================================================
+         FAAH — thème clair (repris des maquettes)
+         À inclure dans App.axaml :
+         <StyleInclude Source="avares://FAAH_Frontend/Styles/FaahTheme.axaml"/>
+         ============================================================ -->
+
+    <Styles.Resources>
+
+        <FontFamily x:Key="Sans">Segoe UI, Inter, Helvetica Neue, Arial, sans-serif</FontFamily>
+
+        <!-- Surfaces -->
+        <SolidColorBrush x:Key="Surface"     Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="SurfaceAlt"  Color="#F6F7F8"/>
+        <SolidColorBrush x:Key="FieldBg"     Color="#DCDDDF"/>
+        <SolidColorBrush x:Key="Hairline"    Color="#D9DDE2"/>
+
+        <!-- Texte -->
+        <SolidColorBrush x:Key="TextPrimary" Color="#14181F"/>
+        <SolidColorBrush x:Key="Muted"       Color="#6B7684"/>
+
+        <!-- Marque -->
+        <SolidColorBrush x:Key="Navy"        Color="#0C3765"/>
+        <SolidColorBrush x:Key="NavyDeep"    Color="#092A4E"/>
+        <SolidColorBrush x:Key="NavyHover"   Color="#14507F"/>
+        <SolidColorBrush x:Key="Amber"       Color="#F0A020"/>
+        <SolidColorBrush x:Key="AmberHover"  Color="#DB9014"/>
+
+        <!-- Sémantique -->
+        <SolidColorBrush x:Key="Green"       Color="#2E9E63"/>
+        <SolidColorBrush x:Key="GreenDeep"   Color="#2A6B41"/>
+        <SolidColorBrush x:Key="GreenSolid"  Color="#2E7D32"/>
+        <SolidColorBrush x:Key="GreenSoft"   Color="#DCEFE0"/>
+        <SolidColorBrush x:Key="Red"         Color="#D14343"/>
+        <SolidColorBrush x:Key="RedDeep"     Color="#9B2C2C"/>
+        <SolidColorBrush x:Key="RedSolid"    Color="#D32F2F"/>
+        <SolidColorBrush x:Key="RedSoft"     Color="#F7DCDC"/>
+        <SolidColorBrush x:Key="GreySoft"    Color="#E4E6E9"/>
+        <SolidColorBrush x:Key="GreySolid"   Color="#B0B4BA"/>
+        <SolidColorBrush x:Key="ItemHover"   Color="#0F000000"/>
+
+    </Styles.Resources>
+
+    <!-- ===================== TYPOGRAPHIE ===================== -->
+
+    <Style Selector="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Sans}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="FontSize" Value="13"/>
+    </Style>
+
+    <!-- Titre de page -->
+    <Style Selector="TextBlock.h1">
+        <Setter Property="FontSize" Value="26"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
+    <Style Selector="TextBlock.h2">
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <!-- En-tête de colonne de tableau -->
+    <Style Selector="TextBlock.colHead">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBlock.cell">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBlock.muted">
+        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+    </Style>
+
+    <Style Selector="TextBlock.up">
+        <Setter Property="Foreground" Value="{StaticResource Green}"/>
+    </Style>
+
+    <Style Selector="TextBlock.down">
+        <Setter Property="Foreground" Value="{StaticResource Red}"/>
+    </Style>
+
+    <!-- Libellé de champ de formulaire -->
+    <Style Selector="TextBlock.label">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Margin" Value="0,0,0,6"/>
+    </Style>
+
+    <!-- ===================== FILET / SÉPARATEUR ===================== -->
+
+    <Style Selector="Border.rule">
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Background" Value="{StaticResource Hairline}"/>
+        <Setter Property="Margin" Value="0,10,0,0"/>
+    </Style>
+
+    <Style Selector="Border.vrule">
+        <Setter Property="Width" Value="1"/>
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="Background" Value="{StaticResource Hairline}"/>
+    </Style>
+
+    <!-- ===================== BOUTONS ===================== -->
+
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="{StaticResource Navy}"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="FontFamily" Value="{StaticResource Sans}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="Padding" Value="18,9"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.primary /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource Navy}"/>
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource NavyHover}"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="Button.primary:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource NavyDeep}"/>
+    </Style>
+
+    <Style Selector="Button.accent">
+        <Setter Property="Background" Value="{StaticResource Amber}"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="FontFamily" Value="{StaticResource Sans}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="Padding" Value="20,8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.accent /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource Amber}"/>
+    </Style>
+    <Style Selector="Button.accent:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource AmberHover}"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+
+    <Style Selector="Button.ghost">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontFamily" Value="{StaticResource Sans}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="Padding" Value="18,9"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.ghost /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource SurfaceAlt}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+
+    <!-- Boutons de tri (News) : pilule pleine verte / pilule contour -->
+    <Style Selector="Button.chip">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="14,5"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.chip /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.chip.selected">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="BorderBrush" Value="{StaticResource GreenSolid}"/>
+    </Style>
+    <Style Selector="Button.chip.selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource GreenSolid}"/>
+    </Style>
+
+    <!-- Pagination -->
+    <Style Selector="Button.page">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="7,2"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.page /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.page:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource ItemHover}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+
+    <!-- Étoile favori -->
+    <Style Selector="Button.star">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{StaticResource Amber}"/>
+        <Setter Property="FontSize" Value="17"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.star /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.star.off">
+        <Setter Property="Foreground" Value="{StaticResource GreySolid}"/>
+    </Style>
+
+    <!-- ===================== PASTILLES ===================== -->
+
+    <!-- Pastille douce : ACTIVE / DISABLED / PAUSED / CRYPTO / STOCKS -->
+    <Style Selector="Border.pill">
+        <Setter Property="CornerRadius" Value="11"/>
+        <Setter Property="Padding" Value="14,4"/>
+        <Setter Property="Background" Value="{StaticResource GreySoft}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+    </Style>
+    <Style Selector="Border.pill > TextBlock">
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.pill.green">
+        <Setter Property="Background" Value="{StaticResource GreenSoft}"/>
+    </Style>
+    <Style Selector="Border.pill.green > TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource GreenDeep}"/>
+    </Style>
+    <Style Selector="Border.pill.red">
+        <Setter Property="Background" Value="{StaticResource RedSoft}"/>
+    </Style>
+    <Style Selector="Border.pill.red > TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource RedDeep}"/>
+    </Style>
+
+    <!-- Badge plein : BULLISH / BEARISH / NEUTRAL -->
+    <Style Selector="Border.badge">
+        <Setter Property="CornerRadius" Value="11"/>
+        <Setter Property="Padding" Value="14,4"/>
+        <Setter Property="Width" Value="72"/>
+        <Setter Property="Background" Value="{StaticResource GreySolid}"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+    </Style>
+    <Style Selector="Border.badge > TextBlock">
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.badge.bullish">
+        <Setter Property="Background" Value="{StaticResource GreenSolid}"/>
+    </Style>
+    <Style Selector="Border.badge.bearish">
+        <Setter Property="Background" Value="{StaticResource RedSolid}"/>
+    </Style>
+
+    <!-- ===================== CHAMPS ===================== -->
+
+    <Style Selector="TextBox.field">
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="FontFamily" Value="{StaticResource Sans}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBox.field /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{StaticResource FieldBg}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+    <Style Selector="TextBox.field:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{StaticResource FieldBg}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="TextBox.field:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="#E7E8EA"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Navy}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <Style Selector="ComboBox.field">
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="FontFamily" Value="{StaticResource Sans}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Background" Value="{StaticResource FieldBg}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ComboBox.field /template/ Border#Background">
+        <Setter Property="Background" Value="{StaticResource FieldBg}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="3"/>
+    </Style>
+
+    <!-- ===================== BARRE DE NAVIGATION ===================== -->
+
+    <Style Selector="Button.navItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="9,5"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.navItem /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.navItem TextBlock">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+    </Style>
+    <Style Selector="Button.navItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource ItemHover}"/>
+    </Style>
+    <Style Selector="Button.navItem.active /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource Navy}"/>
+    </Style>
+    <Style Selector="Button.navItem.active TextBlock">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="Button.navItem.active TextBlock.idx">
+        <Setter Property="Foreground" Value="{StaticResource Amber}"/>
+    </Style>
+
+    <!-- Bouton utilisateur + menu déroulant -->
+    <Style Selector="Button.userChip">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.userChip /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.userChip:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource ItemHover}"/>
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter">
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="0,4"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceAlt}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{StaticResource Amber}"/>
+    </Style>
+
+    <!-- ===================== CARTES ===================== -->
+
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{StaticResource Surface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+    </Style>
+
+    <!-- Ligne de tableau survolée -->
+    <Style Selector="Border.row:pointerover">
+        <Setter Property="Background" Value="{StaticResource SurfaceAlt}"/>
+    </Style>
+
+
+    <!-- Ligne de tableau cliquable -->
+    <Style Selector="Button.rowButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="6,12"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="Button.rowButton /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.rowButton:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource SurfaceAlt}"/>
+    </Style>
+
+</Styles>

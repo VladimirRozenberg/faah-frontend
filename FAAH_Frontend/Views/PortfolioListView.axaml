@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="620"
+             x:Class="FAAH_Frontend.Views.PortfolioListView">
+
+    <Grid Margin="42,26,42,20" RowDefinitions="Auto,Auto,Auto,*">
+
+        <TextBlock Grid.Row="0" Text="Portfolios" Classes="h1"/>
+        <Border Grid.Row="1" Classes="rule" Margin="0,12,0,0"/>
+
+        <Grid Grid.Row="2" ColumnDefinitions="2.6*,1*,1.3*,1*,1*,1*" Margin="6,22,6,10">
+            <TextBlock Grid.Column="1" Classes="colHead" Text="RISK"/>
+            <TextBlock Grid.Column="2" Classes="colHead" Text="MAX POSITIONS"/>
+            <TextBlock Grid.Column="3" Classes="colHead" Text="RETURN"/>
+            <TextBlock Grid.Column="4" Classes="colHead" Text="CURRENCY"/>
+            <TextBlock Grid.Column="5" Classes="colHead" Text="Statut"/>
+        </Grid>
+
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Portfolios}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Classes="rowButton"
+                                Command="{Binding $parent[ItemsControl].DataContext.OpenCommand}"
+                                CommandParameter="{Binding}">
+                            <Grid ColumnDefinitions="2.6*,1*,1.3*,1*,1*,1*">
+                                <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Description}" Classes="muted" FontSize="12"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Classes="cell" Text="{Binding RiskDisplay}"/>
+                                <TextBlock Grid.Column="2" Classes="cell" Text="{Binding MaxPositions}"/>
+                                <TextBlock Grid.Column="3" Classes="cell"
+                                           Classes.up="{Binding IsUp}" Classes.down="{Binding IsDown}"
+                                           Text="{Binding ReturnDisplay}"/>
+                                <TextBlock Grid.Column="4" Classes="cell" Text="{Binding Currency}"/>
+                                <TextBlock Grid.Column="5" Classes="cell" Text="{Binding StatusDisplay}"
+                                           Foreground="{StaticResource Muted}"/>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
