@@ -19,7 +19,7 @@ public class ShellViewModel : ViewModelBase
     // Si tu redemarres la VM et que l'adresse change (attribution DHCP), il faudra la remettre a jour ici.
     private readonly HttpClient _http = new()
     {
-        BaseAddress = new Uri("http://192.168.108.129:8001")
+        BaseAddress = new Uri("http://192.168.108.131:8001")
     };
 
     // internal (pas private) : UserListViewModel s'en sert pour appeler /admin/utilisateurs

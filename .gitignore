@@ -3,3 +3,7 @@ dist/
 build/
 .env
 .env.local
+
+.vs/
+bin/
+obj/
