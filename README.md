@@ -42,7 +42,7 @@ doivent seulement être non vides. L'authentification réelle se branche dans
 Une seule fenêtre, `MainWindow`, qui contient la barre de navigation et un `ContentControl`.
 `ShellViewModel.CurrentPage` porte la vue affichée ; toutes les pages sont des `UserControl`.
 
-- Onglets 01 à 04 : `ShowPortfoliosCommand`, `ShowAssetsCommand`, `ShowBotsCommand`, `ShowNewsCommand`
+- Onglets 01 à 03 : `ShowPortfoliosCommand`, `ShowAssetsCommand`, `ShowNewsCommand`
 - Menu de l'avatar : **Admin Console** ouvre la liste des utilisateurs, **Log out** revient à la connexion
 - Un clic sur une ligne de la liste des portefeuilles ouvre le détail
 - **New User** ouvre le formulaire, **Cancel** et **Create User** reviennent à la liste
@@ -67,8 +67,9 @@ pas à changer.
 
 ## Points connus
 
-- La section **Bots** (03) affiche un écran vide : aucune maquette n'a été fournie.
 - Le graphique et la jauge du détail de portefeuille sont dessinés en `Polyline` et `Path`
   avec des coordonnées fixes. Ils ne réagissent pas encore aux données.
-- Les boutons Settings, Forgot password, Sign Up, la pagination et le tri des news sont
+- Les boutons Forgot password, Sign Up, la pagination et le tri des news sont
   présents visuellement mais sans commande associée.
+
+Admin Console ouvre la liste des utilisateurs. Un clic sur une ligne ouvre Personal information pour cet utilisateur, avec un bouton Back to users. L'email est affiche si /admin/utilisateurs le fournit, sinon Not provided.

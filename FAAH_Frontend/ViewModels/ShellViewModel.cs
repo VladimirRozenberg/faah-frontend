@@ -18,7 +18,8 @@ public class ShellViewModel : ViewModelBase
     // Adresse HTTPS du serveur qui heberge le backend FastAPI.
     private readonly HttpClient _http = new()
     {
-        BaseAddress = new Uri("https://footballhero.ch")
+        BaseAddress = new Uri((Environment.GetEnvironmentVariable("FAAH_API_URL") ?? "https://footballhero.ch").TrimEnd('/') + "/"),
+        Timeout = TimeSpan.FromSeconds(30)
     };
 
     // internal (pas private) : UserListViewModel s'en sert pour appeler /admin/utilisateurs
@@ -38,11 +39,13 @@ public class ShellViewModel : ViewModelBase
     }
 
     // Reponse de GET /auth/me : { "user_id": 1, "username": "...", "role": "..." }
-    // Sert uniquement a recuperer le role (admin ou pas) apres la connexion.
+    // Informations du compte connecte, affichees dans le panneau personnel.
     private class CurrentUserResponse
     {
         public string Username { get; set; } = "";
         public string Role { get; set; } = "";
+        public int? UserId { get; set; }
+        public string? Email { get; set; }
     }
 
     private object? _currentPage;
@@ -54,6 +57,13 @@ public class ShellViewModel : ViewModelBase
     private string _userName = string.Empty;
     private string _initials = string.Empty;
     private bool _isAdmin;
+    private string _profileEmail = "Not provided";
+    private string _profileRole = "Unavailable";
+    private string _profileUserId = "Unavailable";
+
+    public string ProfileEmail { get => _profileEmail; private set => SetField(ref _profileEmail, value); }
+    public string ProfileRole { get => _profileRole; private set => SetField(ref _profileRole, value); }
+    public string ProfileUserId { get => _profileUserId; private set => SetField(ref _profileUserId, value); }
 
     public ShellViewModel()
     {
@@ -61,7 +71,6 @@ public class ShellViewModel : ViewModelBase
         LogoutCommand = new RelayCommand(Logout);
         ShowPortfoliosCommand = new RelayCommand(ShowPortfolios);
         ShowAssetsCommand = new RelayCommand(ShowAssets);
-        ShowBotsCommand = new RelayCommand(ShowBots);
         ShowNewsCommand = new RelayCommand(ShowNews);
         ShowUsersCommand = new RelayCommand(ShowUsers);
 
@@ -73,7 +82,11 @@ public class ShellViewModel : ViewModelBase
     public object? CurrentPage
     {
         get => _currentPage;
-        private set => SetField(ref _currentPage, value);
+        private set
+        {
+            if (_currentPage is Avalonia.Controls.Control old && old.DataContext is IDisposable page) page.Dispose();
+            SetField(ref _currentPage, value);
+        }
     }
 
     public bool IsLoggedIn
@@ -112,14 +125,12 @@ public class ShellViewModel : ViewModelBase
             if (!SetField(ref _section, value)) return;
             OnPropertyChanged(nameof(IsPortfolioActive));
             OnPropertyChanged(nameof(IsAssetsActive));
-            OnPropertyChanged(nameof(IsBotsActive));
             OnPropertyChanged(nameof(IsNewsActive));
         }
     }
 
     public bool IsPortfolioActive => Section == "PORTFOLIO";
     public bool IsAssetsActive => Section == "ASSETS";
-    public bool IsBotsActive => Section == "BOTS";
     public bool IsNewsActive => Section == "NEWS";
 
     // ---------- champs de connexion ----------
@@ -144,7 +155,6 @@ public class ShellViewModel : ViewModelBase
     public ICommand LogoutCommand { get; }
     public ICommand ShowPortfoliosCommand { get; }
     public ICommand ShowAssetsCommand { get; }
-    public ICommand ShowBotsCommand { get; }
     public ICommand ShowNewsCommand { get; }
     public ICommand ShowUsersCommand { get; }
 
@@ -171,19 +181,17 @@ public class ShellViewModel : ViewModelBase
     public void ShowAssets()
     {
         Section = "ASSETS";
-        CurrentPage = new AssetListView { DataContext = new AssetListViewModel() };
-    }
-
-    public void ShowBots()
-    {
-        Section = "BOTS";
-        CurrentPage = new BotsView();
+        var assets = new AssetListViewModel(_http);
+        CurrentPage = new AssetListView { DataContext = assets };
+        assets.Start();
     }
 
     public void ShowNews()
     {
         Section = "NEWS";
-        CurrentPage = new NewsListView { DataContext = new NewsListViewModel() };
+        var news = new NewsListViewModel(_http);
+        CurrentPage = new NewsListView { DataContext = news };
+        news.Start();
     }
 
     public void ShowUsers()
@@ -194,6 +202,14 @@ public class ShellViewModel : ViewModelBase
         // Charge en arriere-plan : l'ecran s'affiche tout de suite,
         // les lignes apparaissent des que l'API repond.
         _ = viewModel.ChargerUtilisateursAsync();
+    }
+
+    public void ShowUserInformation(User user)
+    {
+        CurrentPage = new PersonalInformationView
+        {
+            DataContext = new PersonalInformationViewModel(user, this)
+        };
     }
 
     public void ShowUserCreate()
@@ -214,9 +230,13 @@ public class ShellViewModel : ViewModelBase
         try
         {
             ErrorMessage = null;
+            IsAdmin = false;
+            ProfileEmail = "Not provided";
+            ProfileRole = "Unavailable";
+            ProfileUserId = "Unavailable";
 
             var loginResponse = await _http.PostAsJsonAsync(
-                "/auth/login",
+                "auth/login",
                 new { username = Username, password = Password },
                 JsonOptions);
 
@@ -245,11 +265,19 @@ public class ShellViewModel : ViewModelBase
             // En best-effort : si ca echoue, on reste connecte mais sans le menu admin.
             try
             {
-                var meResponse = await _http.GetAsync("/auth/me");
+                var meResponse = await _http.GetAsync("auth/me");
                 if (meResponse.IsSuccessStatusCode)
                 {
                     var moi = await meResponse.Content.ReadFromJsonAsync<CurrentUserResponse>(JsonOptions);
                     IsAdmin = moi?.Role == "admin";
+                    if (moi is not null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(moi.Username)) UserName = moi.Username;
+                        Initials = UserName.Length >= 2 ? UserName[..2].ToUpperInvariant() : UserName.ToUpperInvariant();
+                        ProfileEmail = string.IsNullOrWhiteSpace(moi.Email) ? "Not provided" : moi.Email;
+                        ProfileRole = string.IsNullOrWhiteSpace(moi.Role) ? "Unavailable" : moi.Role;
+                        ProfileUserId = moi.UserId?.ToString() ?? "Unavailable";
+                    }
                 }
             }
             catch (Exception ex)
@@ -258,6 +286,7 @@ public class ShellViewModel : ViewModelBase
                 IsAdmin = false;
             }
 
+            Password = string.Empty;
             IsLoggedIn = true;
             ShowPortfolios();
         }
@@ -274,6 +303,9 @@ public class ShellViewModel : ViewModelBase
         Password = string.Empty;
         UserName = string.Empty;
         Initials = string.Empty;
+        ProfileEmail = "Not provided";
+        ProfileRole = "Unavailable";
+        ProfileUserId = "Unavailable";
         IsAdmin = false;
         ErrorMessage = null;
         Section = "PORTFOLIO";

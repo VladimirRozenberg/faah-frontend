@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FAAH_Frontend.Views.PersonalInformationView">
+    <Grid Margin="42,26,42,24" RowDefinitions="Auto,Auto,*,Auto">
+        <TextBlock Text="Personal information" Classes="h1"/>
+        <Border Grid.Row="1" Classes="rule" Margin="0,14,0,0"/>
+        <ScrollViewer Grid.Row="2" Margin="0,30,0,20">
+            <Grid ColumnDefinitions="1*,80,1*" VerticalAlignment="Top">
+                <StackPanel Spacing="18">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Username" Classes="label"/>
+                        <TextBlock Text="{Binding Username}" FontSize="16" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Email" Classes="label"/>
+                        <TextBlock Text="{Binding Email}" FontSize="16" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="18">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="User ID" Classes="label"/>
+                        <TextBlock Text="{Binding UserId}" FontSize="16"/>
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Role" Classes="label"/>
+                        <TextBlock Text="{Binding Role}" FontSize="16" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+        <Button Grid.Row="3" Content="Back to users" Classes="ghost" Command="{Binding BackCommand}"/>
+    </Grid>
+</UserControl>

@@ -10,6 +10,8 @@ public class User
 
     public string Role { get; set; } = string.Empty;
 
+    public string? Email { get; set; }
+
     // ---- Proprietes d'affichage ----
 
     public bool IsAdminRole => Role == "admin";

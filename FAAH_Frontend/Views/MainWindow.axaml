@@ -49,20 +49,10 @@
 
                     <TextBlock Text="|" Foreground="{StaticResource Hairline}" VerticalAlignment="Center"/>
 
-                    <Button Classes="navItem" Classes.active="{Binding IsBotsActive}"
-                            Command="{Binding ShowBotsCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Classes="idx" Text="03"/>
-                            <TextBlock Text="BOTS"/>
-                        </StackPanel>
-                    </Button>
-
-                    <TextBlock Text="|" Foreground="{StaticResource Hairline}" VerticalAlignment="Center"/>
-
                     <Button Classes="navItem" Classes.active="{Binding IsNewsActive}"
                             Command="{Binding ShowNewsCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Classes="idx" Text="04"/>
+                            <TextBlock Classes="idx" Text="03"/>
                             <TextBlock Text="NEWS"/>
                         </StackPanel>
                     </Button>

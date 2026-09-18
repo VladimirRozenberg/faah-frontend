@@ -16,9 +16,11 @@ public class UserListViewModel : ViewModelBase
     {
         _shell = shell;
         NewUserCommand = new RelayCommand(shell.ShowUserCreate);
+        OpenUserCommand = new RelayCommand(parameter => { if (parameter is User user) shell.ShowUserInformation(user); });
     }
 
     public ICommand NewUserCommand { get; }
+    public ICommand OpenUserCommand { get; }
 
     // Vide au depart : rempli par ChargerUtilisateursAsync() depuis l'API.
     public ObservableCollection<User> Users { get; } = new();

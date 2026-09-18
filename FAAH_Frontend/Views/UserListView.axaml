@@ -26,7 +26,7 @@
             <ItemsControl ItemsSource="{Binding Users}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Classes="row" CornerRadius="4" Padding="6,12" Margin="0,0,0,2">
+                        <Button Classes="rowButton" Padding="6,12" Margin="0,0,0,2" Command="{Binding $parent[ItemsControl].DataContext.OpenUserCommand}" CommandParameter="{Binding}">
                             <Grid ColumnDefinitions="0.6*,2*,1.2*">
                                 <TextBlock Grid.Column="0" Classes="cell" Text="{Binding UserId}"/>
                                 <TextBlock Grid.Column="1" Classes="cell" Text="{Binding Username}"/>
@@ -35,7 +35,7 @@
                                     <TextBlock Text="{Binding RoleDisplay}"/>
                                 </Border>
                             </Grid>
-                        </Border>
+                        </Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
