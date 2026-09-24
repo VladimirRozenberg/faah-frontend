@@ -30,6 +30,15 @@ Check(!vm.Assets[0].IsFavorite && !vm.HasError,"favorite persists across reload"
 handler.FailRead=true;
 await vm.RefreshAsync();
 Check(vm.HasError && vm.Assets.Count==2,"favorite-read failure preserves existing snapshot");
+Check(vm.Assets[0].Price==123.45m,"favorite-read failure does not block market prices");
+Check(!vm.ToggleFavoriteCommand.CanExecute(null),"favorites disabled when saved state is unknown");
+handler.FailMarket=true;
+await vm.RefreshAsync();
+Check(vm.Error.Contains("Favorites:") && vm.Error.Contains("Market prices:"),"both service errors remain visible");
+Check(!vm.IsBusy && !vm.IsLoadingPrices && vm.Assets.All(a=>!a.IsLoadingPrice),"loading indicators reset after failures");
+handler.FailMarket=false; handler.FailRead=false;
+await vm.RefreshAsync();
+Check(!vm.HasError && vm.ToggleFavoriteCommand.CanExecute(null),"retry restores data and favorite commands");
 vm.Dispose(); int calls=handler.Calls; await vm.RefreshAsync();
 Check(handler.Calls==calls,"navigation disposal stops requests");
 class Fake : HttpMessageHandler

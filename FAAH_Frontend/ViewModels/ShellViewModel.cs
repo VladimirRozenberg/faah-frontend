@@ -181,9 +181,19 @@ public class ShellViewModel : ViewModelBase
     public void ShowAssets()
     {
         Section = "ASSETS";
-        var assets = new AssetListViewModel(_http);
+        var assets = new AssetListViewModel(_http, ShowAssetDetail);
         CurrentPage = new AssetListView { DataContext = assets };
         assets.Start();
+    }
+
+    // Le detail remplace la liste dans la fenetre existante (pas de nouvelle fenetre).
+    public void ShowAssetDetail(Asset asset)
+    {
+        Section = "ASSETS";
+        int.TryParse(ProfileUserId, out int userId);
+        var detail = new AssetDetailViewModel(_http, asset, ShowAssets, userId);
+        CurrentPage = new AssetDetailView { DataContext = detail };
+        detail.Start();
     }
 
     public void ShowNews()

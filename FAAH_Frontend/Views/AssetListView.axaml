@@ -29,8 +29,13 @@
                     <DataTemplate>
                         <Border Classes="row" CornerRadius="4" Padding="6,10" Margin="0,0,0,2">
                             <Grid ColumnDefinitions="2*,1.2*,1.2*,1.2*,60">
+                                <Button Grid.ColumnSpan="4" Background="Transparent" BorderThickness="0"
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Cursor="Hand"
+                                        Command="{Binding $parent[ItemsControl].DataContext.OpenAssetCommand}"
+                                        CommandParameter="{Binding}" ToolTip.Tip="Open asset details"
+                                        AutomationProperties.Name="{Binding Symbol}"/>
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10"
-                                            VerticalAlignment="Center">
+                                            VerticalAlignment="Center" IsHitTestVisible="False">
                                     <Border Width="20" Height="20" CornerRadius="10" Background="{Binding IconColor}">
                                         <TextBlock Text="{Binding IconText}" FontSize="11" FontWeight="Bold"
                                                    Foreground="#FFFFFF"
@@ -39,12 +44,12 @@
                                     <TextBlock Classes="cell" Text="{Binding Symbol}"/>
                                 </StackPanel>
                                 <TextBlock Grid.Column="1" Classes="cell" Text="{Binding PriceDisplay}"
-                                           HorizontalAlignment="Center"/>
+                                           HorizontalAlignment="Center" IsHitTestVisible="False"/>
                                 <TextBlock Grid.Column="2" Classes="cell"
                                            Classes.up="{Binding IsUp}" Classes.down="{Binding IsDown}"
-                                           Text="{Binding ChangeDisplay}" HorizontalAlignment="Center"/>
+                                           Text="{Binding ChangeDisplay}" HorizontalAlignment="Center" IsHitTestVisible="False"/>
                                 <TextBlock Grid.Column="3" Classes="cell" Text="{Binding Volume}"
-                                           HorizontalAlignment="Center"/>
+                                           HorizontalAlignment="Center" IsHitTestVisible="False"/>
                                 <Button Grid.Column="4" Classes="star" Classes.off="{Binding !IsFavorite}"
                                         Command="{Binding $parent[ItemsControl].DataContext.ToggleFavoriteCommand}" CommandParameter="{Binding}" ToolTip.Tip="Add or remove favorite" Content="{Binding StarGlyph}" HorizontalAlignment="Center"/>
                             </Grid>
