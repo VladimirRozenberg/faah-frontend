@@ -15,11 +15,10 @@ namespace FAAH_Frontend.ViewModels;
 /// </summary>
 public class ShellViewModel : ViewModelBase
 {
-    // Adresse de la VM Linux qui heberge le backend FastAPI (trouvee avec "hostname -I").
-    // Si tu redemarres la VM et que l'adresse change (attribution DHCP), il faudra la remettre a jour ici.
+    // Adresse HTTPS du serveur qui heberge le backend FastAPI.
     private readonly HttpClient _http = new()
     {
-        BaseAddress = new Uri((Environment.GetEnvironmentVariable("FAAH_API_URL") ?? "http://192.168.108.131:8001").TrimEnd('/') + "/"),
+        BaseAddress = new Uri((Environment.GetEnvironmentVariable("FAAH_API_URL") ?? "https://footballhero.ch").TrimEnd('/') + "/"),
         Timeout = TimeSpan.FromSeconds(30)
     };
 
