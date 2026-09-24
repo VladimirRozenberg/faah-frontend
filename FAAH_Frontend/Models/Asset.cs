@@ -8,6 +8,11 @@ public sealed class Asset : ViewModelBase
     public required int Id { get; set; }
     public required string Symbol { get; set; }
     public string? Name { get; set; }
+    public string? Type { get; set; }
+    public string? Exchange { get; set; }
+    public string? Country { get; set; }
+    public string? Sector { get; set; }
+    public string? Industry { get; set; }
     public string? Currency { get; set; }
     public decimal? Price { get; set; }
     public decimal? ChangePercent { get; set; }
