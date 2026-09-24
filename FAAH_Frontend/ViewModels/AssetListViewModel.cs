@@ -32,7 +32,12 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     {
         _page = Math.Clamp(_page, 1, PageCount);
         Assets.Clear();
-        foreach (var asset in _allAssets.Skip((_page - 1) * PageSize).Take(PageSize)) Assets.Add(asset);
+        var pageAssets = _allAssets.OrderByDescending(a => a.IsFavorite).Skip((_page - 1) * PageSize).Take(PageSize).ToList();
+        for (var index = 0; index < pageAssets.Count; index++)
+        {
+            pageAssets[index].IsAlternateRow = index % 2 == 1;
+            Assets.Add(pageAssets[index]);
+        }
         ((RelayCommand)PreviousPageCommand).RaiseCanExecuteChanged();
         ((RelayCommand)NextPageCommand).RaiseCanExecuteChanged();
         Notify();
@@ -84,7 +89,9 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             if (catalog.Items is null || catalog.Items.Any(a => a is null || string.IsNullOrWhiteSpace(a.Symbol))) throw new JsonException();
             if (_disposed) return;
             _favoritesLoaded = false;
+            var previousFavorites = _allAssets.Where(a => a.IsFavorite).Select(a => a.Id).ToHashSet();
             _allAssets = catalog.Items;
+            foreach (var asset in _allAssets) asset.IsFavorite = previousFavorites.Contains(asset.Id);
             _loaded = true;
             ShowPage(); // Display the catalog immediately; prices must not delay pagination.
             var favorites = await GetAsync<FavoriteResponse>("api/favorites");
@@ -93,6 +100,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             var favoriteIds = favorites.AssetIds.ToHashSet();
             foreach (var asset in _allAssets) asset.IsFavorite = favoriteIds.Contains(asset.Id);
             _favoritesLoaded = true;
+            ShowPage();
             MarketResponse? market = null;
             IsLoadingPrices = true;
             foreach (var asset in _allAssets) asset.IsLoadingPrice = true;
@@ -117,14 +125,16 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     {
         if(IsBusy || _disposed || !_favoritesLoaded || !Assets.Contains(asset)) return;
         IsBusy=true; Error="";
+        bool previous = asset.IsFavorite;
+        bool add = !previous;
+        asset.IsFavorite = add;
         try
         {
-            bool add=!asset.IsFavorite;
             using var request=new HttpRequestMessage(add ? HttpMethod.Put : HttpMethod.Delete,$"api/favorites/{asset.Id}");
             using var response=await _http.SendAsync(request,_lifetime.Token); Ensure(response);
-            if(!_disposed) asset.IsFavorite=add;
+            // Keep the row in place. Reorder only when paging or refreshing.
         }
-        catch(Exception ex) when(ex is HttpRequestException or InvalidOperationException or OperationCanceledException) { SetError(ex); }
+        catch(Exception ex) when(ex is HttpRequestException or InvalidOperationException or OperationCanceledException) { asset.IsFavorite = previous; SetError(ex); }
         finally { IsBusy=false; }
     }
     private void SetError(Exception ex)

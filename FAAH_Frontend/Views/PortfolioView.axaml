@@ -18,7 +18,7 @@
 
                     <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
                         <TextBlock Text="+1 434 $" FontSize="11" Classes="up"/>
-                        <TextBlock Text="+1,43 %" FontSize="11" Classes="up"/>
+                        <TextBlock Text="+1.43%" FontSize="11" Classes="up"/>
                         <TextBlock Text="·" FontSize="11" Classes="muted"/>
                         <TextBlock Text="max DD −150 $" FontSize="11" Classes="muted"/>
                     </StackPanel>
@@ -125,6 +125,7 @@
                     </Grid>
 
                     <StackPanel Spacing="10">
+                        <TextBlock Text="Base currency" Classes="label"/><TextBlock Text="{Binding BaseCurrency}" FontWeight="SemiBold"/>
                         <TextBlock Text="Types of covered assets" FontSize="13"/>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <Border Classes="pill"><TextBlock Text="CRYPTO"/></Border>
@@ -152,7 +153,7 @@
                         </Grid>
                     </Border>
 
-                    <Button Classes="primary" Content="Paramètre" HorizontalAlignment="Left" Width="150"/>
+                    <Button Classes="primary" Content="Settings" HorizontalAlignment="Left" Width="150"/>
                 </StackPanel>
             </Grid>
         </Grid>

@@ -65,14 +65,18 @@ public class ShellViewModel : ViewModelBase
     public string ProfileRole { get => _profileRole; private set => SetField(ref _profileRole, value); }
     public string ProfileUserId { get => _profileUserId; private set => SetField(ref _profileUserId, value); }
 
-    public ShellViewModel()
+    public ShellViewModel(HttpClient? http = null)
     {
+        if (http is not null) _http = http;
         LoginCommand = new RelayCommand(Login);
         LogoutCommand = new RelayCommand(Logout);
         ShowPortfoliosCommand = new RelayCommand(ShowPortfolios);
+        ShowDashboardCommand = new RelayCommand(ShowDashboard);
         ShowAssetsCommand = new RelayCommand(ShowAssets);
         ShowNewsCommand = new RelayCommand(ShowNews);
         ShowUsersCommand = new RelayCommand(ShowUsers);
+        ShowProfileCommand = new RelayCommand(ShowProfile);
+        ShowSettingsCommand = new RelayCommand(() => { Section = "SETTINGS"; CurrentPage = new SettingsView { DataContext = this }; });
 
         ShowLogin();
     }
@@ -124,11 +128,13 @@ public class ShellViewModel : ViewModelBase
         {
             if (!SetField(ref _section, value)) return;
             OnPropertyChanged(nameof(IsPortfolioActive));
+            OnPropertyChanged(nameof(IsDashboardActive));
             OnPropertyChanged(nameof(IsAssetsActive));
             OnPropertyChanged(nameof(IsNewsActive));
         }
     }
 
+    public bool IsDashboardActive => Section == "DASHBOARD";
     public bool IsPortfolioActive => Section == "PORTFOLIO";
     public bool IsAssetsActive => Section == "ASSETS";
     public bool IsNewsActive => Section == "NEWS";
@@ -154,9 +160,20 @@ public class ShellViewModel : ViewModelBase
     public ICommand LoginCommand { get; }
     public ICommand LogoutCommand { get; }
     public ICommand ShowPortfoliosCommand { get; }
+    public ICommand ShowDashboardCommand { get; }
     public ICommand ShowAssetsCommand { get; }
     public ICommand ShowNewsCommand { get; }
     public ICommand ShowUsersCommand { get; }
+    public ICommand ShowProfileCommand { get; }
+    public ICommand ShowSettingsCommand { get; }
+    public string SessionDuration => "4 hours after sign-in";
+    public string AccountCurrency => "USD — US dollar";
+    public string FundingPolicy => "Only an administrator can top up your account.";
+    public void ShowProfile()
+    {
+        if (!int.TryParse(ProfileUserId, out var id)) return;
+        ShowUserInformation(new User { UserId = id, Username = UserName, Email = ProfileEmail, Role = ProfileRole, IsActive = true });
+    }
 
     // ---------- navigation ----------
 
@@ -164,6 +181,12 @@ public class ShellViewModel : ViewModelBase
     {
         IsLoggedIn = false;
         CurrentPage = new LoginView { DataContext = this };
+    }
+
+    public void ShowDashboard()
+    {
+        Section = "DASHBOARD";
+        CurrentPage = new DashboardView { DataContext = new DashboardViewModel(this) };
     }
 
     public void ShowPortfolios()
@@ -196,6 +219,8 @@ public class ShellViewModel : ViewModelBase
 
     public void ShowUsers()
     {
+        if (!IsAdmin) return;
+        Section = "ADMIN";
         var viewModel = new UserListViewModel(this);
         CurrentPage = new UserListView { DataContext = viewModel };
 
@@ -206,6 +231,7 @@ public class ShellViewModel : ViewModelBase
 
     public void ShowUserInformation(User user)
     {
+        Section = "PROFILE";
         CurrentPage = new PersonalInformationView
         {
             DataContext = new PersonalInformationViewModel(user, this)
@@ -242,14 +268,14 @@ public class ShellViewModel : ViewModelBase
 
             if (!loginResponse.IsSuccessStatusCode)
             {
-                ErrorMessage = "Nom d'utilisateur (ou email) ou mot de passe incorrect.";
+                ErrorMessage = "Incorrect username or password.";
                 return;
             }
 
             var login = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>(JsonOptions);
             if (login is null || string.IsNullOrWhiteSpace(login.Token))
             {
-                ErrorMessage = "L'API n'a pas renvoye de token.";
+                ErrorMessage = "The server did not return a session token.";
                 return;
             }
 
@@ -288,12 +314,12 @@ public class ShellViewModel : ViewModelBase
 
             Password = string.Empty;
             IsLoggedIn = true;
-            ShowPortfolios();
+            ShowDashboard();
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"ERREUR LOGIN : {ex}");
-            ErrorMessage = "Impossible de contacter le serveur FAAH. Verifie qu'il est demarre.";
+            ErrorMessage = "Unable to reach the FAAH server. Please try again.";
         }
     }
 

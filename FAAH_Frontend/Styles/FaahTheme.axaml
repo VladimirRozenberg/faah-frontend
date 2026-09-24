@@ -224,6 +224,13 @@
         <Setter Property="Foreground" Value="{StaticResource GreySolid}"/>
     </Style>
 
+    <Style Selector="Button.star:disabled /template/ ContentPresenter">
+        <Setter Property="TextElement.Foreground" Value="{StaticResource Amber}"/>
+    </Style>
+    <Style Selector="Button.star.off:disabled /template/ ContentPresenter">
+        <Setter Property="TextElement.Foreground" Value="{StaticResource GreySolid}"/>
+    </Style>
+
     <!-- ===================== PASTILLES ===================== -->
 
     <!-- Pastille douce : ACTIVE / DISABLED / PAUSED / CRYPTO / STOCKS -->
@@ -381,6 +388,10 @@
     </Style>
 
     <!-- Ligne de tableau survolée -->
+    <Style Selector="Border.row.zebra">
+        <Setter Property="Background" Value="#E9EDF2"/>
+    </Style>
+
     <Style Selector="Border.row:pointerover">
         <Setter Property="Background" Value="{StaticResource SurfaceAlt}"/>
     </Style>

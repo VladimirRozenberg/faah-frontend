@@ -18,14 +18,23 @@ public sealed class NewsListViewModel : ViewModelBase, IDisposable
     private readonly CancellationTokenSource _lifetime = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(60) };
     private List<NewsArticle> _snapshot = new();
+    private const int PageSize = 10;
+    private int _page = 1;
+    public int CurrentPage => _page;
+    public int PageCount => Math.Max(1, (_snapshot.Count + PageSize - 1) / PageSize);
+    public string PageLabel => $"Page {_page} of {PageCount} · {_snapshot.Count} news";
+    public ICommand PreviousPageCommand { get; }
+    public ICommand NextPageCommand { get; }
     private bool _busy, _disposed, _alphabetical, _loaded;
     private string _error = "", _updated = "Not loaded yet";
     public NewsListViewModel(HttpClient http)
     {
         _http = http;
+        PreviousPageCommand = new RelayCommand(p => { if (!_disposed && _page > 1) { _page--; ApplySort(); } }, p => !_disposed && _page > 1);
+        NextPageCommand = new RelayCommand(p => { if (!_disposed && _page < PageCount) { _page++; ApplySort(); } }, p => !_disposed && _page < PageCount);
         RefreshCommand = new RelayCommand(parameter => { _ = RefreshAsync(); }, parameter => !IsBusy && !_disposed);
-        LatestCommand = new RelayCommand(() => { IsAlphabetical = false; ApplySort(); });
-        AlphabeticalCommand = new RelayCommand(() => { IsAlphabetical = true; ApplySort(); });
+        LatestCommand = new RelayCommand(() => { IsAlphabetical = false; _page = 1; ApplySort(); });
+        AlphabeticalCommand = new RelayCommand(() => { IsAlphabetical = true; _page = 1; ApplySort(); });
         _timer.Tick += OnTick;
     }
     public ObservableCollection<NewsArticle> Articles { get; } = new();
@@ -46,7 +55,19 @@ public sealed class NewsListViewModel : ViewModelBase, IDisposable
     {
         var ordered = IsAlphabetical ? _snapshot.OrderBy(a => a.Title, StringComparer.CurrentCultureIgnoreCase).ThenBy(a => a.Id)
             : _snapshot.OrderByDescending(a => a.SortDate).ThenByDescending(a => a.Id);
-        Articles.Clear(); foreach (var article in ordered) Articles.Add(article);
+        _page = Math.Clamp(_page, 1, PageCount);
+        var pageArticles = ordered.Skip((_page - 1) * PageSize).Take(PageSize).ToList();
+        Articles.Clear();
+        for (var index = 0; index < pageArticles.Count; index++)
+        {
+            pageArticles[index].IsAlternateRow = index % 2 == 1;
+            Articles.Add(pageArticles[index]);
+        }
+        OnPropertyChanged(nameof(CurrentPage));
+        OnPropertyChanged(nameof(PageCount));
+        OnPropertyChanged(nameof(PageLabel));
+        ((RelayCommand)PreviousPageCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)NextPageCommand).RaiseCanExecuteChanged();
         NotifyState();
     }
     public async Task RefreshAsync()

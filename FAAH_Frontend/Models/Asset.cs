@@ -20,6 +20,7 @@ public sealed class Asset : ViewModelBase
     }
     private bool _favorite;
     public bool IsFavorite { get => _favorite; set { if (SetField(ref _favorite,value)) OnPropertyChanged(nameof(StarGlyph)); } }
+    public bool IsAlternateRow { get; set; }
     public string IconText => Symbol.Length > 2 ? Symbol[..2] : Symbol;
     public string IconColor => "#4B5A78";
     public string PriceDisplay => IsLoadingPrice ? "Loading…" : Price is null ? "Unavailable" : Price.Value.ToString("N2",CultureInfo.CurrentCulture) + " " + Currency;

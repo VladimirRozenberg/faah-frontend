@@ -31,7 +31,7 @@ public class UserCreateViewModel : ViewModelBase
     public string? Role { get => _role; set => SetField(ref _role, value); }
 
     // Doivent correspondre exactement aux valeurs acceptees par le backend.
-    public ObservableCollection<string> Roles { get; } = new() { "admin", "employe" };
+    public ObservableCollection<string> Roles { get; } = new() { "Administrator", "Employee" };
 
     public string? ErrorMessage
     {
@@ -68,7 +68,7 @@ public class UserCreateViewModel : ViewModelBase
             string.IsNullOrWhiteSpace(TemporaryPassword) ||
             string.IsNullOrWhiteSpace(Role))
         {
-            ErrorMessage = "Remplis username, email, mot de passe et role.";
+            ErrorMessage = "Enter a username, email, password and role.";
             return;
         }
 
@@ -80,16 +80,16 @@ public class UserCreateViewModel : ViewModelBase
             // Reserve aux admins cote backend (meme regle que la liste des utilisateurs).
             var response = await _shell.Http.PostAsJsonAsync(
                 "/admin/utilisateurs",
-                new { username = Username, email = Email, password = TemporaryPassword, role = Role },
+                new { username = Username, email = Email, password = TemporaryPassword, role = Role == "Administrator" ? "admin" : "employe" },
                 ShellViewModel.JsonOptions);
 
             if (!response.IsSuccessStatusCode)
             {
                 ErrorMessage = response.StatusCode == HttpStatusCode.Conflict
-                    ? "Ce nom d'utilisateur ou cet email est deja pris."
+                    ? "This username or email is already in use."
                     : response.StatusCode == HttpStatusCode.Forbidden
-                        ? "Reserve aux administrateurs."
-                        : $"Erreur ({(int)response.StatusCode}) lors de la creation.";
+                        ? "Administrator access is required."
+                        : $"Unable to create the user (HTTP {(int)response.StatusCode}).";
                 return;
             }
 
@@ -99,7 +99,7 @@ public class UserCreateViewModel : ViewModelBase
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"ERREUR CREATE USER : {ex}");
-            ErrorMessage = "Impossible de contacter le serveur FAAH. Verifie qu'il est demarre.";
+            ErrorMessage = "Unable to reach the FAAH server. Please try again.";
         }
         finally
         {

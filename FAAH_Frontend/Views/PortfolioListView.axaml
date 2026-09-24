@@ -14,8 +14,8 @@
             <TextBlock Grid.Column="1" Classes="colHead" Text="RISK"/>
             <TextBlock Grid.Column="2" Classes="colHead" Text="MAX POSITIONS"/>
             <TextBlock Grid.Column="3" Classes="colHead" Text="RETURN"/>
-            <TextBlock Grid.Column="4" Classes="colHead" Text="CURRENCY"/>
-            <TextBlock Grid.Column="5" Classes="colHead" Text="Statut"/>
+            <TextBlock Grid.Column="4" Classes="colHead" Text="BASE CURRENCY"/>
+            <TextBlock Grid.Column="5" Classes="colHead" Text="STATUS"/>
         </Grid>
 
         <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
@@ -35,7 +35,7 @@
                                 <TextBlock Grid.Column="3" Classes="cell"
                                            Classes.up="{Binding IsUp}" Classes.down="{Binding IsDown}"
                                            Text="{Binding ReturnDisplay}"/>
-                                <TextBlock Grid.Column="4" Classes="cell" Text="{Binding Currency}"/>
+                                <TextBlock Grid.Column="4" Classes="cell" Text="{Binding BaseCurrency}"/>
                                 <TextBlock Grid.Column="5" Classes="cell" Text="{Binding StatusDisplay}"
                                            Foreground="{StaticResource Muted}"/>
                             </Grid>

@@ -1,10 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="FAAH_Frontend.Views.NewsListView">
-  <Grid Margin="42,26,42,20" RowDefinitions="Auto,Auto,Auto,*">
+  <Grid Margin="42,26,42,20" RowDefinitions="Auto,Auto,Auto,*,Auto">
     <Grid ColumnDefinitions="*,Auto">
       <TextBlock Text="News" Classes="h1"/>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-        <Button Classes="chip" Classes.selected="{Binding IsLatest}" Content="Latest" Command="{Binding LatestCommand}"/>
-        <Button Classes="chip" Classes.selected="{Binding IsAlphabetical}" Content="A-Z" Command="{Binding AlphabeticalCommand}"/>
         <Button Classes="ghost" Content="Refresh" Command="{Binding RefreshCommand}"/>
       </StackPanel>
     </Grid>
@@ -17,15 +15,28 @@
     </StackPanel>
     <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
       <ItemsControl ItemsSource="{Binding Articles}"><ItemsControl.ItemTemplate><DataTemplate>
-        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,24">
+        <Border Classes="row" Classes.zebra="{Binding IsAlternateRow}" CornerRadius="4" Padding="10,10" Margin="0,0,0,4">
+        <Grid ColumnDefinitions="*,Auto">
           <StackPanel Spacing="6" Margin="0,0,22,0">
             <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding Summary}" FontSize="12" TextWrapping="Wrap"/>
+            <ItemsControl ItemsSource="{Binding AssetTags}" IsVisible="{Binding HasAssetTags}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <Border Classes="pill" Margin="0,0,8,4"><TextBlock Text="{Binding}" FontSize="11"/></Border>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
             <TextBlock Text="{Binding Source}" FontSize="12" Classes="muted"/>
           </StackPanel>
           <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding DateLabel}" Classes="muted" FontSize="11"/><TextBlock Text="{Binding DateDisplay}" Classes="muted" FontSize="12"/></StackPanel>
         </Grid>
+        </Border>
       </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
     </ScrollViewer>
+    <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="10" Margin="0,14,0,0">
+      <Button Content="Previous" Command="{Binding PreviousPageCommand}"/>
+      <Button Content="Next" Command="{Binding NextPageCommand}"/>
+      <TextBlock Text="{Binding PageLabel}" Classes="muted" VerticalAlignment="Center"/>
+    </StackPanel>
   </Grid>
 </UserControl>

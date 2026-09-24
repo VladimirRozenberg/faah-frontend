@@ -19,7 +19,8 @@ public class Portfolio
 
     public decimal ReturnPercent { get; set; }
 
-    public string Currency { get; set; } = "USD";
+    public string BaseCurrency { get; set; } = "USD";
+    public string Currency { get => BaseCurrency; set => BaseCurrency = value; }
 
     public PortfolioStatus Status { get; set; }
 

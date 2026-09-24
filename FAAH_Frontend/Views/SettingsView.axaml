@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="FAAH_Frontend.Views.SettingsView">
+ <ScrollViewer><StackPanel Margin="42,26" Spacing="16" MaxWidth="780" HorizontalAlignment="Left">
+  <TextBlock Text="Settings" Classes="h1"/>
+  <TextBlock Text="User details" FontSize="18" FontWeight="SemiBold"/>
+  <TextBlock Text="Static example information" Classes="muted" FontSize="12"/>
+  <Border Classes="rule"/>
+  <Grid ColumnDefinitions="200,420" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+   <TextBlock Grid.Row="0" Text="Name" VerticalAlignment="Center"/><TextBox Grid.Row="0" Grid.Column="1" Text="John Doe" IsReadOnly="True" Margin="0,4"/>
+   <TextBlock Grid.Row="1" Text="Username" VerticalAlignment="Center"/><TextBox Grid.Row="1" Grid.Column="1" Text="john.doe" IsReadOnly="True" Margin="0,4"/>
+   <TextBlock Grid.Row="2" Text="Email" VerticalAlignment="Center"/><TextBox Grid.Row="2" Grid.Column="1" Text="john.doe@example.com" IsReadOnly="True" Margin="0,4"/>
+   <TextBlock Grid.Row="3" Text="New password" VerticalAlignment="Center"/><TextBox Grid.Row="3" Grid.Column="1" PlaceholderText="Not set" IsReadOnly="True" Margin="0,4"/>
+   <TextBlock Grid.Row="4" Text="Confirm password" VerticalAlignment="Center"/><TextBox Grid.Row="4" Grid.Column="1" PlaceholderText="Not set" IsReadOnly="True" Margin="0,4"/>
+   <TextBlock Grid.Row="5" Text="Group" VerticalAlignment="Top" Margin="0,12"/><ListBox Grid.Row="5" Grid.Column="1" SelectedIndex="0" IsEnabled="False" Margin="0,4"><ListBoxItem Content="Employee"/><ListBoxItem Content="Administrator"/></ListBox>
+   <TextBlock Grid.Row="6" Text="Registration date" Margin="0,10"/><TextBlock Grid.Row="6" Grid.Column="1" Text="16 September 2026, 09:00" Margin="0,10"/>
+  </Grid>
+ </StackPanel></ScrollViewer>
+</UserControl>

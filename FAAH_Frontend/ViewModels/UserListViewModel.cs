@@ -1,57 +1,103 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using FAAH_Frontend.Models;
-
 namespace FAAH_Frontend.ViewModels;
-
-public class UserListViewModel : ViewModelBase
+public sealed class UserListViewModel : ViewModelBase, IDisposable
 {
-    private readonly ShellViewModel _shell;
-
-    public UserListViewModel(ShellViewModel shell)
+    private readonly HttpClient _http;
+    private readonly int _currentId;
+    private readonly CancellationTokenSource _lifetime=new();
+    private bool _busy, _disposed;
+    private string _message="";
+    private List<User> _allUsers = new();
+    private int _page = 1;
+    private const int PageSize = 10;
+    public int PageCount => Math.Max(1, (_allUsers.Count + PageSize - 1) / PageSize);
+    public ICommand FirstPageCommand { get; }
+    public ICommand PreviousPageCommand { get; }
+    public ICommand NextPageCommand { get; }
+    public ICommand LastPageCommand { get; }
+    private void ShowPage(int page)
     {
-        _shell = shell;
-        NewUserCommand = new RelayCommand(shell.ShowUserCreate);
-        OpenUserCommand = new RelayCommand(parameter => { if (parameter is User user) shell.ShowUserInformation(user); });
+        _page = Math.Clamp(page, 1, PageCount);
+        Users.Clear(); foreach (var user in _allUsers.Skip((_page - 1) * PageSize).Take(PageSize)) Users.Add(user);
+        OnPropertyChanged(nameof(PageLabel));
+        foreach (var command in new[] { FirstPageCommand, PreviousPageCommand, NextPageCommand, LastPageCommand }) ((RelayCommand)command).RaiseCanExecuteChanged();
     }
-
+    public UserListViewModel(ShellViewModel shell) : this(shell.Http,int.TryParse(shell.ProfileUserId,out var id)?id:0,shell.ShowUserCreate,shell.ShowUserInformation) { }
+    public UserListViewModel(HttpClient http,int currentId,Action create,Action<User> open)
+    {
+        _http=http; _currentId=currentId;
+        FirstPageCommand = new RelayCommand(p => ShowPage(1), p => !IsBusy && !_disposed && _page > 1);
+        PreviousPageCommand = new RelayCommand(p => ShowPage(_page - 1), p => !IsBusy && !_disposed && _page > 1);
+        NextPageCommand = new RelayCommand(p => ShowPage(_page + 1), p => !IsBusy && !_disposed && _page < PageCount);
+        LastPageCommand = new RelayCommand(p => ShowPage(PageCount), p => !IsBusy && !_disposed && _page < PageCount);
+        NewUserCommand=new RelayCommand(p=>create(),p=>!IsBusy && !_disposed);
+        OpenUserCommand=new RelayCommand(p=>{if(p is User user) open(user);},p=>!IsBusy && !_disposed);
+        RefreshCommand=new RelayCommand(p=>{_ = ChargerUtilisateursAsync();},p=>!IsBusy && !_disposed);
+        ChangeRoleCommand=new RelayCommand(p=>{if(p is User user) _=UpdateAsync(user,true);},p=>CanEdit(p) && p is User u && (u.Role=="admin" || u.Role=="employe"));
+        ToggleStatusCommand=new RelayCommand(p=>{if(p is User user) _=UpdateAsync(user,false);},p=>CanEdit(p) && p is User u && u.IsActive.HasValue);
+    }
+    public ObservableCollection<User> Users { get; }=new();
     public ICommand NewUserCommand { get; }
     public ICommand OpenUserCommand { get; }
-
-    // Vide au depart : rempli par ChargerUtilisateursAsync() depuis l'API.
-    public ObservableCollection<User> Users { get; } = new();
-
-    public string PageLabel => "Page 1 of 1";
-
-    /// <summary>Charge la vraie liste depuis GET /admin/utilisateurs (reserve aux admins).</summary>
+    public ICommand RefreshCommand { get; }
+    public ICommand ChangeRoleCommand { get; }
+    public ICommand ToggleStatusCommand { get; }
+    public bool IsBusy { get=>_busy; private set {SetField(ref _busy,value); foreach(var c in new[]{NewUserCommand,OpenUserCommand,RefreshCommand,ChangeRoleCommand,ToggleStatusCommand,FirstPageCommand,PreviousPageCommand,NextPageCommand,LastPageCommand}) ((RelayCommand)c).RaiseCanExecuteChanged();} }
+    public string Message { get=>_message; private set {SetField(ref _message,value);OnPropertyChanged(nameof(HasMessage));} }
+    public bool HasMessage=>Message.Length>0;
+    public string PageLabel=>$"Page {_page} of {PageCount} · {_allUsers.Count} users";
+    private bool CanEdit(object? p)=>!IsBusy && !_disposed && _currentId>0 && p is User u && u.UserId!=_currentId && Users.Contains(u);
     public async Task ChargerUtilisateursAsync()
     {
-        try
-        {
-            var response = await _shell.Http.GetAsync("/admin/utilisateurs");
-            if (!response.IsSuccessStatusCode)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"ERREUR CHARGEMENT USERS : GET /admin/utilisateurs a repondu {(int)response.StatusCode}");
-                return;
-            }
-
-            var utilisateurs = await response.Content.ReadFromJsonAsync<List<User>>(ShellViewModel.JsonOptions);
-
-            Users.Clear();
-            if (utilisateurs is not null)
-            {
-                foreach (var utilisateur in utilisateurs)
-                    Users.Add(utilisateur);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"ERREUR CHARGEMENT USERS : {ex}");
-        }
+        if(IsBusy || _disposed) return;
+        IsBusy=true;Message="";
+        try {
+            using var response=await _http.GetAsync("admin/utilisateurs",_lifetime.Token); Ensure(response);
+            var users=await response.Content.ReadFromJsonAsync<List<User>>(ShellViewModel.JsonOptions,_lifetime.Token) ?? throw new JsonException();
+            if(_disposed) return;
+            _allUsers = users; ShowPage(_page);
+            OnPropertyChanged(nameof(PageLabel));
+            if(users.Exists(u=>u.IsActive is null)) Message="Account status is unavailable. Deploy the updated backend to enable activation controls.";
+            else if(_currentId==0) Message="Your account identity is unavailable. Please sign in again to edit users.";
+        } catch(Exception ex) when(Expected(ex)) {Report(ex);} finally {IsBusy=false;}
     }
+    public async Task UpdateAsync(User user,bool role)
+    {
+        if(!CanEdit(user) || (role ? user.Role!="admin" && user.Role!="employe" : user.IsActive is null)) return;
+        IsBusy=true;Message="";
+        try {
+            object body=role ? new {role=user.IsAdminRole?"employe":"admin"} : new {is_active=!user.IsActive!.Value};
+            var suffix=role?"role":"statut";
+            using var response=await _http.PutAsJsonAsync($"admin/utilisateurs/{user.UserId}/{suffix}",body,ShellViewModel.JsonOptions,_lifetime.Token); Ensure(response);
+            var updated=await response.Content.ReadFromJsonAsync<User>(ShellViewModel.JsonOptions,_lifetime.Token) ?? throw new JsonException();
+            if(updated.UserId!=user.UserId) throw new JsonException();
+            if(_disposed) return;
+            user.Role=updated.Role;user.IsActive=updated.IsActive;user.Email=updated.Email;
+            Message=$"Account updated: {user.Username}.";
+        } catch(Exception ex) when(Expected(ex)) {Report(ex);} finally {IsBusy=false;}
+    }
+    private static bool Expected(Exception ex)=>ex is HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException;
+    private static void Ensure(HttpResponseMessage response)
+    {
+        if(response.IsSuccessStatusCode) return;
+        throw new InvalidOperationException(response.StatusCode switch {
+            HttpStatusCode.Unauthorized=>"Session expired. Please sign in again.",
+            HttpStatusCode.Forbidden=>"This action requires an administrator account.",
+            HttpStatusCode.BadRequest=>"The server refused this change. You cannot deactivate yourself or remove your own admin role.",
+            HttpStatusCode.NotFound=>"User or administration service unavailable. Refresh the list.",
+            _=>$"Update failed (HTTP {(int)response.StatusCode}). Refresh before retrying."});
+    }
+    private void Report(Exception ex) {if(!_disposed) Message=ex switch {HttpRequestException=>"Cannot reach the server. Refresh before retrying.",OperationCanceledException=>"Request timed out. Refresh to check the account state.",JsonException=>"Unexpected server response. Refresh to check the account state.",_=>ex.Message};}
+    public void Dispose(){_disposed=true;_lifetime.Cancel();}
 }

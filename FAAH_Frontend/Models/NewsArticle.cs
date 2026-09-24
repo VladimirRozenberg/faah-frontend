@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 namespace FAAH_Frontend.Models;
 public sealed class NewsResponse
@@ -15,6 +16,10 @@ public sealed class NewsArticle
     [JsonPropertyName("src_original_url")] public string? OriginalUrl { get; set; }
     [JsonPropertyName("src_published_at")] public DateTime? PublishedAt { get; set; }
     [JsonPropertyName("src_created_at")] public DateTime? CreatedAt { get; set; }
+    [JsonPropertyName("related_assets")] public List<string>? RelatedAssets { get; set; }
+    public bool IsAlternateRow { get; set; }
+    public IEnumerable<string> AssetTags => (RelatedAssets ?? new()).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.OrdinalIgnoreCase);
+    public bool HasAssetTags => AssetTags.Any();
     public string Title => string.IsNullOrWhiteSpace(RawTitle) ? "Untitled article" : RawTitle;
     public string Summary => string.IsNullOrWhiteSpace(Content) ? "No content available." : Content.Length > 450 ? Content[..450] + "…" : Content;
     public string Source => Uri.TryCreate(OriginalUrl, UriKind.Absolute, out var uri) && (uri.Scheme == "https" || uri.Scheme == "http") ? uri.Host : SourceType ?? "Unknown source";
