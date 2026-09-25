@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FAAH_Frontend.Views.NewsDetailView">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="42,26,42,26" Spacing="18">
+            <Grid ColumnDefinitions="*,Auto">
+                <Button Content="← Back to news" Classes="ghost" Command="{Binding BackCommand}" HorizontalAlignment="Left"/>
+                <Button Grid.Column="1" Content="Refresh" Classes="ghost" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
+            </Grid>
+            <TextBlock Text="Loading source analysis…" IsVisible="{Binding IsBusy}" Classes="muted"/>
+            <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="{StaticResource Red}" TextWrapping="Wrap"/>
+            <StackPanel IsVisible="{Binding HasDetail}" Spacing="18">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="{Binding Detail.Source.Title}" Classes="h1" TextWrapping="Wrap"/>
+                    <WrapPanel ItemSpacing="12" LineSpacing="4">
+                        <TextBlock Text="{Binding Detail.Source.TypeDisplay}" Classes="muted"/>
+                        <TextBlock Text="Published {Binding PublishedDisplay}" Classes="muted"/>
+                        <Button Content="Original article ↗" Classes="ghost" Click="OpenOriginalArticle"
+                                CommandParameter="{Binding Detail.Source.OriginalUrl}" Padding="4,1"/>
+                    </WrapPanel>
+                </StackPanel>
+
+                <Border Background="{StaticResource SurfaceAlt}" Padding="16" CornerRadius="6">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Source content" Classes="h2"/>
+                        <TextBlock Text="{Binding ContentPreview}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="rule"/>
+                <TextBlock Text="Classification" Classes="h2"/>
+                <ItemsControl ItemsSource="{Binding Detail.Classifications}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource SurfaceAlt}" Padding="16" Margin="0,0,0,10" CornerRadius="6">
+                                <StackPanel Spacing="9">
+                                    <Grid ColumnDefinitions="*,Auto,Auto">
+                                        <TextBlock Text="{Binding CategoryDisplay}" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ImportanceDisplay}" Classes="muted" Margin="12,0,0,0"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding SentimentDisplay}" Classes="muted" Margin="12,0,0,0"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Reason}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Assets" Classes="muted" IsVisible="{Binding Assets.Count}"/>
+                                    <ItemsControl ItemsSource="{Binding Assets}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Symbol}" TextWrapping="Wrap"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="Niches" Classes="muted" IsVisible="{Binding Niches.Count}"/>
+                                    <ItemsControl ItemsSource="{Binding Niches}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border Classes="rule"/>
+                <TextBlock Text="Analysis" Classes="h2"/>
+                <ItemsControl ItemsSource="{Binding Detail.Analyses}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource SurfaceAlt}" Padding="18" Margin="0,0,0,12" CornerRadius="6">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnDefinitions="*,Auto,Auto">
+                                        <TextBlock Text="{Binding DirectionDisplay}" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding MarketSentimentDisplay}" Classes="muted" Margin="12,0,0,0"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding ConfidenceDisplay}" Classes.high="{Binding IsHighConfidence}" Classes.medium="{Binding IsMediumConfidence}" Classes.low="{Binding IsLowConfidence}" Margin="12,0,0,0"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Summary}" FontSize="15" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding ResponseText}" TextWrapping="Wrap" IsVisible="{Binding ResponseText}"/>
+                                    <WrapPanel ItemSpacing="14" LineSpacing="4">
+                                        <TextBlock Text="{Binding RiskLevelDisplay}" Classes="muted"/>
+                                        <TextBlock Text="{Binding TimeframeDisplay}" Classes="muted"/>
+                                        <TextBlock Text="{Binding TriggerTypeDisplay}" Classes="muted"/>
+                                    </WrapPanel>
+                                    <TextBlock Text="{Binding TriggerReason}" Classes="muted" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

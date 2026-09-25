@@ -5,8 +5,8 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="42,26,42,26" Spacing="16">
             <Grid ColumnDefinitions="*,Auto">
-                <Button Content="← Retour aux actifs" Classes="ghost" Command="{Binding BackCommand}" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Left"/>
-                <Button Grid.Column="1" Content="Actualiser" Classes="ghost" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
+                 <Button Content="← Back to assets" Classes="ghost" Command="{Binding BackCommand}" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Left"/>
+                 <Button Grid.Column="1" Content="Refresh" Classes="ghost" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
             </Grid>
             <TextBlock Text="{Binding Title}" Classes="h1" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding Details}" Classes="muted" TextWrapping="Wrap"/>
@@ -15,48 +15,48 @@
                     <TextBlock Text="{Binding Asset.PriceDisplay}" FontSize="28" FontWeight="Bold"/>
                     <TextBlock Text="{Binding Asset.ChangeDisplay}" Classes.up="{Binding Asset.IsUp}" Classes.down="{Binding Asset.IsDown}"/>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="Volume :" Classes="muted"/>
+                         <TextBlock Text="Volume:" Classes="muted"/>
                         <TextBlock Text="{Binding Asset.Volume}" Classes="muted"/>
                     </StackPanel>
                     <TextBlock Text="{Binding QuoteStatus}" Classes="muted" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Top" Margin="16,0,0,0">
-                    <Button Content="Acheter" Background="{StaticResource GreenSolid}" Foreground="White" Command="{Binding BuyCommand}" IsEnabled="{Binding CanPrepareOrder}"/>
-                    <Button Content="Vendre" Background="{StaticResource RedSolid}" Foreground="White" Command="{Binding SellCommand}" IsEnabled="{Binding CanPrepareOrder}"/>
+                     <Button Content="Buy" Background="{StaticResource GreenSolid}" Foreground="White" Command="{Binding BuyCommand}" IsEnabled="{Binding CanPrepareOrder}"/>
+                     <Button Content="Sell" Background="{StaticResource RedSolid}" Foreground="White" Command="{Binding SellCommand}" IsEnabled="{Binding CanPrepareOrder}"/>
                 </StackPanel>
             </Grid>
             <TextBlock Text="{Binding TradingNotice}" Classes="muted" TextWrapping="Wrap"/>
             <Border IsVisible="{Binding IsOrderOpen}" Background="{StaticResource SurfaceAlt}" Padding="16" CornerRadius="6">
                 <StackPanel Spacing="10">
                     <TextBlock Text="{Binding OrderSide}" Classes="h2"/>
-                    <TextBlock Text="Simulation uniquement - aucun argent réel."/>
-                    <TextBlock Text="Quantité"/>
+                     <TextBlock Text="Simulation only - no real money is involved."/>
+                     <TextBlock Text="Quantity"/>
                     <NumericUpDown Value="{Binding Quantity}" Minimum="0.00000001" Maximum="99999999" Increment="1" FormatString="0.########" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Left" Width="220"/>
                     <TextBlock Text="{Binding OrderEstimate}" TextWrapping="Wrap"/>
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <Button Content="Confirmer la simulation" Command="{Binding SubmitOrderCommand}" IsEnabled="{Binding CanSubmitOrder}"/>
-                        <Button Content="Annuler" Command="{Binding CloseOrderCommand}" IsEnabled="{Binding !IsSubmitting}"/>
+                         <Button Content="Confirm simulation" Command="{Binding SubmitOrderCommand}" IsEnabled="{Binding CanSubmitOrder}"/>
+                         <Button Content="Cancel" Command="{Binding CloseOrderCommand}" IsEnabled="{Binding !IsSubmitting}"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
             <TextBlock Text="{Binding OrderStatus}" TextWrapping="Wrap"/>
             <Border Classes="rule"/>
-            <TextBlock Text="Historique du cours" Classes="h2"/>
+             <TextBlock Text="Price history" Classes="h2"/>
             <StackPanel Orientation="Horizontal" Spacing="20" IsEnabled="{Binding HasHistoryOptions}">
                 <StackPanel Spacing="5">
-                    <TextBlock Text="Période affichée"/>
+                     <TextBlock Text="Displayed period"/>
                     <ComboBox Width="160" ItemsSource="{Binding Periods}" SelectedItem="{Binding SelectedPeriod, Mode=TwoWay}"/>
                 </StackPanel>
                 <StackPanel Spacing="5">
-                    <TextBlock Text="Durée d’une bougie"/>
+                     <TextBlock Text="Candle interval"/>
                     <ComboBox Width="160" ItemsSource="{Binding Intervals}" SelectedItem="{Binding SelectedInterval, Mode=TwoWay}"/>
                 </StackPanel>
             </StackPanel>
-            <TextBlock Text="m = minute · h = heure · d = jour · wk = semaine · mo = mois · y = an" Classes="muted" TextWrapping="Wrap"/>
+             <TextBlock Text="m = minute · h = hour · d = day · wk = week · mo = month · y = year" Classes="muted" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding ChartStatus}" Classes="muted" TextWrapping="Wrap"/>
             <controls:CandleChart Candles="{Binding Candles}" Height="300" MinWidth="280"/>
             <Border Classes="rule"/>
-            <TextBlock Text="Actualités de cet actif" Classes="h2"/>
+             <TextBlock Text="Asset news" Classes="h2"/>
             <TextBlock Text="{Binding NewsStatus}" Classes="muted" TextWrapping="Wrap"/>
             <ItemsControl ItemsSource="{Binding News}">
                 <ItemsControl.ItemTemplate>
@@ -69,7 +69,7 @@
                                     <TextBlock Text="{Binding DateDisplay}" Classes="muted"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding Summary}" TextWrapping="Wrap"/>
-                                <Button Content="Lire l’article ↗" Click="OpenArticle" CommandParameter="{Binding OriginalUrl}" Classes="ghost"/>
+                                 <Button Content="Read article ↗" Click="OpenArticle" CommandParameter="{Binding OriginalUrl}" Classes="ghost"/>
                             </StackPanel>
                         </Border>
                     </DataTemplate>
