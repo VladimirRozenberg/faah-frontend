@@ -106,9 +106,9 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public bool CanSubmitOrder => CanPrepareOrder && IsOrderOpen && Quantity > 0 && Quantity <= 99999999
         && _orderPrice > 0 && DateTimeOffset.UtcNow - _orderAt < TimeSpan.FromMinutes(2);
     public string TradingNotice => _userId <= 0 ? "Reconnecte-toi pour identifier ton portefeuille."
-        : _uncertain ? "Resultat de la derniere demande incertain : verifie l'historique avant toute nouvelle operation."
-        : !string.Equals(Asset.Currency, "USD", StringComparison.OrdinalIgnoreCase) ? "Simulation indisponible : le backend enregistre actuellement les transactions en USD uniquement."
-        : "Simulation sans argent reel. Une cotation recente est necessaire. Le backend actuel ne gere pas encore de solde disponible.";
+        : _uncertain ? "The result of the last request is uncertain: check your history before making another operation."
+        : !string.Equals(Asset.Currency, "USD", StringComparison.OrdinalIgnoreCase) ? "Simulation unavailable: the backend currently records transactions in USD only."
+        : "Simulation only; no real money is involved. A recent quote is required. The current backend does not yet manage an available balance.";
     private void NotifyTrading()
     {
         OnPropertyChanged(nameof(CanPrepareOrder));
@@ -135,15 +135,15 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         set { SetField(ref _quantity, value); OnPropertyChanged(nameof(OrderEstimate)); NotifyTrading(); }
     }
     public string OrderEstimate => Quantity > 0 && Quantity <= 99999999 && _orderPrice > 0
-        ? $"Prix de simulation : {_orderPrice:G10} USD · montant : {Quantity.Value * _orderPrice:N2} USD (hors frais)"
-        : "Indique une quantite positive. Une cotation est necessaire pour l'estimation.";
+        ? $"Simulation price: {_orderPrice:G10} USD · amount: {Quantity.Value * _orderPrice:N2} USD (excluding fees)"
+        : "Enter a positive quantity. A quote is required for the estimate.";
     private void PrepareOrder(string side)
     {
         if (!CanPrepareOrder) return;
         _orderPrice = Asset.Price!.Value; // Prix fige pour que le montant ne change pas pendant la confirmation.
         _orderAt = _quoteAt;
         Quantity = 1;
-        OrderSide = side;
+        OrderSide = side == "Achat" ? "Buy" : side == "Vente" ? "Sell" : side;
         OrderStatus = "";
     }
 
@@ -152,8 +152,8 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         if (_disposed || IsSubmitting) return;
         if (!CanSubmitOrder) { OrderStatus = "Verifie la quantite et actualise le cours avant de preparer un nouvel ordre."; return; }
         IsSubmitting = true;
-        OrderStatus = "Enregistrement de la simulation…";
-        string action = OrderSide == "Achat" ? "buy" : "sell";
+        OrderStatus = "Saving simulation…";
+        string action = OrderSide == "Buy" ? "buy" : "sell";
         var data = new Dictionary<string, object>
         {
             ["symbol"] = Asset.Symbol,
@@ -177,7 +177,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             if (portfolio is null || portfolio.UserId != _userId || portfolio.Positions is null) throw new JsonException();
             if (_disposed) return;
             decimal remaining = portfolio.Positions.FirstOrDefault(p => string.Equals(p.Symbol, Asset.Symbol, StringComparison.OrdinalIgnoreCase))?.Quantity ?? 0;
-            OrderStatus = $"{OrderSide} simule enregistre. Quantite detenue : {remaining:G10} {Asset.Symbol}.";
+            OrderStatus = $"Simulated {OrderSide.ToLowerInvariant()} recorded. Holdings: {remaining:G10} {Asset.Symbol}.";
             OrderSide = "";
         }
         catch (Exception)
@@ -219,12 +219,14 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
 
     private async Task LoadQuoteAsync()
     {
-        QuoteStatus = "Actualisation du cours…";
+            QuoteStatus = "Refreshing quote…";
         try
         {
-            var quote = await GetAsync<MarketQuote>($"api/assets/{Uri.EscapeDataString(Asset.Symbol)}/market");
+            var quote = await GetAsync<AssetListMarket>($"api/assets/{Uri.EscapeDataString(Asset.Symbol)}/market");
             if (_disposed) return;
             if (!string.Equals(quote.Symbol, Asset.Symbol, StringComparison.OrdinalIgnoreCase)) throw new JsonException();
+            // La liste et le détail affichent maintenant les cours via le même objet Market.
+            Asset.Market = quote;
             Asset.Price = quote?.LastPrice;
             Asset.ChangePercent = quote?.ChangePercent;
             Asset.MarketVolume = quote?.Volume;
@@ -233,12 +235,12 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             Asset.RefreshQuoteDisplay();
             _quoteAt = DateTimeOffset.UtcNow;
             OnPropertyChanged(nameof(OrderEstimate));
-            QuoteStatus = quote?.LastPrice is null ? "Cours indisponible pour cet actif." : $"Recu a {DateTime.Now:HH:mm:ss} · actualisation toutes les 60 s";
+            QuoteStatus = quote?.LastPrice is null ? "Quote unavailable for this asset." : $"Received at {DateTime.Now:HH:mm:ss} · refreshes every 60 s";
         }
         catch (OperationCanceledException) when (_disposed) { }
         catch (Exception ex)
         {
-            if (!_disposed) QuoteStatus = "Cours non actualise (derniere valeur conservee). " + Explain(ex);
+            if (!_disposed) QuoteStatus = "Quote not refreshed (the last value was kept). " + Explain(ex);
         }
     }
 
@@ -247,7 +249,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         // On demande les choix au backend une seule fois, puis on les reutilise.
         if (!HasHistoryOptions)
         {
-            ChartStatus = "Chargement des periodes disponibles…";
+            ChartStatus = "Loading available periods…";
             try
             {
                 var options = await GetAsync<Dictionary<string, List<string>>>("api/history-options");
@@ -274,7 +276,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             }
             catch (Exception ex)
             {
-                if (!_disposed) ChartStatus = "Periodes indisponibles. " + Explain(ex);
+                if (!_disposed) ChartStatus = "Periods unavailable. " + Explain(ex);
                 return; // Le bouton Actualiser permettra de reessayer.
             }
         }
@@ -288,7 +290,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         int request = ++_chartRequest;
         string period = SelectedPeriod, interval = SelectedInterval;
         Candles = Array.Empty<Candle>();
-        ChartStatus = "Chargement des bougies…";
+        ChartStatus = "Loading candles…";
         try
         {
             // On transmet les deux selections a la route Python existante.
@@ -300,7 +302,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             if (result.Candles.Any(c => c is null || c.High < c.Low || c.High < Math.Max(c.Open, c.Close) || c.Low > Math.Min(c.Open, c.Close)))
                 throw new JsonException();
             Candles = result.Candles.OrderBy(c => c.Timestamp).DistinctBy(c => c.Timestamp).ToList();
-            ChartStatus = Candles.Count == 0 ? "Aucune bougie disponible pour cette periode." : $"Periode : {period} · bougies : {interval} · heures UTC · vert : hausse / rouge : baisse";
+            ChartStatus = Candles.Count == 0 ? "No candles available for this period." : $"Period: {period} · candles: {interval} · UTC hours · green: rise / red: fall";
         }
         catch (OperationCanceledException) when (_disposed) { }
         catch (Exception ex)
@@ -311,7 +313,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
 
     private async Task LoadNewsAsync()
     {
-        NewsStatus = "Chargement des actualites…";
+        NewsStatus = "Loading news…";
         try
         {
             // Le backend suit les liens de classification en BDD pour cet actif.
@@ -319,22 +321,22 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             var result = await GetAsync<NewsResponse>($"api/assets/{symbol}/news");
             if (_disposed) return;
             News = result.Items.OrderByDescending(n => n.SortDate).ToList();
-            NewsStatus = News.Count == 0 ? "Aucune actualité classée liée à cet actif en base."
-                : "Actualités liées à cet actif par les classifications enregistrées en base.";
+            NewsStatus = News.Count == 0 ? "No classified news linked to this asset in the database."
+                : "News linked to this asset through classifications stored in the database.";
         }
         catch (OperationCanceledException) when (_disposed) { }
         catch (Exception ex)
         {
-            if (!_disposed) { News = Array.Empty<NewsArticle>(); NewsStatus = "Actualites indisponibles. " + Explain(ex); }
+            if (!_disposed) { News = Array.Empty<NewsArticle>(); NewsStatus = "News unavailable. " + Explain(ex); }
         }
     }
 
     private static string Explain(Exception ex) => ex switch
     {
-        HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized } => "Session expiree : reconnecte-toi.",
-        HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound } => "Route ou actif introuvable sur le backend actuel.",
-        JsonException => "Le format recu ne correspond pas au format attendu.",
-        _ => "Verifie la connexion et le backend, puis actualise."
+        HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized } => "Session expired: please sign in again.",
+        HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound } => "The route or asset was not found on the current backend.",
+        JsonException => "The received format does not match the expected format.",
+        _ => "Check the connection and backend, then refresh."
     };
 
     public void Dispose()

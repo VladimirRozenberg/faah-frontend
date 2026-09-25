@@ -38,31 +38,31 @@ var logos = new AssetLogoService(http);
 using var list = new AssetListViewModel(http, logos: logos);
 Finish(list.RefreshAsync());
 Finish(list.LoadVisibleLogosAsync());
-Check(handler.LogoCalls == 9, "only first page logos fetched; null logo_url skipped");
+Check(handler.LogoCalls == 19, "only first page logos fetched; null logo_url skipped");
 Check(list.Assets[0].HasLogo && list.Assets[0].Logo!.PixelSize.Width == 64, "logo_url decoded and bitmap resized");
 Check(!list.Assets[1].HasLogo && list.Assets[1].IconText == "A2", "missing logo keeps initials");
 Check(!list.Assets[2].HasLogo && !list.Assets[3].HasLogo && !list.Assets[4].HasLogo, "404, invalid image and HTML keep initials");
 var firstImage = list.Assets[0].Logo;
 Finish(list.RefreshAsync());
 Finish(list.LoadVisibleLogosAsync());
-Check(handler.LogoCalls == 9 && ReferenceEquals(firstImage, list.Assets[0].Logo), "refresh reuses cache including recent failures");
+Check(handler.LogoCalls == 19 && ReferenceEquals(firstImage, list.Assets[0].Logo), "refresh reuses cache including recent failures");
 list.NextPageCommand.Execute(null);
 Finish(list.LoadVisibleLogosAsync());
-Check(handler.LogoCalls == 19 && list.Assets[0].HasLogo, "new page loads only new logos");
+Check(handler.LogoCalls == 22 && list.Assets[0].HasLogo, "new page loads only new logos");
 list.PreviousPageCommand.Execute(null);
 Finish(list.LoadVisibleLogosAsync());
-Check(handler.LogoCalls == 19, "return to previous page makes no new requests");
+Check(handler.LogoCalls == 22, "return to previous page makes no new requests");
 using var reopened = new AssetListViewModel(http, logos: logos);
 Finish(reopened.RefreshAsync());
 Finish(reopened.LoadVisibleLogosAsync());
-Check(handler.LogoCalls == 19, "shared cache survives list recreation");
+Check(handler.LogoCalls == 22, "shared cache survives list recreation");
 
 var view = new AssetListView { DataContext = list };
 var window = new Window { Content = view, Width = 1100, Height = 700 };
 window.Show();
 Dispatcher.UIThread.RunJobs();
 var images = view.GetVisualDescendants().OfType<Image>().ToList();
-Check(images.Count == 10 && images[0].IsVisible && !images[1].IsVisible, "AXAML switches from initials to actual image");
+Check(images.Count == 20 && images[0].IsVisible && !images[1].IsVisible, "AXAML switches from initials to actual image");
 Check(ReferenceEquals(images[0].Source, firstImage), "image binding uses downloaded bitmap");
 window.Close();
 
@@ -118,9 +118,13 @@ class LogoApi(byte[] png) : HttpMessageHandler
             if (path == "/api/assets/A5/logo") response.Content.Headers.ContentType = new MediaTypeHeaderValue("text/html");
             return Task.FromResult(response);
         }
+        var query = request.RequestUri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Split('=')).ToDictionary(pair => pair[0], pair => pair[1]);
+        int page = query.TryGetValue("page", out var requestedPage) ? int.Parse(requestedPage) : 1;
+        int size = query.TryGetValue("page_size", out var requestedSize) ? int.Parse(requestedSize) : 20;
         string body = path switch
         {
-            "/api/assets" => JsonSerializer.Serialize(new { items = Enumerable.Range(1, 23).Select(i => new { id = i, symbol = "A" + i, logo_url = i == 2 ? null : $"/api/assets/A{i}/logo" }) }),
+            "/api/assets" => JsonSerializer.Serialize(new { count = 23, page, page_size = size, items = Enumerable.Range(1, 23).Skip((page - 1) * size).Take(size).Select(i => new { id = i, symbol = "A" + i, logo_url = i == 2 ? null : $"/api/assets/A{i}/logo" }) }),
             "/api/favorites" => "{\"asset_ids\":[]}",
             "/api/market" => "{\"items\":[]}",
             _ => throw new Exception(path)

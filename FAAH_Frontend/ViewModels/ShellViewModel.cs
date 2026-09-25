@@ -204,9 +204,17 @@ public class ShellViewModel : ViewModelBase
     public void ShowNews()
     {
         Section = "NEWS";
-        var news = new NewsListViewModel(_http);
+        var news = new NewsListViewModel(_http, ShowNewsDetail);
         CurrentPage = new NewsListView { DataContext = news };
         news.Start();
+    }
+
+    public void ShowNewsDetail(int articleId)
+    {
+        Section = "NEWS";
+        var detail = new NewsDetailViewModel(_http, articleId, ShowNews);
+        CurrentPage = new NewsDetailView { DataContext = detail };
+        detail.Start();
     }
 
     public void ShowUsers()

@@ -26,6 +26,7 @@ bool returned = false;
 using var vm = new AssetDetailViewModel(http, asset, () => returned = true, 42);
 await vm.RefreshAsync();
 Check(vm.Asset.Price == 100 && vm.Candles.Count == 40, "market and candles decoded from actual backend formats");
+Check(vm.Asset.Market?.LastPrice == 100 && vm.Asset.PriceDisplay.Contains("100"), "detail refresh updates the shared market display model");
 Check(vm.News.Count == 1 && vm.News[0].Id == 1, "classified news from asset endpoint displayed even without symbol or name in text");
 Check(vm.Periods.Contains("1mo") && vm.SelectedPeriod == "1d" && vm.SelectedInterval == "5m", "history options come from backend with initial 1d/5m selection");
 vm.SelectedPeriod = "1mo";
@@ -44,7 +45,7 @@ var chartDeadline = DateTime.UtcNow.AddSeconds(5);
 while (!oldRefresh.IsCompleted && DateTime.UtcNow < chartDeadline) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(1); }
 Check(oldRefresh.IsCompleted, "delayed chart response completed");
 await oldRefresh;
-Check(vm.Candles.Count == 40 && vm.ChartStatus.Contains("bougies : 5m"), "late old response cannot overwrite the new selection");
+Check(vm.Candles.Count == 40 && vm.ChartStatus.Contains("candles: 5m"), "late old response cannot overwrite the new selection");
 Check(vm.CanPrepareOrder && !vm.CanSubmitOrder, "fresh quote enables ticket, not submission without ticket");
 vm.BuyCommand.Execute(null);
 vm.Quantity = 0;
@@ -55,7 +56,7 @@ await vm.SubmitOrderAsync();
 Check(handler.Posts == 1 && handler.LastPath == "/api/users/42/portfolio/assets/buy", "buy route uses connected user");
 Check(handler.LastBody!.Value.GetProperty("quantity").GetDecimal() == 0.25m
     && handler.LastBody.Value.GetProperty("purchase_price").GetDecimal() == 100m, "fractional quantity and purchase price serialized");
-Check(vm.OrderStatus.Contains("enregistre") && !vm.IsOrderOpen, "success shown only after server confirmation");
+Check(vm.OrderStatus.Contains("recorded") && !vm.IsOrderOpen, "success shown only after server confirmation");
 vm.SellCommand.Execute(null);
 await vm.SubmitOrderAsync();
 Check(handler.LastBody!.Value.TryGetProperty("sale_price", out _) && handler.LastPath.EndsWith("/sell"), "sell contract uses sale_price");
@@ -89,7 +90,7 @@ Check(vm.Candles.Count == 0 && vm.ChartStatus.Contains("format"), "invalid OHLC 
 handler.MalformedCandles = false;
 handler.FailNews = true;
 await vm.RefreshAsync();
-Check(vm.News.Count == 0 && vm.NewsStatus.Contains("indisponibles") && vm.Candles.Count > 0,
+Check(vm.News.Count == 0 && vm.NewsStatus.Contains("unavailable") && vm.Candles.Count > 0,
     "news endpoint failure shown without text-search fallback or broken chart");
 handler.FailNews = false;
 handler.Empty = true;
@@ -105,7 +106,7 @@ var view = new AssetDetailView { DataContext = vm };
 var window = new Window { Width = 1100, Height = 900, Content = view };
 window.Show();
 Dispatcher.UIThread.RunJobs();
-var buy = view.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Acheter"));
+var buy = view.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Buy"));
 var selectors = view.GetVisualDescendants().OfType<ComboBox>().ToList();
 Check(selectors.Count == 2 && Equals(selectors[0].SelectedItem, "1d"), "period and interval selectors bound in AXAML");
 selectors[0].SelectedItem = "1mo";
@@ -168,7 +169,7 @@ handler.Currency = "USD";
 handler.FailOptions = true;
 using var optionsFailure = new AssetDetailViewModel(http, asset, () => { });
 await optionsFailure.RefreshAsync();
-Check(!optionsFailure.HasHistoryOptions && optionsFailure.ChartStatus.Contains("indisponibles") && optionsFailure.News.Count == 1, "options failure does not break other blocks");
+Check(!optionsFailure.HasHistoryOptions && optionsFailure.ChartStatus.Contains("unavailable") && optionsFailure.News.Count == 1, "options failure does not break other blocks");
 handler.FailOptions = false;
 var loadingView = new AssetDetailView { DataContext = optionsFailure };
 var loadingWindow = new Window { Content = loadingView, Width = 1000, Height = 700 };

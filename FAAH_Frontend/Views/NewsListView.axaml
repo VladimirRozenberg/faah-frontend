@@ -1,31 +1,81 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="FAAH_Frontend.Views.NewsListView">
-  <Grid Margin="42,26,42,20" RowDefinitions="Auto,Auto,Auto,*">
-    <Grid ColumnDefinitions="*,Auto">
+  <Grid Margin="42,26,42,20" RowDefinitions="Auto,Auto,Auto,*,Auto">
+    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
       <TextBlock Text="News" Classes="h1"/>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-        <Button Classes="chip" Classes.selected="{Binding IsLatest}" Content="Latest" Command="{Binding LatestCommand}"/>
-        <Button Classes="chip" Classes.selected="{Binding IsAlphabetical}" Content="A-Z" Command="{Binding AlphabeticalCommand}"/>
-        <Button Classes="ghost" Content="Refresh" Command="{Binding RefreshCommand}"/>
+        <StackPanel Spacing="2">
+          <TextBlock Text="From" Classes="muted" FontSize="10"/>
+          <DatePicker Width="92" Height="26" FontSize="10" SelectedDate="{Binding PublishedFromDate, Mode=TwoWay}"/>
+        </StackPanel>
+        <StackPanel Spacing="2">
+          <TextBlock Text="To" Classes="muted" FontSize="10"/>
+          <DatePicker Width="92" Height="26" FontSize="10" SelectedDate="{Binding PublishedToDate, Mode=TwoWay}"/>
+        </StackPanel>
+      </StackPanel>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+        <Button Classes="ghost compact" Content="Refresh" Command="{Binding RefreshCommand}"/>
       </StackPanel>
     </Grid>
     <Border Grid.Row="1" Classes="rule" Margin="0,12,0,0"/>
-    <StackPanel Grid.Row="2" Spacing="6" Margin="0,14">
+    <StackPanel Grid.Row="2" Spacing="6" Margin="0,8,0,14">
       <TextBlock Text="{Binding Updated}" Classes="muted" FontSize="12"/>
       <TextBlock Text="Loading news…" IsVisible="{Binding IsBusy}"/>
       <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="{StaticResource Red}" TextWrapping="Wrap"/>
       <TextBlock Text="No news available yet." IsVisible="{Binding IsEmpty}" Classes="muted"/>
     </StackPanel>
-    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
-      <ItemsControl ItemsSource="{Binding Articles}"><ItemsControl.ItemTemplate><DataTemplate>
-        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,24">
-          <StackPanel Spacing="6" Margin="0,0,22,0">
-            <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding Summary}" FontSize="12" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding Source}" FontSize="12" Classes="muted"/>
+    <Grid Grid.Row="3" ColumnDefinitions="*,240" ColumnSpacing="14">
+      <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding Articles}"><ItemsControl.ItemTemplate><DataTemplate>
+          <Grid ColumnDefinitions="*,Auto" Margin="0,0,22,24">
+            <StackPanel Spacing="6" Margin="0,0,22,0">
+              <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Summary}" FontSize="12" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Source}" FontSize="12" Classes="muted"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding DateLabel}" Classes="muted" FontSize="11"/><TextBlock Text="{Binding DateDisplay}" Classes="muted" FontSize="12"/><Button Content="Read ↗" Classes="ghost" Command="{Binding $parent[UserControl].DataContext.OpenArticleCommand}" CommandParameter="{Binding Id}" Padding="4,1"/></StackPanel>
+          </Grid>
+        </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+      </ScrollViewer>
+      <Border Grid.Column="1" Background="{StaticResource SurfaceAlt}" Padding="12" CornerRadius="6">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Filters" Classes="h2"/>
+            <TextBlock Text="Search" Classes="label"/>
+            <TextBox Classes="field" Height="28" FontSize="11" Watermark="Title, content or URL" Text="{Binding SearchQuery, Mode=TwoWay}"/>
+            <TextBlock Text="Processing status" Classes="label"/>
+            <ComboBox Classes="field" ItemsSource="{Binding ProcessedOptions}" SelectedItem="{Binding ProcessedFilter, Mode=TwoWay}"/>
+            <TextBlock Text="Asset symbol" Classes="label"/>
+            <TextBox Classes="field" Watermark="Example: NVDA" Text="{Binding AssetSymbol, Mode=TwoWay}"/>
+            <TextBlock Text="Importance" Classes="label"/>
+            <ComboBox Classes="field" ItemsSource="{Binding ImportanceOptions}" SelectedItem="{Binding ImportanceFilter, Mode=TwoWay}"/>
+            <TextBlock Text="Sentiment" Classes="label"/>
+            <ComboBox Classes="field" ItemsSource="{Binding SentimentOptions}" SelectedItem="{Binding SentimentFilter, Mode=TwoWay}"/>
+            <TextBlock Text="Trigger status" Classes="label"/>
+            <ComboBox Classes="field" ItemsSource="{Binding TriggerOptions}" SelectedItem="{Binding TriggerFilter, Mode=TwoWay}"/>
+            <TextBlock Text="Sort field" Classes="label"/>
+            <ComboBox Classes="field" ItemsSource="{Binding SortByOptions}" SelectedItem="{Binding SortBy, Mode=TwoWay}"/>
+            <TextBlock Text="Sort direction" Classes="label"/>
+            <ComboBox Classes="field" ItemsSource="{Binding SortOrderOptions}" SelectedItem="{Binding SortOrder, Mode=TwoWay}"/>
           </StackPanel>
-          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding DateLabel}" Classes="muted" FontSize="11"/><TextBlock Text="{Binding DateDisplay}" Classes="muted" FontSize="12"/></StackPanel>
-        </Grid>
-      </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
-    </ScrollViewer>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+    <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="5" Margin="0,14,0,0" HorizontalAlignment="Center">
+      <ItemsControl ItemsSource="{Binding PageNumbers}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="5"/></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Button Classes="page" Content="{Binding}"
+                    Command="{Binding $parent[ItemsControl].DataContext.GoToPageCommand}"
+                    CommandParameter="{Binding}"/>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBox Width="58" Text="{Binding PageInput, Mode=TwoWay}" KeyDown="PageInputKeyDown"
+               Watermark="Page" HorizontalContentAlignment="Center"/>
+      <TextBlock Text="{Binding PageLabel}" Classes="muted" VerticalAlignment="Center" Margin="8,0,0,0"/>
+    </StackPanel>
   </Grid>
 </UserControl>
