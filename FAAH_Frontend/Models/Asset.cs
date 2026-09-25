@@ -35,7 +35,13 @@ public sealed class Asset : ViewModelBase
     public bool IsDown => ChangePercent < 0;
     public string StarGlyph => IsFavorite ? "★" : "☆";
 }
-public sealed class AssetResponse { public required List<Asset> Items { get; set; } }
+public sealed class AssetResponse
+{
+    public int Count { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public required List<Asset> Items { get; set; }
+}
 public sealed class FavoriteResponse { public required List<int> AssetIds { get; set; } }
 public sealed class MarketResponse { public required List<MarketQuote> Items { get; set; } }
 public sealed class MarketQuote

@@ -14,53 +14,48 @@ using FAAH_Frontend.Models;
 
 namespace FAAH_Frontend.ViewModels;
 
-// Cette classe prépare les données affichées dans la liste des actifs.
 public sealed class AssetListViewModel : ViewModelBase, IDisposable
 {
-    // Le client HTTP fourni par le Shell contient déjà le token de connexion.
     private readonly HttpClient _http;
     private readonly Action<Asset>? _openAsset;
     private readonly CancellationTokenSource _lifetime = new();
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(60) };
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMinutes(15) };
+    private readonly HashSet<int> _favoriteIds = new();
+    private int _currentPage = 1, _totalCount;
+    private bool _isBusy, _disposed, _favoritesLoaded;
+    private string _error = "", _updated = "Not loaded yet";
 
-    // Le backend utilise snake_case et peut envoyer les nombres sous forme de texte.
+    public const int PageSize = 20;
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        NumberHandling = JsonNumberHandling.AllowReadingFromString
+        NumberHandling = JsonNumberHandling.AllowReadingFromString,
     };
-
-    private List<Asset> _allAssets = new();
-    private int _currentPage = 1;
-    private bool _isBusy, _disposed, _catalogLoaded, _favoritesLoaded, _loadingPrices;
-    private string _error = "", _updated = "Not loaded yet";
-    public const int PageSize = 10;
 
     public AssetListViewModel(HttpClient http, Action<Asset>? openAsset = null)
     {
         _http = http;
         _openAsset = openAsset;
         OpenAssetCommand = new RelayCommand(OpenAsset, _ => !_disposed && _openAsset is not null);
-        PreviousPageCommand = new RelayCommand(_ => PreviousPage(), _ => !_disposed && _currentPage > 1);
-        NextPageCommand = new RelayCommand(_ => NextPage(), _ => !_disposed && _currentPage < PageCount);
-        RefreshCommand = new RelayCommand(parameter => { _ = RefreshAsync(); }, _ => !_disposed && !IsBusy);
+        PreviousPageCommand = new RelayCommand(_ => { _ = LoadPageAsync(_currentPage - 1); }, _ => !_disposed && !IsBusy && _currentPage > 1);
+        NextPageCommand = new RelayCommand(_ => { _ = LoadPageAsync(_currentPage + 1); }, _ => !_disposed && !IsBusy && _currentPage < PageCount);
+        RefreshCommand = new RelayCommand(_ => { _ = LoadPageAsync(_currentPage, refreshFavorites: true); }, _ => !_disposed && !IsBusy);
         ToggleFavoriteCommand = new RelayCommand(ToggleFavorite, _ => !_disposed && !IsBusy && _favoritesLoaded);
         _timer.Tick += OnTimerTick;
     }
 
-    // Propriétés et commandes utilisées par les Binding du fichier AXAML.
-    // Assets contient la page visible ; _allAssets contient le catalogue complet.
     public ObservableCollection<Asset> Assets { get; } = new();
     public RelayCommand OpenAssetCommand { get; }
     public RelayCommand PreviousPageCommand { get; }
     public RelayCommand NextPageCommand { get; }
     public RelayCommand RefreshCommand { get; }
     public RelayCommand ToggleFavoriteCommand { get; }
-
-    public int PageCount => Math.Max(1, (_allAssets.Count + PageSize - 1) / PageSize);
-    public string PageLabel => $"Page {_currentPage} of {PageCount} · {_allAssets.Count} assets";
+    public int CurrentPage => _currentPage;
+    public int PageCount => Math.Max(1, (_totalCount + PageSize - 1) / PageSize);
+    public string PageLabel => $"Page {CurrentPage} of {PageCount} · {_totalCount} assets";
     public bool HasError => Error.Length > 0;
-    public bool IsEmpty => _catalogLoaded && !IsBusy && !HasError && Assets.Count == 0;
+    public bool IsEmpty => !IsBusy && !HasError && _totalCount == 0;
 
     public bool IsBusy
     {
@@ -68,16 +63,9 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         private set
         {
             SetField(ref _isBusy, value);
-            RefreshCommand.RaiseCanExecuteChanged();
-            ToggleFavoriteCommand.RaiseCanExecuteChanged();
-            UpdateDisplayProperties();
+            RefreshCommands();
+            OnPropertyChanged(nameof(IsEmpty));
         }
-    }
-
-    public bool IsLoadingPrices
-    {
-        get => _loadingPrices;
-        private set => SetField(ref _loadingPrices, value);
     }
 
     public string Error
@@ -86,140 +74,84 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         private set
         {
             SetField(ref _error, value);
-            UpdateDisplayProperties();
+            OnPropertyChanged(nameof(HasError));
+            OnPropertyChanged(nameof(IsEmpty));
         }
     }
 
-    public string Updated
-    {
-        get => _updated;
-        private set => SetField(ref _updated, value);
-    }
+    public string Updated { get => _updated; private set => SetField(ref _updated, value); }
 
-    // Navigation : aucune requête réseau pour changer de page.
-    private void OpenAsset(object? parameter)
-    {
-        if (!_disposed && parameter is Asset asset) _openAsset?.Invoke(asset);
-    }
-
-    private void PreviousPage()
-    {
-        if (_disposed || _currentPage <= 1) return;
-        _currentPage--;
-        ShowPage();
-    }
-
-    private void NextPage()
-    {
-        if (_disposed || _currentPage >= PageCount) return;
-        _currentPage++;
-        ShowPage();
-    }
-
-    private void ShowPage()
-    {
-        // Si des actifs ont disparu, revenir à une page qui existe encore.
-        _currentPage = Math.Clamp(_currentPage, 1, PageCount);
-        Assets.Clear();
-        foreach (var asset in _allAssets.Skip((_currentPage - 1) * PageSize).Take(PageSize))
-            Assets.Add(asset);
-
-        PreviousPageCommand.RaiseCanExecuteChanged();
-        NextPageCommand.RaiseCanExecuteChanged();
-        UpdateDisplayProperties();
-    }
-
-    private void UpdateDisplayProperties()
-    {
-        OnPropertyChanged(nameof(HasError));
-        OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(PageLabel));
-        OnPropertyChanged(nameof(PageCount));
-    }
-
-    // Chargement initial, puis actualisation toutes les 60 secondes.
     public void Start()
     {
         if (_disposed) return;
         _timer.Start();
-        _ = RefreshAsync();
+        _ = LoadPageAsync(1, refreshFavorites: true);
     }
 
-    private void OnTimerTick(object? sender, EventArgs e) => _ = RefreshAsync();
+    public Task RefreshAsync() => LoadPageAsync(_currentPage, refreshFavorites: true);
 
-    // Point de départ : charger le catalogue, puis les favoris et les cours.
-    public async Task RefreshAsync()
+    private void OnTimerTick(object? sender, EventArgs e) => _ = LoadPageAsync(_currentPage, refreshFavorites: true);
+
+    private async Task LoadPageAsync(int page, bool refreshFavorites = false)
     {
-        if (IsBusy || _disposed) return; // Évite deux actualisations simultanées.
+        if (_disposed || IsBusy || page < 1) return;
         IsBusy = true;
         Error = "";
+
         try
         {
-            await LoadAssetsAsync();
-            if (_disposed) return;
-            await LoadFavoritesAsync();
-            if (_disposed) return;
-            await LoadPricesAsync();
-            if (!_disposed)
-                Updated = $"Last loaded: {DateTime.Now:HH:mm:ss} · Auto-refresh: 60 s";
+            if (!_favoritesLoaded || refreshFavorites) await LoadFavoritesAsync();
+
+            var catalog = await GetAsync<AssetResponse>($"api/assets?page={page}&page_size={PageSize}");
+            if (catalog.Items is null || catalog.Items.Any(asset => asset is null || string.IsNullOrWhiteSpace(asset.Symbol))) throw new JsonException();
+
+            _currentPage = catalog.Page;
+            _totalCount = catalog.Count;
+            Assets.Clear();
+
+            for (var index = 0; index < catalog.Items.Count; index++)
+            {
+                var asset = catalog.Items[index];
+                asset.IsFavorite = _favoriteIds.Contains(asset.Id);
+                asset.IsAlternateRow = index % 2 == 1;
+                asset.IsLoadingPrice = true;
+                Assets.Add(asset);
+            }
+
+            await LoadPricesForVisibleAssetsAsync();
+            Updated = $"Last updated: {DateTime.Now:HH:mm:ss} · Refreshes every 15 minutes";
+            NotifyPage();
         }
-        catch (Exception ex) when (IsRequestError(ex)) { AddError(ex); }
+        catch (Exception ex) when (IsRequestError(ex))
+        {
+            Error = FriendlyError(ex);
+        }
         finally
         {
             if (!_disposed) IsBusy = false;
         }
     }
 
-    // 1. Récupérer tous les actifs et afficher immédiatement la page courante.
-    private async Task LoadAssetsAsync()
-    {
-        var catalog = await GetAsync<AssetResponse>("api/assets");
-        if (catalog.Items is null || catalog.Items.Any(a => a is null || string.IsNullOrWhiteSpace(a.Symbol)))
-            throw new JsonException();
-        if (_disposed) return;
-
-        _allAssets = catalog.Items;
-        _catalogLoaded = true;
-        _favoritesLoaded = false;
-        ShowPage(); // Les cours ne doivent pas retarder l'affichage de la liste.
-    }
-
-    // 2. Retrouver les favoris du compte connecté.
     private async Task LoadFavoritesAsync()
     {
-        try
-        {
-            var favorites = await GetAsync<FavoriteResponse>("api/favorites");
-            if (favorites.AssetIds is null) throw new JsonException();
-            if (_disposed) return;
-
-            // Un HashSet permet de retrouver rapidement un identifiant.
-            var favoriteIds = favorites.AssetIds.ToHashSet();
-            foreach (var asset in _allAssets)
-                asset.IsFavorite = favoriteIds.Contains(asset.Id);
-            _favoritesLoaded = true;
-        }
-        // Une panne des favoris ne doit pas empêcher le chargement des prix.
-        catch (Exception ex) when (IsRequestError(ex)) { AddError(ex, "Favorites"); }
+        var favorites = await GetAsync<FavoriteResponse>("api/favorites");
+        if (favorites.AssetIds is null) throw new JsonException();
+        _favoriteIds.Clear();
+        foreach (var id in favorites.AssetIds) _favoriteIds.Add(id);
+        _favoritesLoaded = true;
     }
 
-    // 3. Ajouter les cours aux actifs déjà affichés.
-    private async Task LoadPricesAsync()
+    private async Task LoadPricesForVisibleAssetsAsync()
     {
-        IsLoadingPrices = true;
-        foreach (var asset in _allAssets) asset.IsLoadingPrice = true;
+        var symbols = string.Join(",", Assets.Select(asset => asset.Symbol));
+        if (symbols.Length == 0) return;
+
         try
         {
-            var market = await GetAsync<MarketResponse>("api/market");
-            if (market.Items is null || market.Items.Any(q => q is null || string.IsNullOrWhiteSpace(q.Symbol)))
-                throw new JsonException();
-            if (_disposed) return;
+            var market = await GetAsync<MarketResponse>("api/market?symbols=" + Uri.EscapeDataString(symbols));
+            var quotes = market.Items.ToDictionary(quote => quote.Symbol, StringComparer.OrdinalIgnoreCase);
 
-            // Associer les cours aux actifs par symbole, sans dépendre de leur ordre.
-            var quotes = new Dictionary<string, MarketQuote>(StringComparer.OrdinalIgnoreCase);
-            foreach (var quote in market.Items) quotes[quote.Symbol] = quote;
-
-            foreach (var asset in _allAssets)
+            foreach (var asset in Assets)
             {
                 quotes.TryGetValue(asset.Symbol, out var quote);
                 asset.Price = quote?.LastPrice;
@@ -228,22 +160,16 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
                 asset.Currency = quote?.Currency ?? asset.Currency;
             }
         }
-        catch (Exception ex) when (IsRequestError(ex)) { AddError(ex, "Market prices"); }
         finally
         {
-            if (!_disposed)
+            foreach (var asset in Assets)
             {
-                IsLoadingPrices = false;
-                foreach (var asset in _allAssets)
-                {
-                    asset.IsLoadingPrice = false;
-                    asset.RefreshQuoteDisplay();
-                }
+                asset.IsLoadingPrice = false;
+                asset.RefreshQuoteDisplay();
             }
         }
     }
 
-    // L'étoile change seulement après confirmation du backend.
     private void ToggleFavorite(object? parameter)
     {
         if (parameter is Asset asset) _ = ToggleFavoriteAsync(asset);
@@ -251,32 +177,41 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
 
     public async Task ToggleFavoriteAsync(Asset asset)
     {
-        if (IsBusy || _disposed || !_favoritesLoaded || !Assets.Contains(asset)) return;
+        if (_disposed || IsBusy || !_favoritesLoaded) return;
         IsBusy = true;
         Error = "";
+
         try
         {
-            bool add = !asset.IsFavorite;
-            var method = add ? HttpMethod.Put : HttpMethod.Delete;
-            using var request = new HttpRequestMessage(method, $"api/favorites/{asset.Id}");
+            var addFavorite = !asset.IsFavorite;
+            using var request = new HttpRequestMessage(addFavorite ? HttpMethod.Put : HttpMethod.Delete, $"api/favorites/{asset.Id}");
             using var response = await _http.SendAsync(request, _lifetime.Token);
             CheckResponse(response);
-            if (!_disposed) asset.IsFavorite = add;
+            if (addFavorite) _favoriteIds.Add(asset.Id); else _favoriteIds.Remove(asset.Id);
         }
-        catch (Exception ex) when (IsRequestError(ex)) { AddError(ex); }
+        catch (Exception ex) when (IsRequestError(ex))
+        {
+            Error = FriendlyError(ex);
+            return;
+        }
         finally
         {
             if (!_disposed) IsBusy = false;
         }
+
+        await LoadPageAsync(1);
     }
 
-    // Code HTTP commun : envoyer la requête, vérifier le statut, lire le JSON.
+    private void OpenAsset(object? parameter)
+    {
+        if (!_disposed && parameter is Asset asset) _openAsset?.Invoke(asset);
+    }
+
     private async Task<T> GetAsync<T>(string path)
     {
         using var response = await _http.GetAsync(path, _lifetime.Token);
         CheckResponse(response);
-        return await response.Content.ReadFromJsonAsync<T>(Json, _lifetime.Token)
-            ?? throw new JsonException();
+        return await response.Content.ReadFromJsonAsync<T>(Json, _lifetime.Token) ?? throw new JsonException();
     }
 
     private static void CheckResponse(HttpResponseMessage response)
@@ -287,29 +222,38 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             HttpStatusCode.Unauthorized => "Session expired. Please sign in again.",
             HttpStatusCode.Forbidden => "Access denied.",
             HttpStatusCode.NotFound => "Service or asset unavailable. Check that the updated backend is deployed.",
-            _ => $"Server error ({(int)response.StatusCode}). Please retry."
+            _ => $"Server error ({(int)response.StatusCode}). Please retry.",
         });
     }
 
-    private static bool IsRequestError(Exception ex) =>
-        ex is HttpRequestException or InvalidOperationException or JsonException or OperationCanceledException;
+    private static bool IsRequestError(Exception error) => error is HttpRequestException or InvalidOperationException or JsonException or OperationCanceledException;
 
-    private void AddError(Exception ex, string? section = null)
+    private static string FriendlyError(Exception error) => error switch
     {
-        if (_disposed) return;
-        string message = ex switch
-        {
-            OperationCanceledException => "Request timed out. Please retry.",
-            HttpRequestException => "Cannot reach the server. Please retry.",
-            JsonException => "Unexpected server response.",
-            _ => ex.Message
-        };
-        if (section is not null) message = section + ": " + message;
-        Error = HasError ? Error + Environment.NewLine + message : message;
+        OperationCanceledException => "Request timed out. Please retry.",
+        HttpRequestException => "Cannot reach the server. Please retry.",
+        JsonException => "Unexpected server response.",
+        InvalidOperationException => error.Message,
+        _ => "Unable to load assets. Please retry.",
+    };
+
+    private void NotifyPage()
+    {
+        OnPropertyChanged(nameof(CurrentPage));
+        OnPropertyChanged(nameof(PageCount));
+        OnPropertyChanged(nameof(PageLabel));
+        OnPropertyChanged(nameof(IsEmpty));
+        RefreshCommands();
     }
 
-    // Quitter la page arrête le timer et annule les requêtes en cours.
-    // Ne pas fermer _http : il appartient au Shell et sert aux autres pages.
+    private void RefreshCommands()
+    {
+        PreviousPageCommand.RaiseCanExecuteChanged();
+        NextPageCommand.RaiseCanExecuteChanged();
+        RefreshCommand.RaiseCanExecuteChanged();
+        ToggleFavoriteCommand.RaiseCanExecuteChanged();
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
