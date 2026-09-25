@@ -15,6 +15,6 @@ public partial class AssetDetailView : UserControl
         var window = TopLevel.GetTopLevel(this);
         if (window is null) return;
         try { await window.Launcher.LaunchUriAsync(uri); }
-        catch (Exception) { button.Content = "Impossible d’ouvrir le lien"; }
+        catch (Exception) { button.Content = "Unable to open link"; }
     }
 }

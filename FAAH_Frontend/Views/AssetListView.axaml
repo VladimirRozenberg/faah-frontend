@@ -19,7 +19,7 @@
 
         <StackPanel Grid.Row="2" Margin="0,12,0,0" Spacing="5">
             <TextBlock Text="{Binding Updated}" Classes="muted"/>
-            <TextBlock Text="Updating assets…" IsVisible="{Binding IsBusy}"/>
+            <TextBlock Text="Updating assets…" IsVisible="{Binding ShowUpdatingAssets}"/>
             <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="{StaticResource Red}" TextWrapping="Wrap"/>
             <TextBlock Text="No assets available." IsVisible="{Binding IsEmpty}"/>
         </StackPanel>
@@ -29,7 +29,7 @@
                     <DataTemplate>
                         <Border Classes="row" CornerRadius="4" Padding="6,10" Margin="0,0,0,2">
                             <Grid ColumnDefinitions="2*,1.2*,1.2*,1.2*,60">
-                                <Button Grid.ColumnSpan="4" Background="Transparent" BorderThickness="0"
+                                <Button Grid.ColumnSpan="4" Classes="assetOpen" Background="Transparent" BorderThickness="0"
                                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Cursor="Hand"
                                         Command="{Binding $parent[ItemsControl].DataContext.OpenAssetCommand}"
                                         CommandParameter="{Binding}" ToolTip.Tip="Open asset details"
@@ -43,12 +43,15 @@
                                     </Border>
                                     <TextBlock Classes="cell" Text="{Binding Symbol}"/>
                                 </StackPanel>
-                                <TextBlock Grid.Column="1" Classes="cell" Text="{Binding PriceDisplay}"
-                                           HorizontalAlignment="Center" IsHitTestVisible="False"/>
+                                 <TextBlock Grid.Column="1" Classes="cell" Text="{Binding PriceDisplay}"
+                                            ToolTip.Tip="{Binding PreviousCloseDisplay}"
+                                            HorizontalAlignment="Center" IsHitTestVisible="False"/>
                                 <TextBlock Grid.Column="2" Classes="cell"
                                            Classes.up="{Binding IsUp}" Classes.down="{Binding IsDown}"
-                                           Text="{Binding ChangeDisplay}" HorizontalAlignment="Center" IsHitTestVisible="False"/>
-                                <TextBlock Grid.Column="3" Classes="cell" Text="{Binding Volume}"
+                                            Text="{Binding ChangeDisplay}" ToolTip.Tip="{Binding ChangeAmountDisplay}"
+                                            HorizontalAlignment="Center" IsHitTestVisible="False"/>
+                                 <TextBlock Grid.Column="3" Classes="cell" Text="{Binding Volume}"
+                                            ToolTip.Tip="{Binding MarketStatus}"
                                            HorizontalAlignment="Center" IsHitTestVisible="False"/>
                                 <Button Grid.Column="4" Classes="star" Classes.off="{Binding !IsFavorite}"
                                         Command="{Binding $parent[ItemsControl].DataContext.ToggleFavoriteCommand}" CommandParameter="{Binding}" ToolTip.Tip="Add or remove favorite" Content="{Binding StarGlyph}" HorizontalAlignment="Center"/>
@@ -59,11 +62,24 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="4" Margin="6,18,0,0">
-            <Button Classes="page" Content="Previous" Command="{Binding PreviousPageCommand}"/>
-            <Button Classes="page" Content="Next" Command="{Binding NextPageCommand}"/>
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="5" Margin="6,18,0,0"
+                    HorizontalAlignment="Center">
+            <ItemsControl ItemsSource="{Binding PageNumbers}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="5"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Classes="page" Content="{Binding}"
+                                Command="{Binding $parent[ItemsControl].DataContext.GoToPageCommand}"
+                                CommandParameter="{Binding}"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBox Width="58" Text="{Binding PageInput, Mode=TwoWay}" KeyDown="PageInputKeyDown"
+                     PlaceholderText="Page" HorizontalContentAlignment="Center"/>
             <TextBlock Text="{Binding PageLabel}" Classes="muted" FontSize="12"
-                       VerticalAlignment="Center" Margin="10,0,0,0"/>
+                       VerticalAlignment="Center" Margin="8,0,0,0"/>
         </StackPanel>
     </Grid>
 </UserControl>

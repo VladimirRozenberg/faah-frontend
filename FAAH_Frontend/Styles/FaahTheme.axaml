@@ -86,6 +86,21 @@
         <Setter Property="Foreground" Value="{StaticResource Red}"/>
     </Style>
 
+    <Style Selector="TextBlock.high">
+        <Setter Property="Foreground" Value="{StaticResource GreenDeep}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.medium">
+        <Setter Property="Foreground" Value="{StaticResource AmberHover}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="TextBlock.low">
+        <Setter Property="Foreground" Value="{StaticResource RedDeep}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
     <!-- Libellé de champ de formulaire -->
     <Style Selector="TextBlock.label">
         <Setter Property="FontSize" Value="13"/>
@@ -168,6 +183,12 @@
         <Setter Property="Background" Value="{StaticResource SurfaceAlt}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
     </Style>
+    <Style Selector="Button.ghost.compact">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Padding" Value="9,4"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Height" Value="28"/>
+    </Style>
 
     <!-- Boutons de tri (News) : pilule pleine verte / pilule contour -->
     <Style Selector="Button.chip">
@@ -194,7 +215,7 @@
     <!-- Pagination -->
     <Style Selector="Button.page">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Padding" Value="7,2"/>
@@ -383,6 +404,14 @@
     <!-- Ligne de tableau survolée -->
     <Style Selector="Border.row:pointerover">
         <Setter Property="Background" Value="{StaticResource SurfaceAlt}"/>
+    </Style>
+
+    <Style Selector="Button.assetOpen">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.assetOpen:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
     </Style>
 
 

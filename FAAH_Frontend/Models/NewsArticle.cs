@@ -4,6 +4,9 @@ using System.Text.Json.Serialization;
 namespace FAAH_Frontend.Models;
 public sealed class NewsResponse
 {
+    [JsonPropertyName("count")] public int Count { get; set; }
+    [JsonPropertyName("page")] public int Page { get; set; }
+    [JsonPropertyName("page_size")] public int PageSize { get; set; }
     [JsonPropertyName("items")] public required List<NewsArticle> Items { get; set; }
 }
 public sealed class NewsArticle

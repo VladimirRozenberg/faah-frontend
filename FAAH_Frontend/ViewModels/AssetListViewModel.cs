@@ -31,34 +31,50 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     };
 
     private List<Asset> _allAssets = new();
-    private int _currentPage = 1;
-    private bool _isBusy, _disposed, _catalogLoaded, _favoritesLoaded, _loadingPrices;
+    private int _currentPage = 1, _pageCount = 1, _totalCount;
+    private string _pageInput = "1";
+    private bool _isBusy, _isPaging, _disposed, _catalogLoaded, _favoritesLoaded, _loadingPrices;
     private string _error = "", _updated = "Not loaded yet";
-    public const int PageSize = 10;
+    public const int PageSize = 20;
 
     public AssetListViewModel(HttpClient http, Action<Asset>? openAsset = null)
     {
         _http = http;
         _openAsset = openAsset;
         OpenAssetCommand = new RelayCommand(OpenAsset, _ => !_disposed && _openAsset is not null);
-        PreviousPageCommand = new RelayCommand(_ => PreviousPage(), _ => !_disposed && _currentPage > 1);
-        NextPageCommand = new RelayCommand(_ => NextPage(), _ => !_disposed && _currentPage < PageCount);
+        PreviousPageCommand = new RelayCommand(_ => PreviousPage(), _ => !_disposed && !IsBusy && _currentPage > 1);
+        NextPageCommand = new RelayCommand(_ => NextPage(), _ => !_disposed && !IsBusy && _currentPage < PageCount);
+        GoToPageCommand = new RelayCommand(GoToPage, _ => !_disposed && !IsBusy && TryGetPage(_));
         RefreshCommand = new RelayCommand(parameter => { _ = RefreshAsync(); }, _ => !_disposed && !IsBusy);
         ToggleFavoriteCommand = new RelayCommand(ToggleFavorite, _ => !_disposed && !IsBusy && _favoritesLoaded);
         _timer.Tick += OnTimerTick;
     }
 
+    public bool IsPaging
+    {
+        get => _isPaging;
+        private set
+        {
+            if (SetField(ref _isPaging, value)) OnPropertyChanged(nameof(ShowUpdatingAssets));
+        }
+    }
+
+    public bool ShowUpdatingAssets => IsBusy && !IsPaging;
+
     // Propriétés et commandes utilisées par les Binding du fichier AXAML.
     // Assets contient la page visible ; _allAssets contient le catalogue complet.
     public ObservableCollection<Asset> Assets { get; } = new();
+    public ObservableCollection<int> PageNumbers { get; } = new();
     public RelayCommand OpenAssetCommand { get; }
     public RelayCommand PreviousPageCommand { get; }
     public RelayCommand NextPageCommand { get; }
     public RelayCommand RefreshCommand { get; }
     public RelayCommand ToggleFavoriteCommand { get; }
+    public RelayCommand GoToPageCommand { get; }
 
-    public int PageCount => Math.Max(1, (_allAssets.Count + PageSize - 1) / PageSize);
-    public string PageLabel => $"Page {_currentPage} of {PageCount} · {_allAssets.Count} assets";
+    public int PageCount => _pageCount;
+    public string PageInput { get => _pageInput; set => SetField(ref _pageInput, value); }
+    public string PageLabel => $"Page {_currentPage} of {PageCount} · {_totalCount} assets";
     public bool HasError => Error.Length > 0;
     public bool IsEmpty => _catalogLoaded && !IsBusy && !HasError && Assets.Count == 0;
 
@@ -70,6 +86,9 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             SetField(ref _isBusy, value);
             RefreshCommand.RaiseCanExecuteChanged();
             ToggleFavoriteCommand.RaiseCanExecuteChanged();
+            PreviousPageCommand.RaiseCanExecuteChanged();
+            NextPageCommand.RaiseCanExecuteChanged();
+            GoToPageCommand.RaiseCanExecuteChanged();
             UpdateDisplayProperties();
         }
     }
@@ -106,28 +125,53 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     {
         if (_disposed || _currentPage <= 1) return;
         _currentPage--;
-        ShowPage();
+        _ = RefreshAsync(isPaging: true);
     }
 
     private void NextPage()
     {
         if (_disposed || _currentPage >= PageCount) return;
         _currentPage++;
-        ShowPage();
+        _ = RefreshAsync(isPaging: true);
     }
 
     private void ShowPage()
     {
-        // Si des actifs ont disparu, revenir à une page qui existe encore.
         _currentPage = Math.Clamp(_currentPage, 1, PageCount);
         Assets.Clear();
-        foreach (var asset in _allAssets.Skip((_currentPage - 1) * PageSize).Take(PageSize))
-            Assets.Add(asset);
+        foreach (var asset in _allAssets) Assets.Add(asset);
+        PageInput = _currentPage.ToString();
+        UpdatePageNumbers();
 
         PreviousPageCommand.RaiseCanExecuteChanged();
         NextPageCommand.RaiseCanExecuteChanged();
+            GoToPageCommand.RaiseCanExecuteChanged();
         UpdateDisplayProperties();
     }
+
+    private void UpdatePageNumbers()
+    {
+        const int windowSize = 9;
+        int maxStart = Math.Max(1, PageCount - windowSize + 1);
+        int start = Math.Clamp(_currentPage - 2, 1, maxStart);
+        PageNumbers.Clear();
+        for (int page = start; page < start + windowSize && page <= PageCount; page++) PageNumbers.Add(page);
+    }
+
+    private void GoToPage(object? parameter)
+    {
+        if (!TryGetPage(parameter, out var page) || page < 1 || page > PageCount || page == _currentPage) return;
+        _currentPage = page;
+        _ = RefreshAsync(isPaging: true);
+    }
+
+    private static bool TryGetPage(object? parameter, out int page)
+    {
+        if (parameter is int integer) { page = integer; return true; }
+        return int.TryParse(parameter?.ToString(), out page);
+    }
+
+    private static bool TryGetPage(object? parameter) => TryGetPage(parameter, out _);
 
     private void UpdateDisplayProperties()
     {
@@ -148,37 +192,44 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     private void OnTimerTick(object? sender, EventArgs e) => _ = RefreshAsync();
 
     // Point de départ : charger le catalogue, puis les favoris et les cours.
-    public async Task RefreshAsync()
+    public async Task RefreshAsync(bool isPaging = false)
     {
         if (IsBusy || _disposed) return; // Évite deux actualisations simultanées.
+        IsPaging = isPaging;
         IsBusy = true;
         Error = "";
         try
         {
-            await LoadAssetsAsync();
+            await LoadAssetsAsync(_currentPage);
             if (_disposed) return;
             await LoadFavoritesAsync();
             if (_disposed) return;
-            await LoadPricesAsync();
             if (!_disposed)
                 Updated = $"Last loaded: {DateTime.Now:HH:mm:ss} · Auto-refresh: 60 s";
         }
         catch (Exception ex) when (IsRequestError(ex)) { AddError(ex); }
         finally
         {
-            if (!_disposed) IsBusy = false;
+            if (!_disposed)
+            {
+                IsBusy = false;
+                IsPaging = false;
+            }
         }
     }
 
     // 1. Récupérer tous les actifs et afficher immédiatement la page courante.
-    private async Task LoadAssetsAsync()
+    private async Task LoadAssetsAsync(int page)
     {
-        var catalog = await GetAsync<AssetResponse>("api/assets");
+        var catalog = await GetAsync<AssetResponse>($"api/assets?page={page}&page_size={PageSize}");
         if (catalog.Items is null || catalog.Items.Any(a => a is null || string.IsNullOrWhiteSpace(a.Symbol)))
             throw new JsonException();
         if (_disposed) return;
 
         _allAssets = catalog.Items;
+        _currentPage = catalog.Page > 0 ? catalog.Page : page;
+        _totalCount = catalog.Count;
+        _pageCount = Math.Max(1, (int)Math.Ceiling(catalog.Count / (double)PageSize));
         _catalogLoaded = true;
         _favoritesLoaded = false;
         ShowPage(); // Les cours ne doivent pas retarder l'affichage de la liste.
@@ -201,46 +252,6 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         }
         // Une panne des favoris ne doit pas empêcher le chargement des prix.
         catch (Exception ex) when (IsRequestError(ex)) { AddError(ex, "Favorites"); }
-    }
-
-    // 3. Ajouter les cours aux actifs déjà affichés.
-    private async Task LoadPricesAsync()
-    {
-        IsLoadingPrices = true;
-        foreach (var asset in _allAssets) asset.IsLoadingPrice = true;
-        try
-        {
-            var market = await GetAsync<MarketResponse>("api/market");
-            if (market.Items is null || market.Items.Any(q => q is null || string.IsNullOrWhiteSpace(q.Symbol)))
-                throw new JsonException();
-            if (_disposed) return;
-
-            // Associer les cours aux actifs par symbole, sans dépendre de leur ordre.
-            var quotes = new Dictionary<string, MarketQuote>(StringComparer.OrdinalIgnoreCase);
-            foreach (var quote in market.Items) quotes[quote.Symbol] = quote;
-
-            foreach (var asset in _allAssets)
-            {
-                quotes.TryGetValue(asset.Symbol, out var quote);
-                asset.Price = quote?.LastPrice;
-                asset.ChangePercent = quote?.ChangePercent;
-                asset.MarketVolume = quote?.Volume;
-                asset.Currency = quote?.Currency ?? asset.Currency;
-            }
-        }
-        catch (Exception ex) when (IsRequestError(ex)) { AddError(ex, "Market prices"); }
-        finally
-        {
-            if (!_disposed)
-            {
-                IsLoadingPrices = false;
-                foreach (var asset in _allAssets)
-                {
-                    asset.IsLoadingPrice = false;
-                    asset.RefreshQuoteDisplay();
-                }
-            }
-        }
     }
 
     // L'étoile change seulement après confirmation du backend.
