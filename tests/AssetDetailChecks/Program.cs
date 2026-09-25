@@ -26,7 +26,7 @@ bool returned = false;
 using var vm = new AssetDetailViewModel(http, asset, () => returned = true, 42);
 await vm.RefreshAsync();
 Check(vm.Asset.Price == 100 && vm.Candles.Count == 40, "market and candles decoded from actual backend formats");
-Check(vm.News.Count == 1 && vm.News[0].Id == 1, "only news mentioning selected asset");
+Check(vm.News.Count == 1 && vm.News[0].Id == 1, "classified news from asset endpoint displayed even without symbol or name in text");
 Check(vm.Periods.Contains("1mo") && vm.SelectedPeriod == "1d" && vm.SelectedInterval == "5m", "history options come from backend with initial 1d/5m selection");
 vm.SelectedPeriod = "1mo";
 Check(vm.SelectedInterval == "30m" && !vm.Intervals.Contains("5m"), "period change replaces incompatible interval");
@@ -87,6 +87,11 @@ handler.MalformedCandles = true;
 await vm.RefreshAsync();
 Check(vm.Candles.Count == 0 && vm.ChartStatus.Contains("format"), "invalid OHLC values rejected");
 handler.MalformedCandles = false;
+handler.FailNews = true;
+await vm.RefreshAsync();
+Check(vm.News.Count == 0 && vm.NewsStatus.Contains("indisponibles") && vm.Candles.Count > 0,
+    "news endpoint failure shown without text-search fallback or broken chart");
+handler.FailNews = false;
 handler.Empty = true;
 await vm.RefreshAsync();
 Check(vm.Candles.Count == 0 && vm.News.Count == 0, "empty API results handled");
@@ -189,7 +194,7 @@ class FakeApi : HttpMessageHandler
     public string LastPath = "", Currency = "USD";
     public JsonElement? LastBody;
     public bool FailChart, MalformedCandles, Empty, DelayTrade;
-    public bool FailOptions, HoldNextChart;
+    public bool FailOptions, HoldNextChart, FailNews;
     public string LastChartQuery = "";
     private TaskCompletionSource<HttpResponseMessage>? _pendingChart;
     public void CompleteChart() => _pendingChart!.SetResult(Reply(HttpStatusCode.OK, """{"symbol":"BTC-USD","candles":[]}"""));
@@ -229,7 +234,8 @@ class FakeApi : HttpMessageHandler
             });
             return Reply(HttpStatusCode.OK, JsonSerializer.Serialize(new { symbol = "BTC-USD", candles }));
         }
-        if (path == "/api/data-sources") return Reply(HttpStatusCode.OK, Empty ? "{\"items\":[]}" : """{"items":[{"src_id":1,"src_title":"Bitcoin : actualite de demonstration","src_content":"Fixture de test, pas une actualite reelle.","src_original_url":"https://example.test/article","src_published_at":"2026-09-21T10:00:00Z"},{"src_id":2,"src_title":"Autre marche","src_content":"AAPL augmente."}]}""");
+        if (path == "/api/assets/BTC-USD/news") return FailNews ? Reply(HttpStatusCode.NotFound, "{}")
+            : Reply(HttpStatusCode.OK, Empty ? "{\"items\":[]}" : """{"count":1,"items":[{"src_id":1,"src_title":"Une évolution du secteur","src_content":"Liée par classification, sans mention du symbole ni du nom.","src_original_url":"https://example.test/article","src_published_at":"2026-09-21T10:00:00Z"}]}""");
         throw new Exception("Unexpected route " + path);
     }
     private static HttpResponseMessage Reply(HttpStatusCode status, string body) => new(status) { Content = new StringContent(body) };

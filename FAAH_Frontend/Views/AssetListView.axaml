@@ -36,11 +36,14 @@
                                         AutomationProperties.Name="{Binding Symbol}"/>
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10"
                                             VerticalAlignment="Center" IsHitTestVisible="False">
-                                    <Border Width="20" Height="20" CornerRadius="10" Background="{Binding IconColor}">
-                                        <TextBlock Text="{Binding IconText}" FontSize="11" FontWeight="Bold"
-                                                   Foreground="#FFFFFF"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
+                                    <!-- Une image reçue remplace les initiales. Sinon, le rond reste visible. AVEC LE !HASLOGO -->
+                                    <Grid Width="24" Height="24">
+                                        <Border CornerRadius="12" Background="{Binding IconColor}" IsVisible="{Binding !HasLogo}">
+                                            <TextBlock Text="{Binding IconText}" FontSize="11" FontWeight="Bold"
+                                                       Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <Image Source="{Binding Logo}" IsVisible="{Binding HasLogo}" Stretch="Uniform"/>
+                                    </Grid>
                                     <TextBlock Classes="cell" Text="{Binding Symbol}"/>
                                 </StackPanel>
                                 <TextBlock Grid.Column="1" Classes="cell" Text="{Binding PriceDisplay}"

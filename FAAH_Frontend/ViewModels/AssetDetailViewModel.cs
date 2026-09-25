@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -315,32 +314,19 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         NewsStatus = "Chargement des actualites…";
         try
         {
-            var result = await GetAsync<NewsResponse>("api/data-sources");
+            // Le backend suit les liens de classification en BDD pour cet actif.
+            string symbol = Uri.EscapeDataString(Asset.Symbol);
+            var result = await GetAsync<NewsResponse>($"api/assets/{symbol}/news");
             if (_disposed) return;
-            News = result.Items.Where(n => MentionsAsset(n, Asset)).OrderByDescending(n => n.SortDate).Take(20).ToList();
-            NewsStatus = News.Count == 0 ? "Aucun article mentionnant cet actif dans les actualites recues."
-                : "Articles mentionnant le symbole ou le nom de cet actif (filtrage textuel, pas une classification IA).";
+            News = result.Items.OrderByDescending(n => n.SortDate).ToList();
+            NewsStatus = News.Count == 0 ? "Aucune actualité classée liée à cet actif en base."
+                : "Actualités liées à cet actif par les classifications enregistrées en base.";
         }
         catch (OperationCanceledException) when (_disposed) { }
         catch (Exception ex)
         {
             if (!_disposed) { News = Array.Empty<NewsArticle>(); NewsStatus = "Actualites indisponibles. " + Explain(ex); }
         }
-    }
-
-    public static bool MentionsAsset(NewsArticle article, Asset asset)
-    {
-        string text = $"{article.RawTitle} {article.Content}";
-        // BTC-USD peut etre cite comme BTC. Les bornes evitent AAPL dans un autre mot.
-        string ticker = asset.Symbol.Split('-')[0];
-        string? name = asset.Name;
-        // Yahoo nomme par exemple le Bitcoin « Bitcoin USD » ; un article ecrit souvent seulement « Bitcoin ».
-        if (asset.Type == "crypto" && !string.IsNullOrWhiteSpace(asset.Currency)
-            && name?.EndsWith(" " + asset.Currency, StringComparison.OrdinalIgnoreCase) == true)
-            name = name[..^(asset.Currency.Length + 1)];
-        var terms = new[] { asset.Symbol, name, ticker };
-        return terms.Any(term => !string.IsNullOrWhiteSpace(term) && Regex.IsMatch(text,
-            @"(?<![\p{L}\p{N}])" + Regex.Escape(term) + @"(?![\p{L}\p{N}])", RegexOptions.IgnoreCase));
     }
 
     private static string Explain(Exception ex) => ex switch

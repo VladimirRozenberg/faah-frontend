@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Windows.Input;
 using FAAH_Frontend.Models;
+using FAAH_Frontend.Services;
 using FAAH_Frontend.Views;
 
 namespace FAAH_Frontend.ViewModels;
@@ -30,6 +31,7 @@ public class ShellViewModel : ViewModelBase
     };
 
     internal HttpClient Http => _http;
+    private readonly AssetLogoService _logos;
 
     // Reponse de POST /auth/login : { "token": "...", "message": "..." }
     private class LoginResponse
@@ -67,6 +69,7 @@ public class ShellViewModel : ViewModelBase
 
     public ShellViewModel()
     {
+        _logos = new AssetLogoService(_http);
         LoginCommand = new RelayCommand(Login);
         LogoutCommand = new RelayCommand(Logout);
         ShowPortfoliosCommand = new RelayCommand(ShowPortfolios);
@@ -181,7 +184,7 @@ public class ShellViewModel : ViewModelBase
     public void ShowAssets()
     {
         Section = "ASSETS";
-        var assets = new AssetListViewModel(_http, ShowAssetDetail);
+        var assets = new AssetListViewModel(_http, ShowAssetDetail, _logos);
         CurrentPage = new AssetListView { DataContext = assets };
         assets.Start();
     }
@@ -189,6 +192,8 @@ public class ShellViewModel : ViewModelBase
     // Le detail remplace la liste dans la fenetre existante (pas de nouvelle fenetre).
     public void ShowAssetDetail(Asset asset)
     {
+        // Réutiliser le cache si le détail est ouvert avant la fin du téléchargement.
+        _ = _logos.LoadAsync(asset, System.Threading.CancellationToken.None);
         Section = "ASSETS";
         int.TryParse(ProfileUserId, out int userId);
         var detail = new AssetDetailViewModel(_http, asset, ShowAssets, userId);

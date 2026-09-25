@@ -22,7 +22,7 @@ Pas de nouveau package graphique : le graphique utilise les outils de dessin d�
 |---|---|
 | Cours de l’actif | `GET /api/assets/{symbol}/market` |
 | Bougies | `GET /api/assets/{symbol}/candles?period=1d&interval=5m` |
-| Actualités disponibles | `GET /api/data-sources` |
+| Actualités classées pour l'actif | `GET /api/assets/{symbol}/news` |
 | Achat simulé | `POST /api/users/{user_id}/portfolio/assets/buy` |
 | Vente simulée | `POST /api/users/{user_id}/portfolio/assets/sell` |
 
@@ -43,7 +43,8 @@ La cotation utilisée doit dater de moins de deux minutes depuis sa réception. 
 
 ## Limites connues à présenter honnêtement
 
-- Actualités : filtrage textuel sur le nom ou le symbole (et BTC pour BTC-USD), limité à 20 articles. Un symbole ambigu peut donner un faux positif ; une mention indirecte peut être manquée. Ce n’est pas encore une association fondée sur les classifications IA.
+- Actualités : le backend suit les liens `classification_assets` → `source_classifications` → `data_sources`. Une actualité liée apparaît même sans le nom de l'actif dans son texte ; une simple mention sans lien en base ne suffit pas. Les doublons de classification sont supprimés côté backend. Il n'y a plus de filtre textuel ni de limite de 20 articles côté frontend.
+- Déploiement : la nouvelle route `/api/assets/{symbol}/news` doit être déployée sur le serveur utilisé par Avalonia. Une ancienne version du serveur renverra une erreur 404 ; le frontend ne revient pas à l'ancien filtre textuel.
 - Graphique : période et durée de bougie sélectionnables, heures UTC, sans zoom interactif. Les choix viennent de `GET /api/history-options` ; le défaut reste une journée avec des bougies de cinq minutes. Changer de période adapte automatiquement les intervalles disponibles. Une réponse ancienne est ignorée si le choix a changé entre-temps.
 - Le backend actuel enregistre les transactions en USD : la simulation est bloquée pour les autres devises, sans inventer une conversion.
 - Le backend ne contrôle pas encore un solde disponible et accepte le prix transmis par le client. Ce parcours est destiné aux simulations de développement, pas à des transactions réelles.

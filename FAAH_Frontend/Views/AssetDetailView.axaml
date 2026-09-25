@@ -8,7 +8,16 @@
                 <Button Content="← Retour aux actifs" Classes="ghost" Command="{Binding BackCommand}" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Left"/>
                 <Button Grid.Column="1" Content="Actualiser" Classes="ghost" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
             </Grid>
-            <TextBlock Text="{Binding Title}" Classes="h1" TextWrapping="Wrap"/>
+            <Grid ColumnDefinitions="Auto,*">
+                <Grid Width="36" Height="36" Margin="0,0,12,0">
+                    <Border CornerRadius="18" Background="{Binding Asset.IconColor}" IsVisible="{Binding !Asset.HasLogo}">
+                        <TextBlock Text="{Binding Asset.IconText}" Foreground="White" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Image Source="{Binding Asset.Logo}" IsVisible="{Binding Asset.HasLogo}" Stretch="Uniform"/>
+                </Grid>
+                <TextBlock Grid.Column="1" Text="{Binding Title}" Classes="h1" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            </Grid>
             <TextBlock Text="{Binding Details}" Classes="muted" TextWrapping="Wrap"/>
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Spacing="4">

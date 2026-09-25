@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using FAAH_Frontend.Models;
+using FAAH_Frontend.Services;
 
 namespace FAAH_Frontend.ViewModels;
 
@@ -19,6 +20,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
 {
     // Le client HTTP fourni par le Shell contient déjà le token de connexion.
     private readonly HttpClient _http;
+    private readonly AssetLogoService _logos;
     private readonly Action<Asset>? _openAsset;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(60) };
@@ -36,9 +38,10 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     private string _error = "", _updated = "Not loaded yet";
     public const int PageSize = 10;
 
-    public AssetListViewModel(HttpClient http, Action<Asset>? openAsset = null)
+    public AssetListViewModel(HttpClient http, Action<Asset>? openAsset = null, AssetLogoService? logos = null)
     {
         _http = http;
+        _logos = logos ?? new AssetLogoService(http);
         _openAsset = openAsset;
         OpenAssetCommand = new RelayCommand(OpenAsset, _ => !_disposed && _openAsset is not null);
         PreviousPageCommand = new RelayCommand(_ => PreviousPage(), _ => !_disposed && _currentPage > 1);
@@ -127,6 +130,13 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         PreviousPageCommand.RaiseCanExecuteChanged();
         NextPageCommand.RaiseCanExecuteChanged();
         UpdateDisplayProperties();
+        _ = LoadVisibleLogosAsync(); // Ne bloque ni la liste, ni les favoris, ni les cours.
+    }
+
+    public Task LoadVisibleLogosAsync()
+    {
+        if (_disposed) return Task.CompletedTask;
+        return Task.WhenAll(Assets.Select(asset => _logos.LoadAsync(asset, _lifetime.Token)));
     }
 
     private void UpdateDisplayProperties()
