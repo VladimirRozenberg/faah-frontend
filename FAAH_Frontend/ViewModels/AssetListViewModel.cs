@@ -47,6 +47,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         OpenAssetCommand = new RelayCommand(OpenAsset, _ => !_disposed && _openAsset is not null);
         PreviousPageCommand = new RelayCommand(_ => PreviousPage(), _ => !_disposed && !IsBusy && _currentPage > 1);
         NextPageCommand = new RelayCommand(_ => NextPage(), _ => !_disposed && !IsBusy && _currentPage < PageCount);
+        FirstPageCommand = new RelayCommand(_ => FirstPage(), _ => !_disposed && !IsBusy && _currentPage > 1);
+        LastPageCommand = new RelayCommand(_ => LastPage(), _ => !_disposed && !IsBusy && _currentPage < PageCount);
         GoToPageCommand = new RelayCommand(GoToPage, _ => !_disposed && !IsBusy && TryGetPage(_));
         RefreshCommand = new RelayCommand(parameter => { _ = RefreshAsync(); }, _ => !_disposed && !IsBusy);
         ToggleFavoriteCommand = new RelayCommand(ToggleFavorite, _ => !_disposed && !IsBusy && _favoritesLoaded);
@@ -71,6 +73,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     public RelayCommand OpenAssetCommand { get; }
     public RelayCommand PreviousPageCommand { get; }
     public RelayCommand NextPageCommand { get; }
+    public RelayCommand FirstPageCommand { get; }
+    public RelayCommand LastPageCommand { get; }
     public RelayCommand RefreshCommand { get; }
     public RelayCommand ToggleFavoriteCommand { get; }
     public RelayCommand GoToPageCommand { get; }
@@ -91,6 +95,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             ToggleFavoriteCommand.RaiseCanExecuteChanged();
             PreviousPageCommand.RaiseCanExecuteChanged();
             NextPageCommand.RaiseCanExecuteChanged();
+            FirstPageCommand.RaiseCanExecuteChanged();
+            LastPageCommand.RaiseCanExecuteChanged();
             GoToPageCommand.RaiseCanExecuteChanged();
             UpdateDisplayProperties();
         }
@@ -128,6 +134,20 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     {
         if (_disposed || _currentPage <= 1) return;
         _currentPage--;
+        _ = RefreshAsync(isPaging: true);
+    }
+
+    private void FirstPage()
+    {
+        if (_disposed || _currentPage <= 1) return;
+        _currentPage = 1;
+        _ = RefreshAsync(isPaging: true);
+    }
+
+    private void LastPage()
+    {
+        if (_disposed || _currentPage >= PageCount) return;
+        _currentPage = PageCount;
         _ = RefreshAsync(isPaging: true);
     }
 

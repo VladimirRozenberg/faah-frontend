@@ -34,6 +34,10 @@ public sealed class NewsListViewModel : ViewModelBase, IDisposable
         _openArticle = openArticle;
         RefreshCommand = new RelayCommand(parameter => { _ = RefreshAsync(); }, parameter => !IsBusy && !_disposed);
         OpenArticleCommand = new RelayCommand(OpenArticle, parameter => !_disposed && _openArticle is not null);
+        FirstPageCommand = new RelayCommand(_ => GoToPage(1), _ => !_disposed && !IsBusy && HasPreviousPage);
+        PreviousPageCommand = new RelayCommand(_ => GoToPage(CurrentPage - 1), _ => !_disposed && !IsBusy && HasPreviousPage);
+        NextPageCommand = new RelayCommand(_ => GoToPage(CurrentPage + 1), _ => !_disposed && !IsBusy && HasNextPage);
+        LastPageCommand = new RelayCommand(_ => GoToPage(PageCount), _ => !_disposed && !IsBusy && HasNextPage);
         GoToPageCommand = new RelayCommand(GoToPage, parameter => !_disposed && !IsBusy && TryGetPage(parameter, out _));
         _timer.Tick += OnTick;
     }
@@ -41,6 +45,10 @@ public sealed class NewsListViewModel : ViewModelBase, IDisposable
     public ObservableCollection<int> PageNumbers { get; } = new();
     public ICommand RefreshCommand { get; }
     public ICommand OpenArticleCommand { get; }
+    public ICommand FirstPageCommand { get; }
+    public ICommand PreviousPageCommand { get; }
+    public ICommand NextPageCommand { get; }
+    public ICommand LastPageCommand { get; }
     public ICommand GoToPageCommand { get; }
     public string[] ProcessedOptions { get; } = { "All", "Processed", "Unprocessed" };
     public string[] ImportanceOptions { get; } = { "All", "Low", "Medium", "High" };
@@ -118,6 +126,10 @@ public sealed class NewsListViewModel : ViewModelBase, IDisposable
     private void RaisePageCommandState()
     {
         ((RelayCommand)RefreshCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)FirstPageCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)PreviousPageCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)NextPageCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)LastPageCommand).RaiseCanExecuteChanged();
         ((RelayCommand)GoToPageCommand).RaiseCanExecuteChanged();
     }
     private void NotifyState() { OnPropertyChanged(nameof(HasError)); OnPropertyChanged(nameof(IsEmpty)); }

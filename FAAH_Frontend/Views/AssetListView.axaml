@@ -67,6 +67,8 @@
 
         <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="5" Margin="6,18,0,0"
                     HorizontalAlignment="Center">
+            <Button Classes="page" Content="«" ToolTip.Tip="First page" Command="{Binding FirstPageCommand}"/>
+            <Button Classes="page" Content="‹" ToolTip.Tip="Previous page" Command="{Binding PreviousPageCommand}"/>
             <ItemsControl ItemsSource="{Binding PageNumbers}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="5"/></ItemsPanelTemplate>
@@ -79,6 +81,8 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <Button Classes="page" Content="›" ToolTip.Tip="Next page" Command="{Binding NextPageCommand}"/>
+            <Button Classes="page" Content="»" ToolTip.Tip="Last page" Command="{Binding LastPageCommand}"/>
             <TextBox Width="58" Text="{Binding PageInput, Mode=TwoWay}" KeyDown="PageInputKeyDown"
                      PlaceholderText="Page" HorizontalContentAlignment="Center"/>
             <TextBlock Text="{Binding PageLabel}" Classes="muted" FontSize="12"

@@ -3,11 +3,10 @@ using Avalonia.Markup.Xaml;
 
 namespace FAAH_Frontend.Views;
 
-public partial class MainWindow : Window
+public partial class PortfolioCreateView : UserControl
 {
-    public MainWindow()
+    public PortfolioCreateView()
     {
         InitializeComponent();
     }
-
 }
