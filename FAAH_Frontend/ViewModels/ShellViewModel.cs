@@ -46,6 +46,7 @@ public class ShellViewModel : ViewModelBase
         public string Role { get; set; } = "";
         public int? UserId { get; set; }
         public string? Email { get; set; }
+        public DateTime? CreatedAt { get; set; }
     }
 
     private object? _currentPage;
@@ -60,10 +61,13 @@ public class ShellViewModel : ViewModelBase
     private string _profileEmail = "Not provided";
     private string _profileRole = "Unavailable";
     private string _profileUserId = "Unavailable";
+    private string _profileRegistrationDate = "Not available";
 
     public string ProfileEmail { get => _profileEmail; private set => SetField(ref _profileEmail, value); }
-    public string ProfileRole { get => _profileRole; private set => SetField(ref _profileRole, value); }
+    public string ProfileRole { get => _profileRole; private set { if (SetField(ref _profileRole, value)) OnPropertyChanged(nameof(ProfileRoleDisplay)); } }
     public string ProfileUserId { get => _profileUserId; private set => SetField(ref _profileUserId, value); }
+    public string ProfileRegistrationDate { get => _profileRegistrationDate; private set => SetField(ref _profileRegistrationDate, value); }
+    public string ProfileRoleDisplay => ProfileRole == "admin" ? "Administrator" : ProfileRole == "employe" ? "Employee" : "Not available";
 
     public ShellViewModel(HttpClient? http = null)
     {
@@ -321,6 +325,7 @@ public class ShellViewModel : ViewModelBase
                         ProfileEmail = string.IsNullOrWhiteSpace(moi.Email) ? "Not provided" : moi.Email;
                         ProfileRole = string.IsNullOrWhiteSpace(moi.Role) ? "Unavailable" : moi.Role;
                         ProfileUserId = moi.UserId?.ToString() ?? "Unavailable";
+                        ProfileRegistrationDate = moi.CreatedAt?.ToString("dd MMMM yyyy, HH:mm") ?? "Not available";
                     }
                 }
             }

@@ -123,7 +123,12 @@ public sealed class NewsListViewModel : ViewModelBase, IDisposable
     private void NotifyState() { OnPropertyChanged(nameof(HasError)); OnPropertyChanged(nameof(IsEmpty)); }
     private void ApplySort()
     {
-        Articles.Clear(); foreach (var article in _snapshot) Articles.Add(article);
+        Articles.Clear();
+        for (var index = 0; index < _snapshot.Count; index++)
+        {
+            _snapshot[index].IsAlternateRow = index % 2 == 1;
+            Articles.Add(_snapshot[index]);
+        }
         NotifyState();
     }
     public Task RefreshAsync() => LoadPageAsync(CurrentPage);

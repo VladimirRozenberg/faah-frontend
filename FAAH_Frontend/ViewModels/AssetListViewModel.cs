@@ -139,7 +139,11 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     {
         _currentPage = Math.Clamp(_currentPage, 1, PageCount);
         Assets.Clear();
-        foreach (var asset in _allAssets) Assets.Add(asset);
+        for (var index = 0; index < _allAssets.Count; index++)
+        {
+            _allAssets[index].IsAlternateRow = index % 2 == 1;
+            Assets.Add(_allAssets[index]);
+        }
         PageInput = _currentPage.ToString();
         UpdatePageNumbers();
 

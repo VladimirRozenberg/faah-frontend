@@ -11,6 +11,7 @@ public class User : ViewModelBase
     private bool? _active;
     public string Role { get=>_role; set { if(SetField(ref _role,value)) { OnPropertyChanged(nameof(IsAdminRole)); OnPropertyChanged(nameof(RoleDisplay)); OnPropertyChanged(nameof(RoleAction)); } } }
     public bool? IsActive { get=>_active; set { if(SetField(ref _active,value)) { OnPropertyChanged(nameof(StatusDisplay)); OnPropertyChanged(nameof(StatusAction)); OnPropertyChanged(nameof(IsEnabled)); OnPropertyChanged(nameof(IsDisabled)); } } }
+    [JsonIgnore] public bool IsAlternateRow { get; set; }
     [JsonIgnore] public bool IsEnabled => IsActive == true;
     [JsonIgnore] public bool IsDisabled => IsActive == false;
     public bool IsAdminRole => Role == "admin";

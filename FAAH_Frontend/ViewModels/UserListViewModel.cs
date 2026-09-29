@@ -20,18 +20,28 @@ public sealed class UserListViewModel : ViewModelBase, IDisposable
     private string _message="";
     private List<User> _allUsers = new();
     private int _page = 1;
+    private string _pageInput = "1";
     private const int PageSize = 10;
     public int PageCount => Math.Max(1, (_allUsers.Count + PageSize - 1) / PageSize);
     public ICommand FirstPageCommand { get; }
     public ICommand PreviousPageCommand { get; }
     public ICommand NextPageCommand { get; }
     public ICommand LastPageCommand { get; }
+    public ICommand GoToPageCommand { get; }
     private void ShowPage(int page)
     {
         _page = Math.Clamp(page, 1, PageCount);
-        Users.Clear(); foreach (var user in _allUsers.Skip((_page - 1) * PageSize).Take(PageSize)) Users.Add(user);
+        Users.Clear();
+        var visibleUsers = _allUsers.Skip((_page - 1) * PageSize).Take(PageSize).ToList();
+        for (var index = 0; index < visibleUsers.Count; index++)
+        {
+            visibleUsers[index].IsAlternateRow = index % 2 == 1;
+            Users.Add(visibleUsers[index]);
+        }
+        PageInput = _page.ToString();
+        UpdatePageNumbers();
         OnPropertyChanged(nameof(PageLabel));
-        foreach (var command in new[] { FirstPageCommand, PreviousPageCommand, NextPageCommand, LastPageCommand }) ((RelayCommand)command).RaiseCanExecuteChanged();
+        foreach (var command in new[] { FirstPageCommand, PreviousPageCommand, NextPageCommand, LastPageCommand, GoToPageCommand }) ((RelayCommand)command).RaiseCanExecuteChanged();
     }
     public UserListViewModel(ShellViewModel shell) : this(shell.Http,int.TryParse(shell.ProfileUserId,out var id)?id:0,shell.ShowUserCreate,shell.ShowUserInformation) { }
     public UserListViewModel(HttpClient http,int currentId,Action create,Action<User> open)
@@ -41,6 +51,7 @@ public sealed class UserListViewModel : ViewModelBase, IDisposable
         PreviousPageCommand = new RelayCommand(p => ShowPage(_page - 1), p => !IsBusy && !_disposed && _page > 1);
         NextPageCommand = new RelayCommand(p => ShowPage(_page + 1), p => !IsBusy && !_disposed && _page < PageCount);
         LastPageCommand = new RelayCommand(p => ShowPage(PageCount), p => !IsBusy && !_disposed && _page < PageCount);
+        GoToPageCommand = new RelayCommand(GoToPage, p => !IsBusy && !_disposed && TryGetPage(p, out var page) && page >= 1 && page <= PageCount && page != _page);
         NewUserCommand=new RelayCommand(p=>create(),p=>!IsBusy && !_disposed);
         OpenUserCommand=new RelayCommand(p=>{if(p is User user) open(user);},p=>!IsBusy && !_disposed);
         RefreshCommand=new RelayCommand(p=>{_ = ChargerUtilisateursAsync();},p=>!IsBusy && !_disposed);
@@ -48,15 +59,31 @@ public sealed class UserListViewModel : ViewModelBase, IDisposable
         ToggleStatusCommand=new RelayCommand(p=>{if(p is User user) _=UpdateAsync(user,false);},p=>CanEdit(p) && p is User u && u.IsActive.HasValue);
     }
     public ObservableCollection<User> Users { get; }=new();
+    public ObservableCollection<int> PageNumbers { get; }=new();
     public ICommand NewUserCommand { get; }
     public ICommand OpenUserCommand { get; }
     public ICommand RefreshCommand { get; }
     public ICommand ChangeRoleCommand { get; }
     public ICommand ToggleStatusCommand { get; }
-    public bool IsBusy { get=>_busy; private set {SetField(ref _busy,value); foreach(var c in new[]{NewUserCommand,OpenUserCommand,RefreshCommand,ChangeRoleCommand,ToggleStatusCommand,FirstPageCommand,PreviousPageCommand,NextPageCommand,LastPageCommand}) ((RelayCommand)c).RaiseCanExecuteChanged();} }
+    public bool IsBusy { get=>_busy; private set {SetField(ref _busy,value); foreach(var c in new[]{NewUserCommand,OpenUserCommand,RefreshCommand,ChangeRoleCommand,ToggleStatusCommand,FirstPageCommand,PreviousPageCommand,NextPageCommand,LastPageCommand,GoToPageCommand}) ((RelayCommand)c).RaiseCanExecuteChanged();} }
     public string Message { get=>_message; private set {SetField(ref _message,value);OnPropertyChanged(nameof(HasMessage));} }
     public bool HasMessage=>Message.Length>0;
+    public string PageInput { get => _pageInput; set => SetField(ref _pageInput, value); }
     public string PageLabel=>$"Page {_page} of {PageCount} · {_allUsers.Count} users";
+    private void UpdatePageNumbers()
+    {
+        const int windowSize = 9;
+        var maxStart = Math.Max(1, PageCount - windowSize + 1);
+        var start = Math.Clamp(_page - 2, 1, maxStart);
+        PageNumbers.Clear();
+        for (var page = start; page < start + windowSize && page <= PageCount; page++) PageNumbers.Add(page);
+    }
+    private void GoToPage(object? parameter)
+    {
+        if (!TryGetPage(parameter, out var page) || page < 1 || page > PageCount || page == _page) return;
+        ShowPage(page);
+    }
+    private static bool TryGetPage(object? parameter, out int page) => int.TryParse(parameter?.ToString(), out page);
     private bool CanEdit(object? p)=>!IsBusy && !_disposed && _currentId>0 && p is User u && u.UserId!=_currentId && Users.Contains(u);
     public async Task ChargerUtilisateursAsync()
     {
