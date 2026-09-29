@@ -24,6 +24,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     private readonly Action<Asset>? _openAsset;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(60) };
+    private readonly DispatcherTimer _searchTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
+    private bool _searchPending;
 
     // Le backend utilise snake_case et peut envoyer les nombres sous forme de texte.
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
@@ -35,6 +37,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     private List<Asset> _allAssets = new();
     private int _currentPage = 1, _pageCount = 1, _totalCount;
     private string _pageInput = "1";
+    private string _searchText = "", _appliedSearch = "";
     private bool _isBusy, _isPaging, _disposed, _catalogLoaded, _favoritesLoaded, _loadingPrices;
     private string _error = "", _updated = "Not loaded yet";
     public const int PageSize = 20;
@@ -49,8 +52,11 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         NextPageCommand = new RelayCommand(_ => NextPage(), _ => !_disposed && !IsBusy && _currentPage < PageCount);
         GoToPageCommand = new RelayCommand(GoToPage, _ => !_disposed && !IsBusy && TryGetPage(_));
         RefreshCommand = new RelayCommand(parameter => { _ = RefreshAsync(); }, _ => !_disposed && !IsBusy);
+        SearchCommand = new RelayCommand(_ => { _ = SearchAsync(); }, _ => !_disposed);
+        ClearSearchCommand = new RelayCommand(_ => { _ = SearchAsync(clear: true); }, _ => !_disposed);
         ToggleFavoriteCommand = new RelayCommand(ToggleFavorite, _ => !_disposed && !IsBusy && _favoritesLoaded);
         _timer.Tick += OnTimerTick;
+        _searchTimer.Tick += OnSearchTick;
     }
 
     public bool IsPaging
@@ -65,7 +71,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     public bool ShowUpdatingAssets => IsBusy && !IsPaging;
 
     // Propriétés et commandes utilisées par les Binding du fichier AXAML.
-    // Assets contient la page visible ; _allAssets contient le catalogue complet.
+    // Le backend renvoie uniquement la page demandée, déjà filtrée si nécessaire.
     public ObservableCollection<Asset> Assets { get; } = new();
     public ObservableCollection<int> PageNumbers { get; } = new();
     public RelayCommand OpenAssetCommand { get; }
@@ -74,6 +80,49 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     public RelayCommand RefreshCommand { get; }
     public RelayCommand ToggleFavoriteCommand { get; }
     public RelayCommand GoToPageCommand { get; }
+    public RelayCommand SearchCommand { get; }
+    public RelayCommand ClearSearchCommand { get; }
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (_disposed || !SetField(ref _searchText, value ?? "")) return;
+            // Attendre une courte pause de frappe plutôt qu'appeler l'API à chaque touche.
+            _searchTimer.Stop();
+            _searchTimer.Start();
+            // Ne pas laisser les anciens résultats visibles sous une autre recherche.
+            Assets.Clear();
+            _catalogLoaded = false;
+            Error = "";
+            OnPropertyChanged(nameof(SearchStatus));
+        }
+    }
+    public string SearchStatus => HasError ? "" : !_catalogLoaded && SearchText.Trim().Length > 0
+        ? $"Searching: {SearchText.Trim()}…"
+        : _appliedSearch.Length == 0 ? "" : $"Search: {_appliedSearch}";
+
+    // Garder la recherche validée pour la pagination et l'actualisation automatique.
+    // Si une requête est en cours, mémoriser la dernière recherche au lieu de la perdre.
+    public async Task SearchAsync(bool clear = false)
+    {
+        if (_disposed) return;
+        if (clear) SearchText = "";
+        _searchTimer.Stop();
+        if (IsBusy) { _searchPending = true; return; }
+        _searchPending = false;
+        _appliedSearch = (SearchText ?? "").Trim();
+        OnPropertyChanged(nameof(SearchStatus));
+        _currentPage = 1;
+        await RefreshAsync();
+    }
+
+    private void OnSearchTick(object? sender, EventArgs e) => _ = SearchAsync();
+
+    private void ResumePendingSearch()
+    {
+        if (_searchPending && !_disposed) _ = SearchAsync();
+    }
 
     public int PageCount => _pageCount;
     public string PageInput { get => _pageInput; set => SetField(ref _pageInput, value); }
@@ -88,6 +137,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         {
             SetField(ref _isBusy, value);
             RefreshCommand.RaiseCanExecuteChanged();
+            SearchCommand.RaiseCanExecuteChanged();
+            ClearSearchCommand.RaiseCanExecuteChanged();
             ToggleFavoriteCommand.RaiseCanExecuteChanged();
             PreviousPageCommand.RaiseCanExecuteChanged();
             NextPageCommand.RaiseCanExecuteChanged();
@@ -118,7 +169,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         private set => SetField(ref _updated, value);
     }
 
-    // Navigation : aucune requête réseau pour changer de page.
+    // Navigation vers le détail de l'actif sélectionné.
     private void OpenAsset(object? parameter)
     {
         if (!_disposed && parameter is Asset asset) _openAsset?.Invoke(asset);
@@ -189,6 +240,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(PageLabel));
         OnPropertyChanged(nameof(PageCount));
+        OnPropertyChanged(nameof(SearchStatus));
     }
 
     // Chargement initial, puis actualisation toutes les 60 secondes.
@@ -199,7 +251,10 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         _ = RefreshAsync();
     }
 
-    private void OnTimerTick(object? sender, EventArgs e) => _ = RefreshAsync();
+    private void OnTimerTick(object? sender, EventArgs e)
+    {
+        if (!_searchTimer.IsEnabled) _ = RefreshAsync();
+    }
 
     // Point de départ : charger le catalogue, puis les favoris et les cours.
     public async Task RefreshAsync(bool isPaging = false)
@@ -208,33 +263,47 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         IsPaging = isPaging;
         IsBusy = true;
         Error = "";
+        string requestedSearch = _appliedSearch;
         try
         {
-            await LoadAssetsAsync(_currentPage);
+            if (!await LoadAssetsAsync(_currentPage, requestedSearch)) return;
             if (_disposed) return;
             await LoadFavoritesAsync();
             if (_disposed) return;
             if (!_disposed)
                 Updated = $"Last loaded: {DateTime.Now:HH:mm:ss} · Auto-refresh: 60 s";
         }
-        catch (Exception ex) when (IsRequestError(ex)) { AddError(ex); }
+        catch (Exception ex) when (IsRequestError(ex))
+        {
+            if (SearchText.Trim() == requestedSearch) AddError(ex);
+        }
         finally
         {
             if (!_disposed)
             {
                 IsBusy = false;
                 IsPaging = false;
+                ResumePendingSearch();
             }
         }
     }
 
-    // 1. Récupérer tous les actifs et afficher immédiatement la page courante.
-    private async Task LoadAssetsAsync(int page)
+    // 1. Demander au backend la page de résultats, par symbole OU nom.
+    private async Task<bool> LoadAssetsAsync(int page, string requestedSearch)
     {
-        var catalog = await GetAsync<AssetResponse>($"api/assets?page={page}&page_size={PageSize}");
+        string route = $"api/assets?page={page}&page_size={PageSize}";
+        if (requestedSearch.Length > 0) route += "&search=" + Uri.EscapeDataString(requestedSearch);
+        var catalog = await GetAsync<AssetResponse>(route);
+        // La saisie a changé pendant l'appel : ne pas afficher cette ancienne réponse.
+        if (_disposed || SearchText.Trim() != requestedSearch) return false;
         if (catalog.Items is null || catalog.Items.Any(a => a is null || string.IsNullOrWhiteSpace(a.Symbol)))
             throw new JsonException();
-        if (_disposed) return;
+
+        // Détecter un ancien backend qui ignore le filtre, au lieu d'afficher toute la liste.
+        if (requestedSearch.Length > 0 && catalog.Items.Any(a =>
+            !a.Symbol.Contains(requestedSearch, StringComparison.OrdinalIgnoreCase)
+            && !(a.Name?.Contains(requestedSearch, StringComparison.OrdinalIgnoreCase) ?? false)))
+            throw new InvalidOperationException("The server did not filter the assets. Deploy the backend search update.");
 
         _allAssets = catalog.Items;
         _currentPage = catalog.Page > 0 ? catalog.Page : page;
@@ -243,6 +312,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         _catalogLoaded = true;
         _favoritesLoaded = false;
         ShowPage(); // Les cours ne doivent pas retarder l'affichage de la liste.
+        OnPropertyChanged(nameof(SearchStatus));
+        return true;
     }
 
     // 2. Retrouver les favoris du compte connecté.
@@ -287,7 +358,11 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         catch (Exception ex) when (IsRequestError(ex)) { AddError(ex); }
         finally
         {
-            if (!_disposed) IsBusy = false;
+            if (!_disposed)
+            {
+                IsBusy = false;
+                ResumePendingSearch();
+            }
         }
     }
 
@@ -337,6 +412,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         _disposed = true;
         _timer.Stop();
         _timer.Tick -= OnTimerTick;
+        _searchTimer.Stop();
+        _searchTimer.Tick -= OnSearchTick;
         _lifetime.Cancel();
     }
 }

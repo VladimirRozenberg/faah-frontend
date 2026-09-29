@@ -18,10 +18,19 @@
         </Grid>
 
         <StackPanel Grid.Row="2" Margin="0,12,0,0" Spacing="5">
+            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
+                <TextBox x:Name="AssetSearchBox" Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="200"
+                         PlaceholderText="Search by symbol or name (e.g. BTC or Bitcoin)"
+                         AutomationProperties.Name="Search assets by symbol or name"
+                         KeyDown="SearchInputKeyDown"/>
+                <Button Grid.Column="1" Content="Search" Command="{Binding SearchCommand}" Margin="8,0,0,0"/>
+                <Button Grid.Column="2" Content="Clear" Command="{Binding ClearSearchCommand}" Margin="8,0,0,0"/>
+            </Grid>
+            <TextBlock Text="{Binding SearchStatus}" Classes="muted" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding Updated}" Classes="muted"/>
             <TextBlock Text="Updating assets…" IsVisible="{Binding ShowUpdatingAssets}"/>
             <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="{StaticResource Red}" TextWrapping="Wrap"/>
-            <TextBlock Text="No assets available." IsVisible="{Binding IsEmpty}"/>
+            <TextBlock Text="No assets found." IsVisible="{Binding IsEmpty}"/>
         </StackPanel>
         <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Assets}">
