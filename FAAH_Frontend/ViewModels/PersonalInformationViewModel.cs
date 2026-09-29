@@ -57,12 +57,16 @@ public class PersonalInformationViewModel : ViewModelBase, IDisposable
     private async Task ReadAccountAsync()
     {
         var path = $"api/users/{UserId}/portfolio";
-        using var accountResponse = await _shell.Http.GetAsync(path, _lifetime.Token);
-        await EnsureAsync(accountResponse);
-        var account = await accountResponse.Content.ReadFromJsonAsync<AccountSnapshot>(ShellViewModel.JsonOptions, _lifetime.Token) ?? throw new InvalidOperationException("The account response was empty.");
-        _supportsTopUp = account.AvailableBalance.HasValue;
-        Cash = account.AvailableBalance.HasValue ? $"{account.AvailableBalance:N2} {account.BaseCurrency}" : "Unavailable";
-        Assets = account.TotalCurrentValue.HasValue ? $"{account.TotalCurrentValue:N2} {account.BaseCurrency}" : "Prices unavailable";
+        // Cash is account-level (not multiplied by portfolios).
+        using var cashResponse = await _shell.Http.GetAsync($"api/users/{UserId}/available-cash", _lifetime.Token);
+        await EnsureAsync(cashResponse);
+        var cash = await cashResponse.Content.ReadFromJsonAsync<AvailableCashResponse>(ShellViewModel.JsonOptions, _lifetime.Token);
+        _supportsTopUp = cash?.AvailableCash.HasValue == true;
+        Cash = cash?.AvailableCash.HasValue == true ? $"{cash.AvailableCash:N2} {cash.Currency}" : "Unavailable";
+        using var valueResponse = await _shell.Http.GetAsync($"api/users/{UserId}/asset-value", _lifetime.Token);
+        await EnsureAsync(valueResponse);
+        var value = await valueResponse.Content.ReadFromJsonAsync<AssetValueResponse>(ShellViewModel.JsonOptions, _lifetime.Token);
+        Assets = value?.TotalCurrentValue.HasValue == true ? $"{value.TotalCurrentValue:N2} {value.Currency}" : "Prices unavailable";
         using var historyResponse = await _shell.Http.GetAsync(path + "/transactions", _lifetime.Token);
         await EnsureAsync(historyResponse);
         var history = await historyResponse.Content.ReadFromJsonAsync<TransactionPage>(ShellViewModel.JsonOptions, _lifetime.Token);

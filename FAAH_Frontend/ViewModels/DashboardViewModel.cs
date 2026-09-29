@@ -47,10 +47,7 @@ public class DashboardViewModel : ViewModelBase, IDisposable
     {
         _action = action; Selected = null; Opportunities.Clear();
         foreach (var item in _all
-            .Where(x => string.Equals(x.SigAction, action, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(x => x.SigConfidence ?? -1)
-            .ThenByDescending(x => x.SigCreatedAt)
-            .ThenByDescending(x => x.SigId)
+            .Where(x => string.Equals(x.Action, action, StringComparison.OrdinalIgnoreCase))
             .Take(10))
             Opportunities.Add(item);
         OnPropertyChanged(nameof(IsBuy)); OnPropertyChanged(nameof(IsSell)); OnPropertyChanged(nameof(IsEmpty));
@@ -59,7 +56,6 @@ public class DashboardViewModel : ViewModelBase, IDisposable
     {
         if (IsBusy || _disposed) return;
         IsBusy = true; Message = ""; AccountMessage = ""; _failed = false; _all.Clear(); Filter(_action);
-        int? portfolioId = null;
         try {
             var cash = await _shell.Http.GetFromJsonAsync<AvailableCashResponse>($"api/users/{_shell.ProfileUserId}/available-cash", ShellViewModel.JsonOptions, _lifetime.Token);
             Cash = cash?.AvailableCash.HasValue == true ? $"{cash.AvailableCash:N2} {cash.Currency}" : "Unavailable";
@@ -77,29 +73,9 @@ public class DashboardViewModel : ViewModelBase, IDisposable
             if (!_disposed) { Assets = "—"; AccountMessage = FriendlyError(ex, "Asset value"); }
         }
         try {
-            var account = await _shell.Http.GetFromJsonAsync<AccountSnapshot>($"api/users/{_shell.ProfileUserId}/portfolio", ShellViewModel.JsonOptions, _lifetime.Token);
-            portfolioId = account?.Id;
-        } catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException) {
-            // portfolioId stays null; only needed to filter legacy trading-signals.
-        }
-        try {
-            using var response = await _shell.Http.GetAsync("api/opportunities", _lifetime.Token);
-            OpportunityPage? page;
-            if (response.StatusCode == HttpStatusCode.NotFound) {
-                // Compatibility with the currently deployed API; never include another portfolio.
-                page = await _shell.Http.GetFromJsonAsync<OpportunityPage>("api/trading-signals", ShellViewModel.JsonOptions, _lifetime.Token);
-                _all = (page?.Items ?? new()).Where(x =>
-                    (x.SigPrtId == null || portfolioId.HasValue && x.SigPrtId == portfolioId) &&
-                    string.Equals(x.SigStatus, "active", StringComparison.OrdinalIgnoreCase) &&
-                    (x.SigExpiresAt == null || x.SigExpiresAt > DateTimeOffset.UtcNow))
-                    .OrderByDescending(x => x.SigCreatedAt).ThenByDescending(x => x.SigId)
-                    .GroupBy(x => x.AssetSymbol, StringComparer.OrdinalIgnoreCase).Select(g => g.First())
-                    .Where(x => x.SigAction.Equals("buy", StringComparison.OrdinalIgnoreCase) || x.SigAction.Equals("sell", StringComparison.OrdinalIgnoreCase)).ToList();
-            } else {
-                response.EnsureSuccessStatusCode();
-                page = await response.Content.ReadFromJsonAsync<OpportunityPage>(ShellViewModel.JsonOptions, _lifetime.Token);
-                _all = page?.Items ?? new();
-            }
+            // Newest-first and deduplicated by the backend.
+            var page = await _shell.Http.GetFromJsonAsync<OpportunityPage>($"api/users/{_shell.ProfileUserId}/opportunities?limit=200", ShellViewModel.JsonOptions, _lifetime.Token);
+            _all = page?.Items ?? new();
             Filter(_action);
         } catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException) {
             if (!_disposed) { _failed = true; Message = FriendlyError(ex, "Opportunities"); }

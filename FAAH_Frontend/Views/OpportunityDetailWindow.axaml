@@ -8,6 +8,7 @@
     <StackPanel Spacing="6">
       <TextBlock Text="Opportunity details" Classes="label"/>
       <TextBlock Text="{Binding Label}" FontSize="26" FontWeight="Bold" TextWrapping="Wrap"/>
+      <TextBlock Classes="muted"><Run Text="Opportunity #"/><Run Text="{Binding SigId}"/></TextBlock>
       <TextBlock Text="{Binding Context}" Classes="muted" TextWrapping="Wrap"/>
     </StackPanel>
     <Border Grid.Row="1" Classes="rule" Margin="0,22,0,18"/>
