@@ -110,12 +110,15 @@ public class ShellViewModel : ViewModelBase
         _logos = new AssetLogoService(_http);
         Health = new HealthDetailsViewModel(_http);
         ShowHealthCommand = new RelayCommand(ShowHealthDetails);
+        ShowDashboardCommand = new RelayCommand(ShowDashboard);
         LoginCommand = new RelayCommand(Login);
         LogoutCommand = new RelayCommand(Logout);
         ShowPortfoliosCommand = new RelayCommand(ShowPortfolios);
         ShowAssetsCommand = new RelayCommand(ShowAssets);
         ShowNewsCommand = new RelayCommand(ShowNews);
         ShowUsersCommand = new RelayCommand(ShowUsers);
+        ShowProfileCommand = new RelayCommand(ShowProfile);
+        ShowSettingsCommand = new RelayCommand(ShowSettings);
         _healthTimer.Tick += (_, _) => _ = Health.RefreshAsync();
 
         ShowLogin();
@@ -168,11 +171,13 @@ public class ShellViewModel : ViewModelBase
         {
             if (!SetField(ref _section, value)) return;
             OnPropertyChanged(nameof(IsPortfolioActive));
+            OnPropertyChanged(nameof(IsDashboardActive));
             OnPropertyChanged(nameof(IsAssetsActive));
             OnPropertyChanged(nameof(IsNewsActive));
         }
     }
 
+    public bool IsDashboardActive => Section == "DASHBOARD";
     public bool IsPortfolioActive => Section == "PORTFOLIO";
     public bool IsAssetsActive => Section == "ASSETS";
     public bool IsNewsActive => Section == "NEWS";
@@ -198,9 +203,12 @@ public class ShellViewModel : ViewModelBase
     public ICommand LoginCommand { get; }
     public ICommand LogoutCommand { get; }
     public ICommand ShowPortfoliosCommand { get; }
+    public ICommand ShowDashboardCommand { get; }
     public ICommand ShowAssetsCommand { get; }
     public ICommand ShowNewsCommand { get; }
     public ICommand ShowUsersCommand { get; }
+    public ICommand ShowProfileCommand { get; }
+    public ICommand ShowSettingsCommand { get; }
     public ICommand ShowHealthCommand { get; }
 
     // ---------- navigation ----------
@@ -211,10 +219,41 @@ public class ShellViewModel : ViewModelBase
         CurrentPage = new LoginView { DataContext = this };
     }
 
+    public void ShowDashboard()
+    {
+        Section = "DASHBOARD";
+        CurrentPage = new DashboardView { DataContext = new DashboardViewModel(this) };
+    }
+
     public void ShowPortfolios()
     {
         Section = "PORTFOLIO";
         CurrentPage = new PortfolioListView { DataContext = new PortfolioListViewModel(this) };
+    }
+
+    public void ShowProfile()
+    {
+        if (!int.TryParse(ProfileUserId, out var userId))
+            return;
+
+        Section = "PROFILE";
+        CurrentPage = new PersonalInformationView
+        {
+            DataContext = new PersonalInformationViewModel(new User
+            {
+                UserId = userId,
+                Username = UserName,
+                Email = ProfileEmail,
+                Role = ProfileRole,
+                IsActive = true
+            }, this)
+        };
+    }
+
+    public void ShowSettings()
+    {
+        Section = "SETTINGS";
+        CurrentPage = new SettingsView { DataContext = this };
     }
 
     public void ShowPortfolio(Portfolio portfolio)
