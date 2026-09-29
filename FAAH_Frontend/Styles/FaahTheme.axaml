@@ -51,6 +51,22 @@
         <Setter Property="FontSize" Value="13"/>
     </Style>
 
+    <Style Selector="Button.healthButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="6,4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.healthButton:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource GreySoft}"/>
+    </Style>
+    <Style Selector="Ellipse.healthDot">
+        <Setter Property="Fill" Value="{StaticResource Red}"/>
+    </Style>
+    <Style Selector="Ellipse.healthDot.healthy">
+        <Setter Property="Fill" Value="{StaticResource Green}"/>
+    </Style>
+
     <!-- Titre de page -->
     <Style Selector="TextBlock.h1">
         <Setter Property="FontSize" Value="26"/>
@@ -227,6 +243,29 @@
     <Style Selector="Button.page:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="{StaticResource ItemHover}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Button.page:disabled">
+        <Setter Property="Foreground" Value="{StaticResource GreySolid}"/>
+        <Setter Property="Cursor" Value="Arrow"/>
+    </Style>
+
+    <Style Selector="Button.windowButton">
+        <Setter Property="Width" Value="46"/>
+        <Setter Property="MinWidth" Value="46"/>
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontFamily" Value="{StaticResource Sans}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.windowButton:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#1F527D"/>
+    </Style>
+    <Style Selector="Button.windowButton.close:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#C83E3E"/>
     </Style>
 
     <!-- Étoile favori -->

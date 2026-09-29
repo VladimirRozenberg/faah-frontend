@@ -7,7 +7,11 @@
 
     <Grid Margin="42,26,42,20" RowDefinitions="Auto,Auto,Auto,*">
 
-        <TextBlock Grid.Row="0" Text="Portfolios" Classes="h1"/>
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <TextBlock Text="Portfolios" Classes="h1"/>
+            <Button Grid.Column="1" Classes="primary" Content="Create new portfolio"
+                    Command="{Binding CreateCommand}"/>
+        </Grid>
         <Border Grid.Row="1" Classes="rule" Margin="0,12,0,0"/>
 
         <Grid Grid.Row="2" ColumnDefinitions="2.6*,1*,1.3*,1*,1*,1*" Margin="6,22,6,10">

@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -223,9 +222,11 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             QuoteStatus = "Refreshing quote…";
         try
         {
-            var quote = await GetAsync<MarketQuote>($"api/assets/{Uri.EscapeDataString(Asset.Symbol)}/market");
+            var quote = await GetAsync<AssetListMarket>($"api/assets/{Uri.EscapeDataString(Asset.Symbol)}/market");
             if (_disposed) return;
             if (!string.Equals(quote.Symbol, Asset.Symbol, StringComparison.OrdinalIgnoreCase)) throw new JsonException();
+            // La liste et le détail affichent maintenant les cours via le même objet Market.
+            Asset.Market = quote;
             Asset.Price = quote?.LastPrice;
             Asset.ChangePercent = quote?.ChangePercent;
             Asset.MarketVolume = quote?.Volume;
@@ -315,32 +316,19 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         NewsStatus = "Loading news…";
         try
         {
-            var result = await GetAsync<NewsResponse>("api/data-sources");
+            // Le backend suit les liens de classification en BDD pour cet actif.
+            string symbol = Uri.EscapeDataString(Asset.Symbol);
+            var result = await GetAsync<NewsResponse>($"api/assets/{symbol}/news");
             if (_disposed) return;
-            News = result.Items.Where(n => MentionsAsset(n, Asset)).OrderByDescending(n => n.SortDate).Take(20).ToList();
-            NewsStatus = News.Count == 0 ? "No articles mentioning this asset were found in the received news."
-                : "Articles mentioning this asset's symbol or name (text filtering, not AI classification).";
+            News = result.Items.OrderByDescending(n => n.SortDate).ToList();
+            NewsStatus = News.Count == 0 ? "No classified news linked to this asset in the database."
+                : "News linked to this asset through classifications stored in the database.";
         }
         catch (OperationCanceledException) when (_disposed) { }
         catch (Exception ex)
         {
             if (!_disposed) { News = Array.Empty<NewsArticle>(); NewsStatus = "News unavailable. " + Explain(ex); }
         }
-    }
-
-    public static bool MentionsAsset(NewsArticle article, Asset asset)
-    {
-        string text = $"{article.RawTitle} {article.Content}";
-        // BTC-USD peut etre cite comme BTC. Les bornes evitent AAPL dans un autre mot.
-        string ticker = asset.Symbol.Split('-')[0];
-        string? name = asset.Name;
-        // Yahoo nomme par exemple le Bitcoin « Bitcoin USD » ; un article ecrit souvent seulement « Bitcoin ».
-        if (asset.Type == "crypto" && !string.IsNullOrWhiteSpace(asset.Currency)
-            && name?.EndsWith(" " + asset.Currency, StringComparison.OrdinalIgnoreCase) == true)
-            name = name[..^(asset.Currency.Length + 1)];
-        var terms = new[] { asset.Symbol, name, ticker };
-        return terms.Any(term => !string.IsNullOrWhiteSpace(term) && Regex.IsMatch(text,
-            @"(?<![\p{L}\p{N}])" + Regex.Escape(term) + @"(?![\p{L}\p{N}])", RegexOptions.IgnoreCase));
     }
 
     private static string Explain(Exception ex) => ex switch

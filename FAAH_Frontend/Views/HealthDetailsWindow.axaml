@@ -1,0 +1,64 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="FAAH_Frontend.Views.HealthDetailsWindow"
+        Title="FAAH API health"
+        Width="420"
+        Height="480"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Surface}">
+    <Grid Margin="24" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="16">
+        <StackPanel Spacing="4">
+            <TextBlock Text="API health" FontSize="22" FontWeight="Bold"/>
+            <TextBlock Text="Live status from /health" Opacity="0.7"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Padding="14" CornerRadius="6"
+                Background="{StaticResource SurfaceAlt}"
+                BorderBrush="{StaticResource Hairline}"
+                BorderThickness="1">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{Binding StatusLabel}" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimary}"/>
+                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap"
+                           Foreground="{StaticResource TextPrimary}"/>
+                <TextBlock Text="{Binding CheckedAt}" FontSize="11"
+                           Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Database"/>
+                    <TextBlock Grid.Column="1" Text="{Binding DatabaseStatus}"
+                               Foreground="{StaticResource Muted}"/>
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Orchestrator"/>
+                    <TextBlock Grid.Column="1" Text="{Binding OrchestratorStatus}"
+                               Foreground="{StaticResource Muted}"/>
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Portfolio strategists"/>
+                    <TextBlock Grid.Column="1" Text="{Binding StrategistStatus}"
+                               Foreground="{StaticResource Muted}"/>
+                </Grid>
+                <TextBlock Text="{Binding StrategistDetails}" FontSize="11"
+                           Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="RSS feeds"/>
+                    <TextBlock Grid.Column="1" Text="{Binding RssStatus}"
+                               Foreground="{StaticResource Muted}"/>
+                </Grid>
+                <TextBlock Text="{Binding RssDetails}" FontSize="11"
+                           Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+            <Button Content="Close" Click="CloseClick"/>
+        </StackPanel>
+    </Grid>
+</Window>

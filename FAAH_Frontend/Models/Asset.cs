@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text.Json.Serialization;
+using Avalonia.Media.Imaging;
 using FAAH_Frontend.ViewModels;
 namespace FAAH_Frontend.Models;
 public sealed class Asset : ViewModelBase
@@ -14,6 +16,22 @@ public sealed class Asset : ViewModelBase
     public string? Sector { get; set; }
     public string? Industry { get; set; }
     public string? Currency { get; set; }
+    [JsonPropertyName("logo_url")]
+    public string? LogoUrl { get; set; }
+
+    // Logo est l'image affichée par Avalonia, pas une donnée JSON du backend.
+    private Bitmap? _logo;
+    [JsonIgnore]
+    public Bitmap? Logo
+    {
+        get => _logo;
+        set
+        {
+            if (SetField(ref _logo, value)) OnPropertyChanged(nameof(HasLogo));
+        }
+    }
+    [JsonIgnore]
+    public bool HasLogo => Logo is not null;
     public decimal? Price { get; set; }
     public decimal? ChangePercent { get; set; }
     public long? MarketVolume { get; set; }

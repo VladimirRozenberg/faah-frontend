@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using FAAH_Frontend.Models;
+using FAAH_Frontend.Services;
 
 namespace FAAH_Frontend.ViewModels;
 
@@ -19,6 +20,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
 {
     // Le client HTTP fourni par le Shell contient déjà le token de connexion.
     private readonly HttpClient _http;
+    private readonly AssetLogoService _logos;
     private readonly Action<Asset>? _openAsset;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(60) };
@@ -37,13 +39,16 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     private string _error = "", _updated = "Not loaded yet";
     public const int PageSize = 20;
 
-    public AssetListViewModel(HttpClient http, Action<Asset>? openAsset = null)
+    public AssetListViewModel(HttpClient http, Action<Asset>? openAsset = null, AssetLogoService? logos = null)
     {
         _http = http;
+        _logos = logos ?? new AssetLogoService(http);
         _openAsset = openAsset;
         OpenAssetCommand = new RelayCommand(OpenAsset, _ => !_disposed && _openAsset is not null);
         PreviousPageCommand = new RelayCommand(_ => PreviousPage(), _ => !_disposed && !IsBusy && _currentPage > 1);
         NextPageCommand = new RelayCommand(_ => NextPage(), _ => !_disposed && !IsBusy && _currentPage < PageCount);
+        FirstPageCommand = new RelayCommand(_ => FirstPage(), _ => !_disposed && !IsBusy && _currentPage > 1);
+        LastPageCommand = new RelayCommand(_ => LastPage(), _ => !_disposed && !IsBusy && _currentPage < PageCount);
         GoToPageCommand = new RelayCommand(GoToPage, _ => !_disposed && !IsBusy && TryGetPage(_));
         RefreshCommand = new RelayCommand(parameter => { _ = RefreshAsync(); }, _ => !_disposed && !IsBusy);
         ToggleFavoriteCommand = new RelayCommand(ToggleFavorite, _ => !_disposed && !IsBusy && _favoritesLoaded);
@@ -68,6 +73,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     public RelayCommand OpenAssetCommand { get; }
     public RelayCommand PreviousPageCommand { get; }
     public RelayCommand NextPageCommand { get; }
+    public RelayCommand FirstPageCommand { get; }
+    public RelayCommand LastPageCommand { get; }
     public RelayCommand RefreshCommand { get; }
     public RelayCommand ToggleFavoriteCommand { get; }
     public RelayCommand GoToPageCommand { get; }
@@ -88,6 +95,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             ToggleFavoriteCommand.RaiseCanExecuteChanged();
             PreviousPageCommand.RaiseCanExecuteChanged();
             NextPageCommand.RaiseCanExecuteChanged();
+            FirstPageCommand.RaiseCanExecuteChanged();
+            LastPageCommand.RaiseCanExecuteChanged();
             GoToPageCommand.RaiseCanExecuteChanged();
             UpdateDisplayProperties();
         }
@@ -128,6 +137,20 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         _ = RefreshAsync(isPaging: true);
     }
 
+    private void FirstPage()
+    {
+        if (_disposed || _currentPage <= 1) return;
+        _currentPage = 1;
+        _ = RefreshAsync(isPaging: true);
+    }
+
+    private void LastPage()
+    {
+        if (_disposed || _currentPage >= PageCount) return;
+        _currentPage = PageCount;
+        _ = RefreshAsync(isPaging: true);
+    }
+
     private void NextPage()
     {
         if (_disposed || _currentPage >= PageCount) return;
@@ -151,6 +174,13 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         NextPageCommand.RaiseCanExecuteChanged();
             GoToPageCommand.RaiseCanExecuteChanged();
         UpdateDisplayProperties();
+        _ = LoadVisibleLogosAsync(); // Ne bloque ni la liste, ni les favoris, ni les cours.
+    }
+
+    public Task LoadVisibleLogosAsync()
+    {
+        if (_disposed) return Task.CompletedTask;
+        return Task.WhenAll(Assets.Select(asset => _logos.LoadAsync(asset, _lifetime.Token)));
     }
 
     private void UpdatePageNumbers()
