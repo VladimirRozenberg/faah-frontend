@@ -14,7 +14,11 @@
                     <TextBlock Text="{Binding Detail.Source.Title}" Classes="h1" TextWrapping="Wrap"/>
                     <WrapPanel ItemSpacing="12" LineSpacing="4">
                         <TextBlock Text="{Binding Detail.Source.TypeDisplay}" Classes="muted"/>
-                        <TextBlock Text="Published {Binding PublishedDisplay}" Classes="muted"/>
+                        <TextBlock Classes="muted">
+                            <TextBlock.Text>
+                                <Binding Path="PublishedDisplay" StringFormat="Published {0}"/>
+                            </TextBlock.Text>
+                        </TextBlock>
                         <Button Content="Original article ↗" Classes="ghost" Click="OpenOriginalArticle"
                                 CommandParameter="{Binding Detail.Source.OriginalUrl}" Padding="4,1"/>
                     </WrapPanel>

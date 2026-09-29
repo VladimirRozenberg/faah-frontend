@@ -286,7 +286,7 @@ public class ShellViewModel : ViewModelBase
         _ = _logos.LoadAsync(asset, System.Threading.CancellationToken.None);
         Section = "ASSETS";
         int.TryParse(ProfileUserId, out int userId);
-        var detail = new AssetDetailViewModel(_http, asset, ShowAssets, userId);
+        var detail = new AssetDetailViewModel(_http, asset, ShowAssets, userId, ShowNewsDetail);
         CurrentPage = new AssetDetailView { DataContext = detail };
         detail.Start();
     }

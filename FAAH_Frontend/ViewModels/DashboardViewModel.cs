@@ -61,15 +61,26 @@ public class DashboardViewModel : ViewModelBase, IDisposable
         IsBusy = true; Message = ""; AccountMessage = ""; _failed = false; _all.Clear(); Filter(_action);
         int? portfolioId = null;
         try {
-            var account = await _shell.Http.GetFromJsonAsync<AccountSnapshot>($"api/users/{_shell.ProfileUserId}/portfolio", ShellViewModel.JsonOptions, _lifetime.Token);
-            if (account != null) {
-                portfolioId = account.Id;
-                Cash = account.AvailableBalance.HasValue ? $"{account.AvailableBalance:N2} {account.BaseCurrency}" : "Unavailable";
-                Assets = account.TotalCurrentValue.HasValue ? $"{account.TotalCurrentValue:N2} {account.BaseCurrency}" : "Prices unavailable";
-                if (!account.AvailableBalance.HasValue) AccountMessage = "Cash balances and top-ups are not available from the account service yet.";
+            var cash = await _shell.Http.GetFromJsonAsync<AvailableCashResponse>($"api/users/{_shell.ProfileUserId}/available-cash", ShellViewModel.JsonOptions, _lifetime.Token);
+            Cash = cash?.AvailableCash.HasValue == true ? $"{cash.AvailableCash:N2} {cash.Currency}" : "Unavailable";
+        } catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException) {
+            if (!_disposed) { Cash = "—"; AccountMessage = FriendlyError(ex, "Available cash"); }
+        }
+        try {
+            var value = await _shell.Http.GetFromJsonAsync<AssetValueResponse>($"api/users/{_shell.ProfileUserId}/asset-value", ShellViewModel.JsonOptions, _lifetime.Token);
+            if (value != null) {
+                Assets = value.TotalCurrentValue.HasValue ? $"{value.TotalCurrentValue:N2} {value.Currency}" : "Prices unavailable";
+                if (!value.ValuationComplete && value.MissingPriceSymbols.Count > 0)
+                    AccountMessage = $"Prices unavailable for: {string.Join(", ", value.MissingPriceSymbols)}.";
             }
         } catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException) {
-            if (!_disposed) { Cash = "—"; Assets = "—"; AccountMessage = FriendlyError(ex, "Account information"); }
+            if (!_disposed) { Assets = "—"; AccountMessage = FriendlyError(ex, "Asset value"); }
+        }
+        try {
+            var account = await _shell.Http.GetFromJsonAsync<AccountSnapshot>($"api/users/{_shell.ProfileUserId}/portfolio", ShellViewModel.JsonOptions, _lifetime.Token);
+            portfolioId = account?.Id;
+        } catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException) {
+            // portfolioId stays null; only needed to filter legacy trading-signals.
         }
         try {
             using var response = await _shell.Http.GetAsync("api/opportunities", _lifetime.Token);

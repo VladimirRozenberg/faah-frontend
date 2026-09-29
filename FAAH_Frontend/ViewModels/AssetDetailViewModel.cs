@@ -75,20 +75,27 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public AssetDetailViewModel(HttpClient http, Asset asset, Action goBack, int userId = 0)
+    public AssetDetailViewModel(HttpClient http, Asset asset, Action goBack, int userId = 0, Action<int>? openArticle = null)
     {
         _http = http;
         Asset = asset;
         _userId = userId;
+        _openArticle = openArticle;
         BackCommand = new RelayCommand(goBack);
         RefreshCommand = new RelayCommand(() => { _ = RefreshAsync(); });
         BuyCommand = new RelayCommand(() => PrepareOrder("Achat"));
         SellCommand = new RelayCommand(() => PrepareOrder("Vente"));
         CloseOrderCommand = new RelayCommand(() => { OrderSide = ""; });
         SubmitOrderCommand = new RelayCommand(() => { _ = SubmitOrderAsync(); });
+        OpenArticleCommand = new RelayCommand(parameter =>
+        {
+            if (parameter is int id) _openArticle?.Invoke(id);
+            else if (parameter is NewsArticle article) _openArticle?.Invoke(article.Id);
+        }, parameter => !_disposed && _openArticle is not null);
         _timer.Tick += OnTick;
     }
 
+    private readonly Action<int>? _openArticle;
     public Asset Asset { get; }
     public string Title => string.IsNullOrWhiteSpace(Asset.Name) ? Asset.Symbol : $"{Asset.Name} · {Asset.Symbol}";
     public string Details => string.Join(" · ", new[] { Asset.Type, Asset.Exchange, Asset.Country, Asset.Sector, Asset.Industry }.Where(s => !string.IsNullOrWhiteSpace(s)));
@@ -98,6 +105,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public ICommand SellCommand { get; }
     public ICommand CloseOrderCommand { get; }
     public ICommand SubmitOrderCommand { get; }
+    public ICommand OpenArticleCommand { get; }
     public string OrderStatus { get => _orderStatus; private set => SetField(ref _orderStatus, value); }
     public bool IsSubmitting { get => _submitting; private set { SetField(ref _submitting, value); NotifyTrading(); } }
     public bool CanPrepareOrder => !_disposed && !IsSubmitting && !_uncertain && _userId > 0
