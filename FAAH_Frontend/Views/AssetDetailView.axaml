@@ -85,7 +85,9 @@
                                     <TextBlock Text="{Binding DateDisplay}" Classes="muted"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding Summary}" TextWrapping="Wrap"/>
-                                 <Button Content="Read article ↗" Click="OpenArticle" CommandParameter="{Binding OriginalUrl}" Classes="ghost"/>
+                                 <Button Content="More info" Classes="ghost"
+                                         Command="{Binding $parent[ItemsControl].DataContext.OpenArticleCommand}"
+                                         CommandParameter="{Binding Id}"/>
                             </StackPanel>
                         </Border>
                     </DataTemplate>

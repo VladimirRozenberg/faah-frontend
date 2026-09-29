@@ -54,3 +54,17 @@ public class Opportunity
     public string Explanation => string.IsNullOrWhiteSpace(AnalysisSummary) ? "No explanation is available for this signal." : AnalysisSummary;
 }
 public class OpportunityPage { public List<Opportunity> Items { get; set; } = new(); }
+public class AssetValueResponse
+{
+    public string Currency { get; set; } = "USD";
+    public bool ValuationComplete { get; set; }
+    public List<string> MissingPriceSymbols { get; set; } = new();
+    public decimal? TotalCurrentValue { get; set; }
+    public decimal? TotalInvested { get; set; }
+    public decimal? TotalProfitLoss { get; set; }
+}
+public class AvailableCashResponse
+{
+    public string Currency { get; set; } = "USD";
+    public decimal? AvailableCash { get; set; }
+}
