@@ -1,9 +1,11 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Windows.Input;
+using Avalonia.Threading;
 using FAAH_Frontend.Models;
 using FAAH_Frontend.Services;
 using FAAH_Frontend.Views;
@@ -32,6 +34,7 @@ public class ShellViewModel : ViewModelBase
 
     internal HttpClient Http => _http;
     private readonly AssetLogoService _logos;
+    private readonly DispatcherTimer _healthTimer = new() { Interval = TimeSpan.FromSeconds(60) };
 
     // Reponse de POST /auth/login : { "token": "...", "message": "..." }
     private class LoginResponse
@@ -63,19 +66,57 @@ public class ShellViewModel : ViewModelBase
     private string _profileRole = "Unavailable";
     private string _profileUserId = "Unavailable";
 
+    public ObservableCollection<Portfolio> Portfolios { get; } = new()
+    {
+        new Portfolio
+        {
+            Name = "Momentum Alpha", Description = "Short-term futures momentum",
+            Risk = RiskLevel.High, MaxPositions = 8, ReturnPercent = 18.4m,
+            Status = PortfolioStatus.Active
+        },
+        new Portfolio
+        {
+            Name = "Risky Takes", Description = "High-leverage speculative play",
+            Risk = RiskLevel.VeryHigh, MaxPositions = 12, ReturnPercent = -4.2m,
+            Status = PortfolioStatus.Active
+        },
+        new Portfolio
+        {
+            Name = "Conservative Investment", Description = "Blue-chip long-only, capital preservation",
+            Risk = RiskLevel.Low, MaxPositions = 4, ReturnPercent = 6.1m,
+            Status = PortfolioStatus.Active
+        },
+        new Portfolio
+        {
+            Name = "Arb Core", Description = "Cross-exchange arbitrage sleeve",
+            Risk = RiskLevel.Medium, MaxPositions = 15, ReturnPercent = 9.7m,
+            Status = PortfolioStatus.Active
+        },
+        new Portfolio
+        {
+            Name = "Legacy Swing", Description = "Old swing strategy, paused",
+            Risk = RiskLevel.Medium, MaxPositions = 5, ReturnPercent = 1.3m,
+            Status = PortfolioStatus.Paused
+        }
+    };
+
     public string ProfileEmail { get => _profileEmail; private set => SetField(ref _profileEmail, value); }
     public string ProfileRole { get => _profileRole; private set => SetField(ref _profileRole, value); }
     public string ProfileUserId { get => _profileUserId; private set => SetField(ref _profileUserId, value); }
+    public HealthDetailsViewModel Health { get; }
 
     public ShellViewModel()
     {
         _logos = new AssetLogoService(_http);
+        Health = new HealthDetailsViewModel(_http);
+        ShowHealthCommand = new RelayCommand(ShowHealthDetails);
         LoginCommand = new RelayCommand(Login);
         LogoutCommand = new RelayCommand(Logout);
         ShowPortfoliosCommand = new RelayCommand(ShowPortfolios);
         ShowAssetsCommand = new RelayCommand(ShowAssets);
         ShowNewsCommand = new RelayCommand(ShowNews);
         ShowUsersCommand = new RelayCommand(ShowUsers);
+        _healthTimer.Tick += (_, _) => _ = Health.RefreshAsync();
 
         ShowLogin();
     }
@@ -160,6 +201,7 @@ public class ShellViewModel : ViewModelBase
     public ICommand ShowAssetsCommand { get; }
     public ICommand ShowNewsCommand { get; }
     public ICommand ShowUsersCommand { get; }
+    public ICommand ShowHealthCommand { get; }
 
     // ---------- navigation ----------
 
@@ -179,6 +221,15 @@ public class ShellViewModel : ViewModelBase
     {
         Section = "PORTFOLIO";
         CurrentPage = new PortfolioView { DataContext = portfolio };
+    }
+
+    public void ShowPortfolioCreate()
+    {
+        Section = "PORTFOLIO";
+        CurrentPage = new PortfolioCreateView
+        {
+            DataContext = new PortfolioCreateViewModel(this)
+        };
     }
 
     public void ShowAssets()
@@ -311,6 +362,8 @@ public class ShellViewModel : ViewModelBase
 
             Password = string.Empty;
             IsLoggedIn = true;
+            _healthTimer.Start();
+            _ = Health.RefreshAsync();
             ShowPortfolios();
         }
         catch (Exception ex)
@@ -334,7 +387,17 @@ public class ShellViewModel : ViewModelBase
         Section = "PORTFOLIO";
 
         _http.DefaultRequestHeaders.Authorization = null;
+        _healthTimer.Stop();
 
         ShowLogin();
+    }
+
+    private void ShowHealthDetails()
+    {
+        var window = new HealthDetailsWindow
+        {
+            DataContext = Health
+        };
+        window.Show();
     }
 }

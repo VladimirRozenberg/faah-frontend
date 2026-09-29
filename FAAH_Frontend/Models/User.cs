@@ -1,20 +1,22 @@
+using FAAH_Frontend.ViewModels;
+using System.Text.Json.Serialization;
 namespace FAAH_Frontend.Models;
-
-// Correspond exactement a ce que renvoie GET /admin/utilisateurs cote FastAPI :
-// { "user_id": 1, "username": "...", "role": "admin" | "employe" }
-public class User
+public class User : ViewModelBase
 {
     public int UserId { get; set; }
-
-    public string Username { get; set; } = string.Empty;
-
-    public string Role { get; set; } = string.Empty;
-
+    public decimal? Balance { get; set; }
+    public string Username { get; set; } = "";
     public string? Email { get; set; }
-
-    // ---- Proprietes d'affichage ----
-
+    private string _role = "";
+    private bool? _active;
+    public string Role { get=>_role; set { if(SetField(ref _role,value)) { OnPropertyChanged(nameof(IsAdminRole)); OnPropertyChanged(nameof(RoleDisplay)); OnPropertyChanged(nameof(RoleAction)); } } }
+    public bool? IsActive { get=>_active; set { if(SetField(ref _active,value)) { OnPropertyChanged(nameof(StatusDisplay)); OnPropertyChanged(nameof(StatusAction)); OnPropertyChanged(nameof(IsEnabled)); OnPropertyChanged(nameof(IsDisabled)); } } }
+    [JsonIgnore] public bool IsAlternateRow { get; set; }
+    [JsonIgnore] public bool IsEnabled => IsActive == true;
+    [JsonIgnore] public bool IsDisabled => IsActive == false;
     public bool IsAdminRole => Role == "admin";
-
-    public string RoleDisplay => Role.ToUpperInvariant();
+    public string RoleDisplay => Role == "employe" ? "EMPLOYEE" : Role.ToUpperInvariant();
+    [JsonIgnore] public string RoleAction => IsAdminRole ? "Make employee" : "Make admin";
+    [JsonIgnore] public string StatusDisplay => IsActive switch { true=>"ACTIVE", false=>"DISABLED", _=>"UNKNOWN" };
+    [JsonIgnore] public string StatusAction => IsActive switch { true=>"Deactivate", false=>"Activate", _=>"Unavailable" };
 }

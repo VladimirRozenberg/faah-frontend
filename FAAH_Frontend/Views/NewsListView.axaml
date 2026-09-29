@@ -26,14 +26,14 @@
     <Grid Grid.Row="3" ColumnDefinitions="*,240" ColumnSpacing="14">
       <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
         <ItemsControl ItemsSource="{Binding Articles}"><ItemsControl.ItemTemplate><DataTemplate>
-          <Grid ColumnDefinitions="*,Auto" Margin="0,0,22,24">
+          <Border Classes="row" Classes.zebra="{Binding IsAlternateRow}" Margin="0,0,22,8" Padding="10" CornerRadius="4"><Grid ColumnDefinitions="*,Auto">
             <StackPanel Spacing="6" Margin="0,0,22,0">
               <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap"/>
               <TextBlock Text="{Binding Summary}" FontSize="12" TextWrapping="Wrap"/>
               <TextBlock Text="{Binding Source}" FontSize="12" Classes="muted"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding DateLabel}" Classes="muted" FontSize="11"/><TextBlock Text="{Binding DateDisplay}" Classes="muted" FontSize="12"/><Button Content="Read ↗" Classes="ghost" Command="{Binding $parent[UserControl].DataContext.OpenArticleCommand}" CommandParameter="{Binding Id}" Padding="4,1"/></StackPanel>
-          </Grid>
+          </Grid></Border>
         </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
       </ScrollViewer>
       <Border Grid.Column="1" Background="{StaticResource SurfaceAlt}" Padding="12" CornerRadius="6">
@@ -61,6 +61,8 @@
       </Border>
     </Grid>
     <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="5" Margin="0,14,0,0" HorizontalAlignment="Center">
+      <Button Classes="page" Content="«" ToolTip.Tip="First page" Command="{Binding FirstPageCommand}"/>
+      <Button Classes="page" Content="‹" ToolTip.Tip="Previous page" Command="{Binding PreviousPageCommand}"/>
       <ItemsControl ItemsSource="{Binding PageNumbers}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="5"/></ItemsPanelTemplate>
@@ -73,6 +75,8 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
+      <Button Classes="page" Content="›" ToolTip.Tip="Next page" Command="{Binding NextPageCommand}"/>
+      <Button Classes="page" Content="»" ToolTip.Tip="Last page" Command="{Binding LastPageCommand}"/>
       <TextBox Width="58" Text="{Binding PageInput, Mode=TwoWay}" KeyDown="PageInputKeyDown"
                Watermark="Page" HorizontalContentAlignment="Center"/>
       <TextBlock Text="{Binding PageLabel}" Classes="muted" VerticalAlignment="Center" Margin="8,0,0,0"/>

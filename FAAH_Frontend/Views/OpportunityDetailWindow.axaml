@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="FAAH_Frontend.Views.OpportunityDetailWindow"
+        Title="Opportunity details"
+        Width="720" Height="520" MinWidth="520" MinHeight="360"
+        WindowStartupLocation="CenterOwner">
+  <Grid Margin="32" RowDefinitions="Auto,Auto,*,Auto">
+    <StackPanel Spacing="6">
+      <TextBlock Text="Opportunity details" Classes="label"/>
+      <TextBlock Text="{Binding Label}" FontSize="26" FontWeight="Bold" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding Context}" Classes="muted" TextWrapping="Wrap"/>
+    </StackPanel>
+    <Border Grid.Row="1" Classes="rule" Margin="0,22,0,18"/>
+    <ScrollViewer Grid.Row="2">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Why this asset is recommended" FontSize="18" FontWeight="SemiBold"/>
+        <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" LineHeight="24"/>
+      </StackPanel>
+    </ScrollViewer>
+    <Button Grid.Row="3" Content="Close" HorizontalAlignment="Right" Margin="0,22,0,0" Click="CloseWindow"/>
+  </Grid>
+</Window>

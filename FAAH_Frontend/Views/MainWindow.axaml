@@ -21,18 +21,20 @@
                     <Ellipse Width="13" Height="13" Fill="{StaticResource Amber}"/>
                     <TextBlock VerticalAlignment="Center" FontSize="15">
                         <Run Text="FAAH" FontWeight="Bold"/>
-                        <Run Text=" — " FontWeight="Bold"/>
-                        <Run Text="Futures Arbitrage Assets Hub" Foreground="#5B646F"/>
+                        <!-- Compact brand leaves room for the separate dashboard tab. -->
+                        
                     </TextBlock>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                             Margin="34,0,0,0" Spacing="2">
 
+                    <Button Classes="navItem" Classes.active="{Binding IsDashboardActive}" Command="{Binding ShowDashboardCommand}"><StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Classes="idx" Text="01"/><TextBlock Text="DASHBOARD"/></StackPanel></Button>
+                    <TextBlock Text="|" Foreground="{StaticResource Hairline}" VerticalAlignment="Center"/>
                     <Button Classes="navItem" Classes.active="{Binding IsPortfolioActive}"
                             Command="{Binding ShowPortfoliosCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Classes="idx" Text="01"/>
+                            <TextBlock Classes="idx" Text="02"/>
                             <TextBlock Text="PORTFOLIO"/>
                         </StackPanel>
                     </Button>
@@ -42,7 +44,7 @@
                     <Button Classes="navItem" Classes.active="{Binding IsAssetsActive}"
                             Command="{Binding ShowAssetsCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Classes="idx" Text="02"/>
+                            <TextBlock Classes="idx" Text="03"/>
                             <TextBlock Text="ASSETS"/>
                         </StackPanel>
                     </Button>
@@ -52,18 +54,24 @@
                     <Button Classes="navItem" Classes.active="{Binding IsNewsActive}"
                             Command="{Binding ShowNewsCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Classes="idx" Text="03"/>
+                            <TextBlock Classes="idx" Text="04"/>
                             <TextBlock Text="NEWS"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
 
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="14">
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="14"
+                            IsVisible="{Binding IsLoggedIn}">
 
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="7">
-                        <Ellipse Width="9" Height="9" Fill="{StaticResource Green}"/>
-                        <TextBlock Text="LIVE" FontSize="12" Foreground="{StaticResource Muted}"/>
-                    </StackPanel>
+                    <Button Classes="healthButton" Command="{Binding ShowHealthCommand}"
+                            ToolTip.Tip="Open API health details">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="7">
+                            <Ellipse Width="9" Height="9" Classes="healthDot"
+                                     Classes.healthy="{Binding Health.IsHealthy}"/>
+                            <TextBlock Text="{Binding Health.StatusLabel}" FontSize="12"
+                                       Foreground="{StaticResource Muted}"/>
+                        </StackPanel>
+                    </Button>
 
                     <Button Classes="userChip">
                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -80,13 +88,15 @@
                             <MenuFlyout Placement="BottomEdgeAlignedRight">
                                 <MenuItem Header="Admin Console" Command="{Binding ShowUsersCommand}"
                                           IsVisible="{Binding IsAdmin}"/>
-                                <MenuItem Header="Settings"/>
+                                <MenuItem Header="My profile" Command="{Binding ShowProfileCommand}"/>
+                                <MenuItem Header="Settings" Command="{Binding ShowSettingsCommand}"/>
                                 <MenuItem Header="Log out" Command="{Binding LogoutCommand}"
                                           Foreground="{StaticResource Red}"/>
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
                 </StackPanel>
+
             </Grid>
         </Border>
 

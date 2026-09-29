@@ -36,7 +36,7 @@
             <ItemsControl ItemsSource="{Binding Assets}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Classes="row" CornerRadius="4" Padding="6,10" Margin="0,0,0,2">
+                        <Border Classes="row" Classes.zebra="{Binding IsAlternateRow}" CornerRadius="4" Padding="6,10" Margin="0,0,0,2">
                             <Grid ColumnDefinitions="2*,1.2*,1.2*,1.2*,60">
                                 <Button Grid.ColumnSpan="4" Classes="assetOpen" Background="Transparent" BorderThickness="0"
                                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Cursor="Hand"
@@ -76,6 +76,8 @@
 
         <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="5" Margin="6,18,0,0"
                     HorizontalAlignment="Center">
+            <Button Classes="page" Content="«" ToolTip.Tip="First page" Command="{Binding FirstPageCommand}"/>
+            <Button Classes="page" Content="‹" ToolTip.Tip="Previous page" Command="{Binding PreviousPageCommand}"/>
             <ItemsControl ItemsSource="{Binding PageNumbers}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="5"/></ItemsPanelTemplate>
@@ -88,6 +90,8 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <Button Classes="page" Content="›" ToolTip.Tip="Next page" Command="{Binding NextPageCommand}"/>
+            <Button Classes="page" Content="»" ToolTip.Tip="Last page" Command="{Binding LastPageCommand}"/>
             <TextBox Width="58" Text="{Binding PageInput, Mode=TwoWay}" KeyDown="PageInputKeyDown"
                      PlaceholderText="Page" HorizontalContentAlignment="Center"/>
             <TextBlock Text="{Binding PageLabel}" Classes="muted" FontSize="12"
