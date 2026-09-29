@@ -25,6 +25,21 @@ var asset = new Asset { Id = 7, Symbol = "BTC-USD", Name = "Bitcoin USD", Type =
 bool returned = false;
 using var vm = new AssetDetailViewModel(http, asset, () => returned = true, 42);
 await vm.RefreshAsync();
+Check(vm.Portfolios.Select(p => p.Id).SequenceEqual(new[] { 10, 12 }), "only compatible active USD portfolios; empty preferences allow all types");
+Check(vm.SelectedPortfolio is null && !vm.CanBuy && !vm.CanSell, "no portfolio auto-selected; buy and sell disabled");
+vm.BuyCommand.Execute(null);
+Check(!vm.IsOrderOpen, "buy command also refuses missing selection");
+vm.SelectedPortfolio = vm.Portfolios[0];
+Check(vm.CanBuy && !vm.CanSell, "compatible empty portfolio permits buy but not sell");
+vm.SellCommand.Execute(null);
+Check(!vm.IsOrderOpen, "sell command refuses an asset not held");
+vm.BuyCommand.Execute(null);
+vm.SelectedPortfolio = vm.Portfolios[1];
+Check(!vm.IsOrderOpen && vm.CanSell && vm.HeldQuantity == 2, "switching portfolio closes order and updates held quantity");
+vm.SellCommand.Execute(null);
+vm.Quantity = 3;
+Check(!vm.CanSubmitOrder, "sale exceeding holdings disabled");
+vm.SelectedPortfolio = vm.Portfolios[0];
 Check(vm.Asset.Price == 100 && vm.Candles.Count == 40, "market and candles decoded from actual backend formats");
 Check(vm.Asset.Market?.LastPrice == 100 && vm.Asset.PriceDisplay.Contains("100"), "detail refresh updates the shared market display model");
 Check(vm.News.Count == 1 && vm.News[0].Id == 1, "classified news from asset endpoint displayed even without symbol or name in text");
@@ -53,10 +68,11 @@ Check(!vm.CanSubmitOrder, "zero quantity rejected");
 vm.Quantity = 0.25m;
 Check(vm.CanSubmitOrder && handler.Posts == 0, "preparing order does not send it");
 await vm.SubmitOrderAsync();
-Check(handler.Posts == 1 && handler.LastPath == "/api/users/42/portfolio/assets/buy", "buy route uses connected user");
+Check(handler.Posts == 1 && handler.LastPath == "/api/users/42/portfolios/10/assets/buy", "buy route targets connected user and selected portfolio");
 Check(handler.LastBody!.Value.GetProperty("quantity").GetDecimal() == 0.25m
     && handler.LastBody.Value.GetProperty("purchase_price").GetDecimal() == 100m, "fractional quantity and purchase price serialized");
 Check(vm.OrderStatus.Contains("recorded") && !vm.IsOrderOpen, "success shown only after server confirmation");
+Check(vm.CanSell && vm.HeldQuantity == 0.25m, "buy response enables sell using server holdings");
 vm.SellCommand.Execute(null);
 await vm.SubmitOrderAsync();
 Check(handler.LastBody!.Value.TryGetProperty("sale_price", out _) && handler.LastPath.EndsWith("/sell"), "sell contract uses sale_price");
@@ -68,6 +84,8 @@ handler.TradeStatus = HttpStatusCode.OK;
 handler.DelayTrade = true;
 var firstPost = vm.SubmitOrderAsync();
 int sent = handler.Posts;
+vm.SelectedPortfolio = vm.Portfolios[1];
+Check(vm.SelectedPortfolio!.Id == 10 && !vm.CanSelectPortfolio, "portfolio cannot change while order is being submitted");
 await vm.SubmitOrderAsync();
 Check(handler.Posts == sent && vm.IsSubmitting, "double click does not send two orders");
 handler.CompleteTrade();
@@ -107,12 +125,24 @@ var window = new Window { Width = 1100, Height = 900, Content = view };
 window.Show();
 Dispatcher.UIThread.RunJobs();
 var buy = view.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, "Buy"));
-var selectors = view.GetVisualDescendants().OfType<ComboBox>().ToList();
+var selectors = view.GetVisualDescendants().OfType<ComboBox>().Where(c => c.Name != "TradePortfolioSelector").ToList();
 Check(selectors.Count == 2 && Equals(selectors[0].SelectedItem, "1d"), "period and interval selectors bound in AXAML");
 selectors[0].SelectedItem = "1mo";
 Dispatcher.UIThread.RunJobs();
 Check(vm.SelectedPeriod == "1mo" && Equals(selectors[1].SelectedItem, vm.SelectedInterval), "UI selection updates viewmodel and compatible intervals");
 Check(buy.Command == vm.BuyCommand && buy.IsEnabled, "AXAML buy button is bound and enabled");
+var portfolioSelector = view.FindControl<ComboBox>("TradePortfolioSelector")!;
+portfolioSelector.SelectedItem = null;
+Dispatcher.UIThread.RunJobs();
+Check(!buy.IsEnabled && !vm.CanSell, "clearing real selector disables trading buttons");
+using (var disabledImage = new RenderTargetBitmap(new PixelSize(1100, 900)))
+{
+    disabledImage.Render(window);
+    disabledImage.Save(Path.Combine(Path.GetTempPath(), "faah-portfolio-selection.png"));
+}
+portfolioSelector.SelectedItem = vm.Portfolios[0];
+Dispatcher.UIThread.RunJobs();
+Check(buy.IsEnabled && vm.SelectedPortfolio!.Id == 10, "real selector binding enables buy");
 buy.Command!.Execute(null);
 Dispatcher.UIThread.RunJobs();
 Check(view.GetVisualDescendants().OfType<NumericUpDown>().Single().IsVisible, "inline confirmation form visible");
@@ -178,12 +208,38 @@ Dispatcher.UIThread.RunJobs();
 await optionsFailure.RefreshAsync();
 Dispatcher.UIThread.RunJobs();
 Check(optionsFailure.HasHistoryOptions && optionsFailure.Candles.Count == 40, "refresh retries failed options request");
-var loadedSelectors = loadingView.GetVisualDescendants().OfType<ComboBox>().ToList();
+var loadedSelectors = loadingView.GetVisualDescendants().OfType<ComboBox>().Where(c => c.Name != "TradePortfolioSelector").ToList();
 Check(Equals(loadedSelectors[0].SelectedItem, "1d") && Equals(loadedSelectors[1].SelectedItem, "5m"), "options loaded after view creation display default selections");
 loadingWindow.Close();
 using var noUser = new AssetDetailViewModel(http, asset, () => { });
 await noUser.RefreshAsync();
 Check(!noUser.CanPrepareOrder, "missing user identity blocks orders");
+handler.TradeStatus = HttpStatusCode.OK;
+using var selectionChecks = new AssetDetailViewModel(http, asset, () => { }, 42);
+await selectionChecks.RefreshAsync();
+selectionChecks.SelectedPortfolio = selectionChecks.Portfolios[0];
+handler.EmptyPositions = true;
+selectionChecks.BuyCommand.Execute(null);
+await selectionChecks.SubmitOrderAsync();
+Check(!selectionChecks.CanSell && selectionChecks.HeldQuantity == 0, "zero holdings in response disables sell immediately");
+handler.EmptyPositions = false;
+handler.WrongPortfolio = true;
+selectionChecks.BuyCommand.Execute(null);
+await selectionChecks.SubmitOrderAsync();
+Check(!selectionChecks.CanBuy && selectionChecks.OrderStatus.Contains("peut-etre"), "response for wrong portfolio treated as uncertain");
+handler.WrongPortfolio = false;
+using var unavailable = new AssetDetailViewModel(http, asset, () => { }, 42);
+handler.FailPortfolios = true;
+await unavailable.RefreshAsync();
+Check(!unavailable.CanBuy && !unavailable.CanSell && unavailable.Candles.Count > 0, "portfolio outage blocks trading only");
+handler.FailPortfolios = false;
+await unavailable.RefreshAsync();
+unavailable.SelectedPortfolio = unavailable.Portfolios[0];
+Check(unavailable.CanBuy, "refresh recovers portfolio load");
+handler.NoPortfolios = true;
+await unavailable.RefreshAsync();
+Check(unavailable.SelectedPortfolio is null && !unavailable.CanBuy && unavailable.PortfolioStatus.Contains("No compatible"), "removed portfolio clears selection and disables trading");
+handler.NoPortfolios = false;
 vm.Dispose();
 int calls = handler.Calls;
 await vm.RefreshAsync();
@@ -196,6 +252,7 @@ class FakeApi : HttpMessageHandler
     public JsonElement? LastBody;
     public bool FailChart, MalformedCandles, Empty, DelayTrade;
     public bool FailOptions, HoldNextChart, FailNews;
+    public bool EmptyPositions, WrongPortfolio, FailPortfolios, NoPortfolios;
     public string LastChartQuery = "";
     private TaskCompletionSource<HttpResponseMessage>? _pendingChart;
     public void CompleteChart() => _pendingChart!.SetResult(Reply(HttpStatusCode.OK, """{"symbol":"BTC-USD","candles":[]}"""));
@@ -203,7 +260,8 @@ class FakeApi : HttpMessageHandler
     private TaskCompletionSource<HttpResponseMessage>? _pending;
     public void CompleteTrade() => _pending!.SetResult(TradeResponse());
     private HttpResponseMessage TradeResponse() => Reply(TradeStatus,
-        TradeStatus == HttpStatusCode.OK ? """{"user_id":42,"positions":[{"symbol":"BTC-USD","quantity":0.25}]}"""
+        TradeStatus == HttpStatusCode.OK ? JsonSerializer.Serialize(new { id = WrongPortfolio ? 999 : 10, user_id = 42,
+            positions = EmptyPositions ? Array.Empty<object>() : new object[] { new { symbol = "BTC-USD", quantity = 0.25m } } })
         : """{"detail":"Quantite insuffisante."}""");
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
@@ -211,6 +269,16 @@ class FakeApi : HttpMessageHandler
         Calls++;
         if (request.Headers.Authorization?.Parameter != "test-session") throw new Exception("Missing bearer");
         string path = request.RequestUri!.AbsolutePath;
+        if (path == "/api/users/42/portfolios") return FailPortfolios ? Reply(HttpStatusCode.ServiceUnavailable, "{}")
+            : Reply(HttpStatusCode.OK, NoPortfolios ? "{\"items\":[]}" : """
+            {"items":[
+              {"id":10,"user_id":42,"name":"Crypto","is_active":true,"base_currency":"USD","preferred_asset_types":["crypto"],"positions":[]},
+              {"id":11,"user_id":42,"name":"Stocks","is_active":true,"base_currency":"USD","preferred_asset_types":["stock"],"positions":[]},
+              {"id":12,"user_id":42,"name":"Mixed","is_active":true,"base_currency":"USD","preferred_asset_types":[],"positions":[{"symbol":"BTC-USD","quantity":2}]},
+              {"id":13,"user_id":42,"name":"Paused","is_active":false,"base_currency":"USD","preferred_asset_types":["crypto"],"positions":[]},
+              {"id":14,"user_id":42,"name":"EUR","is_active":true,"base_currency":"EUR","preferred_asset_types":["crypto"],"positions":[]}
+            ]}
+            """);
         if (path == "/api/history-options") return FailOptions ? Reply(HttpStatusCode.ServiceUnavailable, "{}")
             : Reply(HttpStatusCode.OK, """{"1d":["1m","5m","1h"],"5d":["5m","1h"],"1mo":["30m","1h","1d"]}""");
         if (request.Method == HttpMethod.Post)

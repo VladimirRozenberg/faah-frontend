@@ -23,8 +23,9 @@ Pas de nouveau package graphique : le graphique utilise les outils de dessin d�
 | Cours de l’actif | `GET /api/assets/{symbol}/market` |
 | Bougies | `GET /api/assets/{symbol}/candles?period=1d&interval=5m` |
 | Actualités classées pour l'actif | `GET /api/assets/{symbol}/news` |
-| Achat simulé | `POST /api/users/{user_id}/portfolio/assets/buy` |
-| Vente simulée | `POST /api/users/{user_id}/portfolio/assets/sell` |
+| Portefeuilles et positions | `GET /api/users/{user_id}/portfolios` |
+| Achat simulé | `POST /api/users/{user_id}/portfolios/{portfolio_id}/assets/buy` |
+| Vente simulée | `POST /api/users/{user_id}/portfolios/{portfolio_id}/assets/sell` |
 
 L’achat envoie `symbol`, `quantity`, `purchase_price`. La vente envoie `symbol`, `quantity`, `sale_price`. Le backend enregistre l’opération ; le frontend ne fait aucun INSERT et n’affiche un succès qu’après une réponse valide.
 
@@ -34,12 +35,18 @@ Les métadonnées (nom, type, place boursière, secteur…) proviennent de l’a
 
 ## Achat et vente
 
-1. Cliquer sur **Acheter** ou **Vendre**.
+1. Sélectionner un portefeuille puis cliquer sur **Acheter** ou **Vendre**.
 2. Saisir une quantité positive dans le formulaire intégré à la page.
-3. Vérifier le prix de simulation affiché, figé à l’ouverture du formulaire.
+3. Vérifier le portefeuille et l'estimation affichée. Le serveur détermine le prix réellement utilisé.
 4. Cliquer sur **Confirmer la simulation**.
 
 La cotation utilisée doit dater de moins de deux minutes depuis sa réception. Si le formulaire expire, l’annuler, actualiser et le rouvrir. Aucun POST automatique après un timeout : l’opération pourrait déjà être enregistrée. Vérifier l’historique dans ce cas.
+
+Le sélecteur ne propose que les portefeuilles actifs en USD qui acceptent le type de l'actif. Une liste `preferred_asset_types` vide signifie tous les types. Les niches et le niveau de risque ne sont pas des restrictions de type. Aucun portefeuille n'est sélectionné automatiquement.
+
+`CanBuy` exige une sélection et un cours récent ; `CanSell` exige aussi une quantité détenue positive. La quantité vendue ne peut pas dépasser `HeldQuantity`. Changer de portefeuille ferme le formulaire ; pendant l'envoi, le choix est verrouillé. La réponse du serveur actualise les quantités détenues. Les portefeuilles sont relus lors de l'actualisation de la page.
+
+Le backend contrôle aussi le type autorisé et l'état du portefeuille dans `portfolio/repository.py` (`check_trade_portfolio`). Déployer cette modification pour bénéficier du contrôle côté serveur. Pas de migration SQL ni de nouvelle dépendance.
 
 ## Limites connues à présenter honnêtement
 
@@ -47,9 +54,9 @@ La cotation utilisée doit dater de moins de deux minutes depuis sa réception. 
 - Déploiement : la nouvelle route `/api/assets/{symbol}/news` doit être déployée sur le serveur utilisé par Avalonia. Une ancienne version du serveur renverra une erreur 404 ; le frontend ne revient pas à l'ancien filtre textuel.
 - Graphique : période et durée de bougie sélectionnables, heures UTC, sans zoom interactif. Les choix viennent de `GET /api/history-options` ; le défaut reste une journée avec des bougies de cinq minutes. Changer de période adapte automatiquement les intervalles disponibles. Une réponse ancienne est ignorée si le choix a changé entre-temps.
 - Le backend actuel enregistre les transactions en USD : la simulation est bloquée pour les autres devises, sans inventer une conversion.
-- Le backend ne contrôle pas encore un solde disponible et accepte le prix transmis par le client. Ce parcours est destiné aux simulations de développement, pas à des transactions réelles.
+- Le backend contrôle le solde disponible du compte et récupère le prix d'exécution. Le montant du formulaire reste une estimation. Ce parcours est destiné aux simulations, pas à des transactions réelles.
 - **Sécurité backend à compléter avant mise en service** : les routes de portefeuille fournies ne vérifient pas que `user_id` correspond au propriétaire du token. Le frontend transmet le compte connecté mais cela ne remplace pas une autorisation côté serveur. Les accès concurrents aux positions doivent aussi être sécurisés côté backend.
-- La page Portfolio existante utilise encore ses données de démonstration ; ce changement ne la remplace pas. La quantité renvoyée par le backend apparaît dans le message de confirmation du détail.
+- La quantité renvoyée par le backend apparaît dans le message de confirmation et dans la quantité détenue du portefeuille sélectionné.
 
 ## Vérification
 

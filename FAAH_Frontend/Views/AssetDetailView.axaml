@@ -30,11 +30,18 @@
                     <TextBlock Text="{Binding QuoteStatus}" Classes="muted" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Top" Margin="16,0,0,0">
-                     <Button Content="Buy" Background="{StaticResource GreenSolid}" Foreground="White" Command="{Binding BuyCommand}" IsEnabled="{Binding CanPrepareOrder}"/>
-                     <Button Content="Sell" Background="{StaticResource RedSolid}" Foreground="White" Command="{Binding SellCommand}" IsEnabled="{Binding CanPrepareOrder}"/>
+                    <ComboBox x:Name="TradePortfolioSelector" Width="200" PlaceholderText="Select portfolio"
+                              ItemsSource="{Binding Portfolios}" SelectedItem="{Binding SelectedPortfolio, Mode=TwoWay}"
+                              IsEnabled="{Binding CanSelectPortfolio}" AutomationProperties.Name="Transaction portfolio">
+                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate>
+                    </ComboBox>
+                     <Button Content="Buy" Classes="tradeBuy" Command="{Binding BuyCommand}" IsEnabled="{Binding CanBuy}"/>
+                     <Button Content="Sell" Classes="tradeSell" Command="{Binding SellCommand}" IsEnabled="{Binding CanSell}"/>
                 </StackPanel>
             </Grid>
             <TextBlock Text="{Binding TradingNotice}" Classes="muted" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding PortfolioStatus}" Classes="muted" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding HoldingsDisplay}" Classes="muted"/>
             <Border IsVisible="{Binding IsOrderOpen}" Background="{StaticResource SurfaceAlt}" Padding="16" CornerRadius="6">
                 <StackPanel Spacing="10">
                     <TextBlock Text="{Binding OrderSide}" Classes="h2"/>
@@ -86,4 +93,10 @@
             </ItemsControl>
         </StackPanel>
     </ScrollViewer>
+    <UserControl.Styles>
+        <Style Selector="Button.tradeBuy"><Setter Property="Background" Value="{StaticResource GreenSolid}"/><Setter Property="Foreground" Value="White"/></Style>
+        <Style Selector="Button.tradeSell"><Setter Property="Background" Value="{StaticResource RedSolid}"/><Setter Property="Foreground" Value="White"/></Style>
+        <!-- Désactivé = gris, pour rendre l'obligation de choisir un portefeuille visible. -->
+        <Style Selector="Button.tradeBuy:disabled, Button.tradeSell:disabled"><Setter Property="Background" Value="#D5D9DE"/><Setter Property="Foreground" Value="#697386"/></Style>
+    </UserControl.Styles>
 </UserControl>

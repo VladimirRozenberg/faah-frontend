@@ -38,6 +38,31 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     private string _selectedPeriod = "1d", _selectedInterval = "5m";
     private int _chartRequest;
     private bool _changingPeriod;
+    private IReadOnlyList<TradePortfolioResponse> _portfolios = Array.Empty<TradePortfolioResponse>();
+    private TradePortfolioResponse? _selectedPortfolio;
+    private bool _portfoliosReady;
+    private string _portfolioStatus = "Loading portfolios…";
+    private int _orderPortfolioId;
+
+    public IReadOnlyList<TradePortfolioResponse> Portfolios => _portfolios;
+    public string PortfolioStatus { get => _portfolioStatus; private set => SetField(ref _portfolioStatus, value); }
+    public bool CanSelectPortfolio => !_disposed && !IsSubmitting && !IsBusy && _portfoliosReady;
+    public TradePortfolioResponse? SelectedPortfolio
+    {
+        get => _selectedPortfolio;
+        set
+        {
+            if (IsSubmitting || IsBusy || (value is not null && !Portfolios.Contains(value))) return;
+            if (!SetField(ref _selectedPortfolio, value)) return;
+            // Un ordre préparé ne doit jamais partir vers un autre portefeuille.
+            OrderSide = "";
+            if (!_uncertain) OrderStatus = "";
+            NotifyTrading();
+        }
+    }
+    public decimal HeldQuantity => SelectedPortfolio?.Positions
+        .FirstOrDefault(p => string.Equals(p.Symbol, Asset.Symbol, StringComparison.OrdinalIgnoreCase))?.Quantity ?? 0;
+    public string HoldingsDisplay => SelectedPortfolio is null ? "" : $"Held: {HeldQuantity:G10} {Asset.Symbol}";
 
     public IReadOnlyList<string> Periods => _historyOptions.Keys.ToList();
     public IReadOnlyList<string> Intervals => _historyOptions.TryGetValue(_selectedPeriod, out var values) ? values : Array.Empty<string>();
@@ -100,22 +125,32 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public ICommand SubmitOrderCommand { get; }
     public string OrderStatus { get => _orderStatus; private set => SetField(ref _orderStatus, value); }
     public bool IsSubmitting { get => _submitting; private set { SetField(ref _submitting, value); NotifyTrading(); } }
-    public bool CanPrepareOrder => !_disposed && !IsSubmitting && !_uncertain && _userId > 0
+    public bool CanPrepareOrder => !_disposed && !IsBusy && !IsSubmitting && !_uncertain && _userId > 0
+        && _portfoliosReady && SelectedPortfolio is not null
         && Asset.Price > 0 && DateTimeOffset.UtcNow - _quoteAt < TimeSpan.FromMinutes(2)
         && string.Equals(Asset.Currency, "USD", StringComparison.OrdinalIgnoreCase);
+    public bool CanBuy => CanPrepareOrder;
+    public bool CanSell => CanPrepareOrder && HeldQuantity > 0;
     public bool CanSubmitOrder => CanPrepareOrder && IsOrderOpen && Quantity > 0 && Quantity <= 99999999
+        && SelectedPortfolio!.Id == _orderPortfolioId && (OrderSide != "Sell" || Quantity <= HeldQuantity)
         && _orderPrice > 0 && DateTimeOffset.UtcNow - _orderAt < TimeSpan.FromMinutes(2);
     public string TradingNotice => _userId <= 0 ? "Reconnecte-toi pour identifier ton portefeuille."
         : _uncertain ? "The result of the last request is uncertain: check your history before making another operation."
         : !string.Equals(Asset.Currency, "USD", StringComparison.OrdinalIgnoreCase) ? "Simulation unavailable: the backend currently records transactions in USD only."
-        : "Simulation only; no real money is involved. A recent quote is required. The current backend does not yet manage an available balance.";
+        : SelectedPortfolio is null ? "Select a compatible portfolio to trade. Simulation only; no real money is involved."
+        : "Simulation only. The server checks your available balance and determines the execution price.";
     private void NotifyTrading()
     {
         OnPropertyChanged(nameof(CanPrepareOrder));
+        OnPropertyChanged(nameof(CanBuy));
+        OnPropertyChanged(nameof(CanSell));
+        OnPropertyChanged(nameof(CanSelectPortfolio));
+        OnPropertyChanged(nameof(HeldQuantity));
+        OnPropertyChanged(nameof(HoldingsDisplay));
         OnPropertyChanged(nameof(CanSubmitOrder));
         OnPropertyChanged(nameof(TradingNotice));
     }
-    public bool IsBusy { get => _busy; private set => SetField(ref _busy, value); }
+    public bool IsBusy { get => _busy; private set { SetField(ref _busy, value); NotifyTrading(); } }
     public string QuoteStatus { get => _quoteStatus; private set => SetField(ref _quoteStatus, value); }
     public string ChartStatus { get => _chartStatus; private set => SetField(ref _chartStatus, value); }
     public string NewsStatus { get => _newsStatus; private set => SetField(ref _newsStatus, value); }
@@ -135,14 +170,15 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         set { SetField(ref _quantity, value); OnPropertyChanged(nameof(OrderEstimate)); NotifyTrading(); }
     }
     public string OrderEstimate => Quantity > 0 && Quantity <= 99999999 && _orderPrice > 0
-        ? $"Simulation price: {_orderPrice:G10} USD · amount: {Quantity.Value * _orderPrice:N2} USD (excluding fees)"
+        ? $"Portfolio: {SelectedPortfolio?.Name} · Estimated price: {_orderPrice:G10} USD · amount: {Quantity.Value * _orderPrice:N2} USD (excluding fees)"
         : "Enter a positive quantity. A quote is required for the estimate.";
     private void PrepareOrder(string side)
     {
-        if (!CanPrepareOrder) return;
+        if (side == "Achat" ? !CanBuy : !CanSell) return;
+        _orderPortfolioId = SelectedPortfolio!.Id;
         _orderPrice = Asset.Price!.Value; // Prix fige pour que le montant ne change pas pendant la confirmation.
         _orderAt = _quoteAt;
-        Quantity = 1;
+        Quantity = side == "Vente" ? Math.Min(1, HeldQuantity) : 1;
         OrderSide = side == "Achat" ? "Buy" : side == "Vente" ? "Sell" : side;
         OrderStatus = "";
     }
@@ -154,6 +190,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         IsSubmitting = true;
         OrderStatus = "Saving simulation…";
         string action = OrderSide == "Buy" ? "buy" : "sell";
+        int portfolioId = _orderPortfolioId;
         var data = new Dictionary<string, object>
         {
             ["symbol"] = Asset.Symbol,
@@ -163,7 +200,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         try
         {
             // Le meme client HTTP conserve le token du compte connecte. Aucun nouvel essai automatique.
-            using var response = await _http.PostAsJsonAsync($"api/users/{_userId}/portfolio/assets/{action}", data, Json, _lifetime.Token);
+            using var response = await _http.PostAsJsonAsync($"api/users/{_userId}/portfolios/{portfolioId}/assets/{action}", data, Json, _lifetime.Token);
             if (!response.IsSuccessStatusCode)
             {
                 if ((int)response.StatusCode >= 500) throw new HttpRequestException();
@@ -174,9 +211,12 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
                 return;
             }
             var portfolio = await response.Content.ReadFromJsonAsync<TradePortfolioResponse>(Json, _lifetime.Token);
-            if (portfolio is null || portfolio.UserId != _userId || portfolio.Positions is null) throw new JsonException();
+            if (portfolio is null || portfolio.Id != portfolioId || portfolio.UserId != _userId || portfolio.Positions is null) throw new JsonException();
             if (_disposed) return;
             decimal remaining = portfolio.Positions.FirstOrDefault(p => string.Equals(p.Symbol, Asset.Symbol, StringComparison.OrdinalIgnoreCase))?.Quantity ?? 0;
+            // La réponse du serveur devient la nouvelle quantité détenue, sans la deviner.
+            SelectedPortfolio!.Positions = portfolio.Positions;
+            NotifyTrading();
             OrderStatus = $"Simulated {OrderSide.ToLowerInvariant()} recorded. Holdings: {remaining:G10} {Asset.Symbol}.";
             OrderSide = "";
         }
@@ -202,10 +242,10 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
 
     public async Task RefreshAsync()
     {
-        if (_disposed || IsBusy) return;
+        if (_disposed || IsBusy || IsSubmitting) return;
         IsBusy = true;
         // Les trois blocs sont independants : une panne des news ne masque pas le graphique.
-        try { await Task.WhenAll(LoadQuoteAsync(), RefreshChartAsync(), LoadNewsAsync()); }
+        try { await Task.WhenAll(LoadQuoteAsync(), RefreshChartAsync(), LoadNewsAsync(), LoadPortfoliosAsync()); }
         finally { if (!_disposed) { IsBusy = false; NotifyTrading(); } }
     }
 
@@ -215,6 +255,39 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<T>(Json, _lifetime.Token)
             ?? throw new JsonException("Reponse vide.");
+    }
+
+    private async Task LoadPortfoliosAsync()
+    {
+        _portfoliosReady = false;
+        PortfolioStatus = "Loading portfolios…";
+        NotifyTrading();
+        try
+        {
+            if (_userId <= 0) { PortfolioStatus = "Sign in to load your portfolios."; return; }
+            var result = await GetAsync<TradePortfolioListResponse>($"api/users/{_userId}/portfolios");
+            if (_disposed) return;
+            if (result.Items is null || result.Items.Any(p => p is null || p.Id <= 0 || p.UserId != _userId
+                || p.Positions is null || p.PreferredAssetTypes is null)) throw new JsonException();
+            // Liste vide de préférences = tous les types, comme dans le backend.
+            _portfolios = result.Items.Where(p => p.IsActive
+                && string.Equals(p.BaseCurrency, "USD", StringComparison.OrdinalIgnoreCase)
+                && (p.PreferredAssetTypes.Count == 0 || p.PreferredAssetTypes.Contains(Asset.Type ?? "", StringComparer.OrdinalIgnoreCase)))
+                .ToList();
+            int? previousId = SelectedPortfolio?.Id;
+            _selectedPortfolio = _portfolios.FirstOrDefault(p => p.Id == previousId);
+            if (_selectedPortfolio is null) OrderSide = "";
+            _portfoliosReady = true;
+            OnPropertyChanged(nameof(Portfolios));
+            OnPropertyChanged(nameof(SelectedPortfolio));
+            PortfolioStatus = _portfolios.Count == 0 ? "No compatible active portfolio. Create one in Portfolio." : "";
+        }
+        catch (OperationCanceledException) when (_disposed) { }
+        catch (Exception ex)
+        {
+            if (!_disposed) { OrderSide = ""; PortfolioStatus = "Portfolios unavailable. " + Explain(ex); }
+        }
+        finally { if (!_disposed) NotifyTrading(); }
     }
 
     private async Task LoadQuoteAsync()
