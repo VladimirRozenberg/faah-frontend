@@ -307,6 +307,51 @@ int calls = handler.Calls;
 await vm.RefreshAsync();
 Check(handler.Calls == calls, "leaving detail stops API calls");
 
+// La fenêtre Live doit rester utilisable avec un ancien backend ou un fournisseur en panne.
+using var healthHandler = new FakeHealthApi();
+using var healthHttp = new HttpClient(healthHandler) { BaseAddress = new Uri("https://example.test/") };
+var healthVm = new HealthDetailsViewModel(healthHttp);
+await healthVm.RefreshAsync();
+Check(healthVm.IsHealthy && healthVm.YahooStatus == "Connected" && healthVm.TwelveStatus == "Rate limited",
+    "health distinguishes internal LIVE and external provider quota");
+Check(healthVm.TwelveDetails.Contains("30 min") && healthVm.YahooDetails.Contains("5 min"), "source dates and cache intervals displayed");
+var healthWindow = new HealthDetailsWindow { DataContext = healthVm };
+healthWindow.Show();
+Dispatcher.UIThread.RunJobs();
+Check(healthWindow.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "Yahoo Finance (yfinance)"), "Yahoo row rendered in Live window");
+Check(healthWindow.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "Twelve Data (logos)"), "Twelve row rendered in Live window");
+using (var healthImage = new RenderTargetBitmap(new PixelSize(420, 680)))
+{
+    healthImage.Render(healthWindow);
+    healthImage.Save(Path.Combine(Path.GetTempPath(), "faah-external-health.png"));
+}
+healthWindow.Close();
+healthHandler.ExternalCode = HttpStatusCode.NotFound;
+await healthVm.RefreshAsync();
+Check(healthVm.IsHealthy && healthVm.YahooStatus == "Unknown" && healthVm.YahooDetails.Contains("update required"), "old backend does not falsely report provider outage");
+healthHandler.ExternalCode = HttpStatusCode.ServiceUnavailable;
+await healthVm.RefreshAsync();
+Check(healthVm.TwelveStatus == "Unknown" && healthVm.TwelveDetails.Contains("Unable"), "failed refresh clears old provider success");
+
+class FakeHealthApi : HttpMessageHandler
+{
+    public HttpStatusCode ExternalCode = HttpStatusCode.OK;
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+    {
+        bool external = request.RequestUri!.AbsolutePath == "/health/external";
+        return Task.FromResult(new HttpResponseMessage(external ? ExternalCode : HttpStatusCode.OK)
+        {
+            Content = new StringContent(external ? """
+                {"yfinance":{"status":"connected","detail":"AAPL price received via yfinance.","checked_at":"2026-09-30T12:25:00Z","cache_seconds":300},
+                 "twelve_data":{"status":"rate_limited","detail":"Twelve Data request quota reached.","checked_at":"2026-09-30T12:25:00Z","cache_seconds":1800}}
+                """ : """
+                {"status":"ok","checked_at":"2026-09-30T12:25:00Z","database":{"status":"connected"},"orchestrator":{"status":"running"},
+                 "portfolio_strategists":{"status":"running","active":10},"rss_feeds":{"status":"running","active":16}}
+                """)
+        });
+    }
+}
+
 class FakeApi : HttpMessageHandler
 {
     public int Posts, Calls;

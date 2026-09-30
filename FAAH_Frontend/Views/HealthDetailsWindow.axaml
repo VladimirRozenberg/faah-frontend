@@ -3,14 +3,15 @@
         x:Class="FAAH_Frontend.Views.HealthDetailsWindow"
         Title="FAAH API health"
         Width="420"
-        Height="480"
-        CanResize="False"
+        Height="680"
+        MinWidth="420" MinHeight="450"
+        CanResize="True"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource Surface}">
     <Grid Margin="24" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="16">
         <StackPanel Spacing="4">
             <TextBlock Text="API health" FontSize="22" FontWeight="Bold"/>
-            <TextBlock Text="Live status from /health" Opacity="0.7"/>
+            <TextBlock Text="Internal API and external data sources" Opacity="0.7"/>
         </StackPanel>
 
         <Border Grid.Row="1" Padding="14" CornerRadius="6"
@@ -53,6 +54,18 @@
                 </Grid>
                 <TextBlock Text="{Binding RssDetails}" FontSize="11"
                            Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                <Border Height="1" Background="{StaticResource Hairline}" Margin="0,4"/>
+                <TextBlock Text="External sources" FontWeight="SemiBold"/>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Yahoo Finance (yfinance)"/>
+                    <TextBlock Grid.Column="1" Text="{Binding YahooStatus}" Foreground="{Binding YahooColor}" FontWeight="SemiBold"/>
+                </Grid>
+                <TextBlock Text="{Binding YahooDetails}" FontSize="11" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Twelve Data (logos)"/>
+                    <TextBlock Grid.Column="1" Text="{Binding TwelveStatus}" Foreground="{Binding TwelveColor}" FontWeight="SemiBold"/>
+                </Grid>
+                <TextBlock Text="{Binding TwelveDetails}" FontSize="11" Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
             </StackPanel>
         </ScrollViewer>
 
