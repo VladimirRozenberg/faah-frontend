@@ -45,7 +45,8 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     private int _orderPortfolioId;
 
     public IReadOnlyList<TradePortfolioResponse> Portfolios => _portfolios;
-    public string PortfolioStatus { get => _portfolioStatus; private set => SetField(ref _portfolioStatus, value); }
+    public string PortfolioStatus { get => _portfolioStatus; private set { SetField(ref _portfolioStatus, value); OnPropertyChanged(nameof(HasPortfolioStatus)); } }
+    public bool HasPortfolioStatus => !string.IsNullOrEmpty(PortfolioStatus);
     public bool CanSelectPortfolio => !_disposed && !IsSubmitting && !IsBusy && _portfoliosReady;
     public TradePortfolioResponse? SelectedPortfolio
     {
@@ -133,7 +134,8 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public ICommand CloseOrderCommand { get; }
     public ICommand SubmitOrderCommand { get; }
     public ICommand OpenArticleCommand { get; }
-    public string OrderStatus { get => _orderStatus; private set => SetField(ref _orderStatus, value); }
+    public string OrderStatus { get => _orderStatus; private set { SetField(ref _orderStatus, value); OnPropertyChanged(nameof(HasOrderStatus)); } }
+    public bool HasOrderStatus => !string.IsNullOrEmpty(OrderStatus);
     public bool IsSubmitting { get => _submitting; private set { SetField(ref _submitting, value); NotifyTrading(); } }
     public bool CanPrepareOrder => !_disposed && !IsBusy && !IsSubmitting && !_uncertain && _userId > 0
         && _portfoliosReady && SelectedPortfolio is not null

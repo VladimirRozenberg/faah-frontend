@@ -158,6 +158,8 @@ window.Width = 1920;
 window.Height = 1080;
 Dispatcher.UIThread.RunJobs();
 Check(Grid.GetColumn(view.FindControl<StackPanel>("TradingPanel")!) == 1, "wide layout places trading beside asset summary");
+Check(Grid.GetColumn(view.FindControl<StackPanel>("OrderActions")!) == 3
+    && view.FindControl<Border>("OrderCard")!.Bounds.Height < 240, "wide order is a compact horizontal panel");
 Check(view.GetVisualDescendants().OfType<FAAH_Frontend.Controls.CandleChart>().Single().Bounds.Width > 1700,
     "chart keeps full page width on large screens");
 using (var wideImage = new RenderTargetBitmap(new PixelSize(1920, 1080)))
@@ -168,6 +170,21 @@ using (var wideImage = new RenderTargetBitmap(new PixelSize(1920, 1080)))
 window.Width = 900;
 Dispatcher.UIThread.RunJobs();
 Check(Grid.GetRow(view.FindControl<StackPanel>("TradingPanel")!) == 1, "narrow layout stacks trading below asset summary");
+Check(Grid.GetRow(view.FindControl<StackPanel>("OrderActions")!) == 1, "medium order uses two rows");
+using (var mediumImage = new RenderTargetBitmap(new PixelSize(900, 1080)))
+{
+    mediumImage.Render(window);
+    mediumImage.Save(Path.Combine(Path.GetTempPath(), "faah-order-medium.png"));
+}
+window.Width = 600;
+Dispatcher.UIThread.RunJobs();
+Check(Grid.GetRow(view.FindControl<StackPanel>("OrderActions")!) == 3, "small order stacks all sections");
+Check(view.FindControl<Border>("OrderCard")!.Bounds.Width <= 560, "small order fits available width");
+using (var smallImage = new RenderTargetBitmap(new PixelSize(600, 1080)))
+{
+    smallImage.Render(window);
+    smallImage.Save(Path.Combine(Path.GetTempPath(), "faah-order-small.png"));
+}
 window.Width = 1100;
 window.Height = 900;
 Dispatcher.UIThread.RunJobs();
