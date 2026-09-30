@@ -30,6 +30,8 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     private string _orderSide = "";
     private decimal? _quantity = 1;
     private readonly int _userId;
+    private readonly int? _preferredPortfolioId;
+    private bool _initialPortfolioSelectionApplied;
     private bool _submitting, _uncertain;
     private string _orderStatus = "";
     private decimal _orderPrice;
@@ -103,11 +105,12 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public AssetDetailViewModel(HttpClient http, Asset asset, Action goBack, int userId = 0, Action<int>? openArticle = null)
+    public AssetDetailViewModel(HttpClient http, Asset asset, Action goBack, int userId = 0, Action<int>? openArticle = null, int? preferredPortfolioId = null)
     {
         _http = http;
         Asset = asset;
         _userId = userId;
+        _preferredPortfolioId = preferredPortfolioId;
         _openArticle = openArticle;
         BackCommand = new RelayCommand(goBack);
         RefreshCommand = new RelayCommand(() => { _ = RefreshAsync(); });
@@ -315,6 +318,11 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
                 .ToList();
             int? previousId = SelectedPortfolio?.Id;
             _selectedPortfolio = _portfolios.FirstOrDefault(p => p.Id == previousId);
+            if (!_initialPortfolioSelectionApplied)
+            {
+                _selectedPortfolio ??= _portfolios.FirstOrDefault(p => p.Id == _preferredPortfolioId);
+                _initialPortfolioSelectionApplied = true;
+            }
             if (_selectedPortfolio is null) OrderSide = "";
             _portfoliosReady = true;
             OnPropertyChanged(nameof(Portfolios));
