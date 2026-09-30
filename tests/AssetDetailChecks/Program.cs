@@ -25,6 +25,7 @@ var asset = new Asset { Id = 7, Symbol = "BTC-USD", Name = "Bitcoin USD", Type =
 bool returned = false;
 using var vm = new AssetDetailViewModel(http, asset, () => returned = true, 42);
 await vm.RefreshAsync();
+Check(handler.DetailIds.SequenceEqual(new[] { 10, 11, 12 }), "summary list followed by details; paused and non-USD portfolios skipped");
 Check(vm.Portfolios.Select(p => p.Id).SequenceEqual(new[] { 10, 12 }), "only compatible active USD portfolios; empty preferences allow all types");
 Check(vm.SelectedPortfolio is null && !vm.CanBuy && !vm.CanSell, "no portfolio auto-selected; buy and sell disabled");
 vm.BuyCommand.Execute(null);
@@ -66,6 +67,8 @@ vm.BuyCommand.Execute(null);
 vm.Quantity = 0;
 Check(!vm.CanSubmitOrder, "zero quantity rejected");
 vm.Quantity = 0.25m;
+Check(vm.ConfirmOrderLabel == "Confirm buy" && vm.OrderTitle == "Buy BTC-USD"
+    && vm.OrderTotal == $"{25m:N2} USD", "buy ticket labels and estimated total follow quantity");
 Check(vm.CanSubmitOrder && handler.Posts == 0, "preparing order does not send it");
 await vm.SubmitOrderAsync();
 Check(handler.Posts == 1 && handler.LastPath == "/api/users/42/portfolios/10/assets/buy", "buy route targets connected user and selected portfolio");
@@ -135,6 +138,7 @@ var portfolioSelector = view.FindControl<ComboBox>("TradePortfolioSelector")!;
 portfolioSelector.SelectedItem = null;
 Dispatcher.UIThread.RunJobs();
 Check(!buy.IsEnabled && !vm.CanSell, "clearing real selector disables trading buttons");
+Check(!view.FindControl<Border>("HoldingsCard")!.IsVisible, "holdings card hidden without portfolio");
 using (var disabledImage = new RenderTargetBitmap(new PixelSize(1100, 900)))
 {
     disabledImage.Render(window);
@@ -143,9 +147,30 @@ using (var disabledImage = new RenderTargetBitmap(new PixelSize(1100, 900)))
 portfolioSelector.SelectedItem = vm.Portfolios[0];
 Dispatcher.UIThread.RunJobs();
 Check(buy.IsEnabled && vm.SelectedPortfolio!.Id == 10, "real selector binding enables buy");
+Check(view.FindControl<Border>("HoldingsCard")!.IsVisible && vm.HoldingsDisplay == "0 BTC-USD", "compact holdings card shows zero quantity for selected portfolio");
+Check(!vm.HasTradingNotice, "routine simulation notice removed; warning messages remain available");
 buy.Command!.Execute(null);
 Dispatcher.UIThread.RunJobs();
 Check(view.GetVisualDescendants().OfType<NumericUpDown>().Single().IsVisible, "inline confirmation form visible");
+Check(view.GetVisualDescendants().OfType<Button>().Any(b => Equals(b.Content, "Confirm buy")), "styled confirmation button bound to buy action");
+// Vérifier le plein écran et une fenêtre réduite avec le même formulaire ouvert.
+window.Width = 1920;
+window.Height = 1080;
+Dispatcher.UIThread.RunJobs();
+Check(Grid.GetColumn(view.FindControl<StackPanel>("TradingPanel")!) == 1, "wide layout places trading beside asset summary");
+Check(view.GetVisualDescendants().OfType<FAAH_Frontend.Controls.CandleChart>().Single().Bounds.Width > 1700,
+    "chart keeps full page width on large screens");
+using (var wideImage = new RenderTargetBitmap(new PixelSize(1920, 1080)))
+{
+    wideImage.Render(window);
+    wideImage.Save(Path.Combine(Path.GetTempPath(), "faah-order-wide.png"));
+}
+window.Width = 900;
+Dispatcher.UIThread.RunJobs();
+Check(Grid.GetRow(view.FindControl<StackPanel>("TradingPanel")!) == 1, "narrow layout stacks trading below asset summary");
+window.Width = 1100;
+window.Height = 900;
+Dispatcher.UIThread.RunJobs();
 using (var bitmap = new RenderTargetBitmap(new PixelSize(1100, 900)))
 {
     bitmap.Render(window);
@@ -153,6 +178,16 @@ using (var bitmap = new RenderTargetBitmap(new PixelSize(1100, 900)))
     bitmap.Save(screenshot);
     Console.WriteLine("SCREENSHOT " + screenshot);
 }
+vm.SelectedPortfolio = vm.Portfolios[1];
+vm.SellCommand.Execute(null);
+Dispatcher.UIThread.RunJobs();
+Check(vm.ConfirmOrderLabel == "Confirm sell" && !vm.IsBuyOrder, "sell ticket has its own label and colour");
+using (var sellImage = new RenderTargetBitmap(new PixelSize(1100, 900)))
+{
+    sellImage.Render(window);
+    sellImage.Save(Path.Combine(Path.GetTempPath(), "faah-order-sell.png"));
+}
+vm.SelectedPortfolio = vm.Portfolios[0];
 vm.CloseOrderCommand.Execute(null);
 Dispatcher.UIThread.RunJobs();
 using (var bitmap = new RenderTargetBitmap(new PixelSize(1100, 900)))
@@ -236,6 +271,16 @@ handler.FailPortfolios = false;
 await unavailable.RefreshAsync();
 unavailable.SelectedPortfolio = unavailable.Portfolios[0];
 Check(unavailable.CanBuy, "refresh recovers portfolio load");
+handler.FailPortfolioDetail = true;
+await unavailable.RefreshAsync();
+Check(!unavailable.CanBuy && !unavailable.CanSell && unavailable.PortfolioStatus.Contains("unavailable"), "detail failure blocks trading instead of guessing holdings");
+handler.FailPortfolioDetail = false;
+handler.WrongDetailOwner = true;
+await unavailable.RefreshAsync();
+Check(!unavailable.CanBuy && unavailable.PortfolioStatus.Contains("format"), "detail for another user rejected");
+handler.WrongDetailOwner = false;
+await unavailable.RefreshAsync();
+Check(unavailable.SelectedPortfolio?.Id == 10 && unavailable.CanBuy, "refresh recovers details and preserves selected portfolio");
 handler.NoPortfolios = true;
 await unavailable.RefreshAsync();
 Check(unavailable.SelectedPortfolio is null && !unavailable.CanBuy && unavailable.PortfolioStatus.Contains("No compatible"), "removed portfolio clears selection and disables trading");
@@ -253,6 +298,8 @@ class FakeApi : HttpMessageHandler
     public bool FailChart, MalformedCandles, Empty, DelayTrade;
     public bool FailOptions, HoldNextChart, FailNews;
     public bool EmptyPositions, WrongPortfolio, FailPortfolios, NoPortfolios;
+    public bool FailPortfolioDetail, WrongDetailOwner;
+    public List<int> DetailIds = new();
     public string LastChartQuery = "";
     private TaskCompletionSource<HttpResponseMessage>? _pendingChart;
     public void CompleteChart() => _pendingChart!.SetResult(Reply(HttpStatusCode.OK, """{"symbol":"BTC-USD","candles":[]}"""));
@@ -272,13 +319,27 @@ class FakeApi : HttpMessageHandler
         if (path == "/api/users/42/portfolios") return FailPortfolios ? Reply(HttpStatusCode.ServiceUnavailable, "{}")
             : Reply(HttpStatusCode.OK, NoPortfolios ? "{\"items\":[]}" : """
             {"items":[
-              {"id":10,"user_id":42,"name":"Crypto","is_active":true,"base_currency":"USD","preferred_asset_types":["crypto"],"positions":[]},
-              {"id":11,"user_id":42,"name":"Stocks","is_active":true,"base_currency":"USD","preferred_asset_types":["stock"],"positions":[]},
-              {"id":12,"user_id":42,"name":"Mixed","is_active":true,"base_currency":"USD","preferred_asset_types":[],"positions":[{"symbol":"BTC-USD","quantity":2}]},
-              {"id":13,"user_id":42,"name":"Paused","is_active":false,"base_currency":"USD","preferred_asset_types":["crypto"],"positions":[]},
-              {"id":14,"user_id":42,"name":"EUR","is_active":true,"base_currency":"EUR","preferred_asset_types":["crypto"],"positions":[]}
+              {"portfolio_id":10,"name":"Crypto","status":"active","base_currency":"USD"},
+              {"portfolio_id":11,"name":"Stocks","status":"active","base_currency":"USD"},
+              {"portfolio_id":12,"name":"Mixed","status":"active","base_currency":"USD"},
+              {"portfolio_id":13,"name":"Paused","status":"paused","base_currency":"USD"},
+              {"portfolio_id":14,"name":"EUR","status":"active","base_currency":"EUR"}
             ]}
             """);
+        if (request.Method == HttpMethod.Get && path.StartsWith("/api/users/42/portfolios/"))
+        {
+            int id = int.Parse(path.Split('/').Last());
+            DetailIds.Add(id);
+            return FailPortfolioDetail ? Reply(HttpStatusCode.ServiceUnavailable, "{}")
+                : Reply(HttpStatusCode.OK, JsonSerializer.Serialize(new
+                {
+                    id, user_id = WrongDetailOwner ? 99 : 42,
+                    name = id == 10 ? "Crypto" : id == 11 ? "Stocks" : "Mixed",
+                    is_active = true, base_currency = "USD",
+                    preferred_asset_types = id == 12 ? Array.Empty<string>() : new[] { id == 10 ? "crypto" : "stock" },
+                    positions = id == 12 ? new object[] { new { symbol = "BTC-USD", quantity = 2 } } : Array.Empty<object>()
+                }));
+        }
         if (path == "/api/history-options") return FailOptions ? Reply(HttpStatusCode.ServiceUnavailable, "{}")
             : Reply(HttpStatusCode.OK, """{"1d":["1m","5m","1h"],"5d":["5m","1h"],"1mo":["30m","1h","1d"]}""");
         if (request.Method == HttpMethod.Post)
