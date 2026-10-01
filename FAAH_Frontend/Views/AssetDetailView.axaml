@@ -65,9 +65,16 @@
                         <TextBlock Text="{Binding SelectedPortfolio.Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
                     </StackPanel>
                     <StackPanel x:Name="OrderQuantity" Grid.Column="1" Margin="24,0,0,0" Spacing="8">
-                        <TextBlock Text="Quantity" FontWeight="SemiBold"/>
-                        <NumericUpDown Value="{Binding Quantity}" Minimum="0.00000001" Maximum="99999999" Increment="1"
+                        <ComboBox x:Name="OrderInputModeSelector" ItemsSource="{Binding OrderInputModes}"
+                                  SelectedItem="{Binding OrderInputMode, Mode=TwoWay}" HorizontalAlignment="Stretch"
+                                  IsEnabled="{Binding !IsSubmitting}" AutomationProperties.Name="Enter quantity or amount"/>
+                        <TextBlock Text="Quantity" FontWeight="SemiBold" IsVisible="{Binding IsQuantityMode}"/>
+                        <NumericUpDown Value="{Binding Quantity, Mode=TwoWay}" IsVisible="{Binding IsQuantityMode}" Minimum="0" Maximum="99999999" ShowButtonSpinner="False" AllowSpin="False"
                                        FormatString="0.########" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Stretch" MinHeight="40"/>
+                        <TextBlock Text="{Binding AmountLabel}" FontWeight="SemiBold" IsVisible="{Binding IsAmountMode}"/>
+                        <NumericUpDown x:Name="OrderAmountInput" Value="{Binding CashAmount, Mode=TwoWay}" IsVisible="{Binding IsAmountMode}"
+                                       Minimum="0" Maximum="99999999" ShowButtonSpinner="False" AllowSpin="False" FormatString="0.00"
+                                       IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Stretch" MinHeight="40"/>
                         <TextBlock Text="Estimated unit price" Classes="muted"/>
                         <TextBlock Text="{Binding OrderUnitPrice}" TextWrapping="Wrap"/>
                     </StackPanel>
@@ -75,7 +82,8 @@
                         <StackPanel Spacing="8">
                             <TextBlock Text="Estimated total" Classes="muted"/>
                             <TextBlock Text="{Binding OrderTotal}" FontSize="24" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                            <TextBlock Text="Excluding fees. The final execution price may vary." Classes="muted" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding OrderQuantityDisplay}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="Excluding fees. The final amount may vary with the execution price." Classes="muted" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
                     <StackPanel x:Name="OrderActions" Grid.Column="3" Margin="24,0,0,0" Spacing="8" VerticalAlignment="Center">

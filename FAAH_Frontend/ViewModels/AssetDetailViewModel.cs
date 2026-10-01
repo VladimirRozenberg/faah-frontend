@@ -31,6 +31,42 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     private IReadOnlyList<NewsArticle> _news = Array.Empty<NewsArticle>();
     private string _orderSide = "";
     private decimal? _quantity = 1;
+    private decimal? _cashAmount;
+    private string _orderInputMode = "Quantity";
+    public IReadOnlyList<string> OrderInputModes { get; } = new[] { "Quantity", "Amount (USD)" };
+    public string OrderInputMode
+    {
+        get => _orderInputMode;
+        set
+        {
+            if (IsSubmitting || !OrderInputModes.Contains(value) || !SetField(ref _orderInputMode, value)) return;
+            // Conserver l'équivalent de la quantité en passant au mode montant.
+            if (IsAmountMode)
+                CashAmount = Quantity > 0 && Quantity <= 99999999 && _orderPrice > 0
+                    ? decimal.Round(Quantity.Value * _orderPrice, 2) : null;
+            OnPropertyChanged(nameof(IsAmountMode));
+            OnPropertyChanged(nameof(IsQuantityMode));
+            NotifyTrading();
+        }
+    }
+    public bool IsAmountMode => OrderInputMode == "Amount (USD)";
+    public bool IsQuantityMode => !IsAmountMode;
+    public decimal? CashAmount
+    {
+        get => _cashAmount;
+        set
+        {
+            if (IsSubmitting) return;
+            SetField(ref _cashAmount, value);
+            // Quantité = montant / prix. Arrondir vers le bas à 8 décimales.
+            // Le cours du ticket reste figé ; seul le serveur fixe le prix final.
+            Quantity = value > 0 && value <= 99999999 && _orderPrice > 0 && _orderPrice >= value.Value / 99999999m
+                ? decimal.Floor(value.Value / _orderPrice * 100000000m) / 100000000m : null;
+        }
+    }
+    public string OrderQuantityDisplay => Quantity > 0 && Quantity <= 99999999
+        ? $"≈ {Quantity.Value:0.########} {Asset.Symbol}" : "Enter a valid amount or quantity.";
+    public string AmountLabel => IsBuyOrder ? "Amount to invest (USD)" : "Amount to sell (USD)";
     private readonly int _userId;
     private readonly int? _preferredPortfolioId;
     private bool _initialPortfolioSelectionApplied;
@@ -175,6 +211,8 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsBuyOrder));
         OnPropertyChanged(nameof(OrderUnitPrice));
         OnPropertyChanged(nameof(OrderTotal));
+        OnPropertyChanged(nameof(OrderQuantityDisplay));
+        OnPropertyChanged(nameof(AmountLabel));
     }
     public bool IsBusy { get => _busy; private set { SetField(ref _busy, value); NotifyTrading(); } }
     public string QuoteStatus { get => _quoteStatus; private set => SetField(ref _quoteStatus, value); }
@@ -200,7 +238,13 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public decimal? Quantity
     {
         get => _quantity;
-        set { SetField(ref _quantity, value); OnPropertyChanged(nameof(OrderEstimate)); NotifyTrading(); }
+        set
+        {
+            if (IsSubmitting) return;
+            SetField(ref _quantity, value);
+            OnPropertyChanged(nameof(OrderEstimate));
+            NotifyTrading();
+        }
     }
     public string OrderEstimate => Quantity > 0 && Quantity <= 99999999 && _orderPrice > 0
         ? $"Portfolio: {SelectedPortfolio?.Name} · Estimated price: {_orderPrice:G10} USD · amount: {Quantity.Value * _orderPrice:N2} USD (excluding fees)"
@@ -211,6 +255,9 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         _orderPortfolioId = SelectedPortfolio!.Id;
         _orderPrice = Asset.Price!.Value; // Prix fige pour que le montant ne change pas pendant la confirmation.
         _orderAt = _quoteAt;
+        OrderInputMode = "Quantity";
+        _cashAmount = null;
+        OnPropertyChanged(nameof(CashAmount));
         Quantity = side == "Vente" ? Math.Min(1, HeldQuantity) : 1;
         OrderSide = side == "Achat" ? "Buy" : side == "Vente" ? "Sell" : side;
         OrderStatus = "";
