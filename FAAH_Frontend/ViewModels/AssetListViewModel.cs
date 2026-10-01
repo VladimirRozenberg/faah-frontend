@@ -39,6 +39,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     private string _pageInput = "1";
     private string _searchText = "", _appliedSearch = "";
     private bool _favoritesOnly;
+    private string _assetTypeFilter = "All", _currencyFilter = "", _countryFilter = "", _exchangeFilter = "", _sectorFilter = "";
+    private int _filterVersion;
     private bool _isBusy, _isPaging, _disposed, _catalogLoaded, _favoritesLoaded, _loadingPrices;
     private string _error = "", _updated = "Not loaded yet";
     public const int PageSize = 20;
@@ -56,7 +58,6 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         GoToPageCommand = new RelayCommand(GoToPage, _ => !_disposed && !IsBusy && TryGetPage(_));
         RefreshCommand = new RelayCommand(parameter => { _ = RefreshAsync(); }, _ => !_disposed && !IsBusy);
         SearchCommand = new RelayCommand(_ => { _ = SearchAsync(); }, _ => !_disposed);
-        ClearSearchCommand = new RelayCommand(_ => { _ = SearchAsync(clear: true); }, _ => !_disposed);
         ToggleFavoriteCommand = new RelayCommand(ToggleFavorite, _ => !_disposed && !IsBusy && _favoritesLoaded);
         _timer.Tick += OnTimerTick;
         _searchTimer.Tick += OnSearchTick;
@@ -86,15 +87,57 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     public RelayCommand ToggleFavoriteCommand { get; }
     public RelayCommand GoToPageCommand { get; }
     public RelayCommand SearchCommand { get; }
-    public RelayCommand ClearSearchCommand { get; }
+    public IReadOnlyList<string> AssetTypeOptions { get; } = new[] { "All", "Stocks", "Crypto", "Forex", "Futures" };
+    public string AssetTypeFilter
+    {
+        get => _assetTypeFilter;
+        set
+        {
+            if (value is null || !AssetTypeOptions.Contains(value) || !SetField(ref _assetTypeFilter, value)) return;
+            FiltersChanged();
+        }
+    }
+    public string CurrencyFilter { get => _currencyFilter; set { if (SetField(ref _currencyFilter, value ?? "")) FiltersChanged(false); } }
+    public string CountryFilter { get => _countryFilter; set { if (SetField(ref _countryFilter, value ?? "")) FiltersChanged(false); } }
+    public string ExchangeFilter { get => _exchangeFilter; set { if (SetField(ref _exchangeFilter, value ?? "")) FiltersChanged(false); } }
+    public string SectorFilter { get => _sectorFilter; set { if (SetField(ref _sectorFilter, value ?? "")) FiltersChanged(false); } }
+
+    private void FiltersChanged(bool immediate = true)
+    {
+        if (_disposed) return;
+        // Invalider aussi une ancienne réponse qui arrive après un changement de filtre.
+        _filterVersion++;
+        Assets.Clear();
+        _catalogLoaded = false;
+        Error = "";
+        _searchTimer.Stop();
+        if (immediate) _ = SearchAsync();
+        else _searchTimer.Start();
+    }
+
+    private string BuildFilterQuery()
+    {
+        string type = AssetTypeFilter switch { "Stocks" => "stock", "Crypto" => "crypto", "Forex" => "forex", "Futures" => "future", _ => "" };
+        var filters = new Dictionary<string, string>
+        {
+            ["asset_type"] = type,
+            ["currency"] = CurrencyFilter.Trim().ToUpperInvariant(),
+            ["country"] = CountryFilter.Trim(),
+            ["exchange"] = ExchangeFilter.Trim().ToUpperInvariant(),
+            ["sector"] = SectorFilter.Trim()
+        };
+        // Le serveur combine ces critères AVANT de découper les résultats en pages.
+        return string.Concat(filters.Where(f => f.Value.Length > 0)
+            .Select(f => "&" + f.Key + "=" + Uri.EscapeDataString(f.Value)))
+            + (FavoritesOnly ? "&favorites_only=true" : "");
+    }
     public bool FavoritesOnly
     {
         get => _favoritesOnly;
         set
         {
             if (_disposed || !SetField(ref _favoritesOnly, value)) return;
-            _currentPage = 1;
-            _ = RefreshAsync();
+            FiltersChanged();
         }
     }
     public string SearchText
@@ -153,7 +196,6 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             SetField(ref _isBusy, value);
             RefreshCommand.RaiseCanExecuteChanged();
             SearchCommand.RaiseCanExecuteChanged();
-            ClearSearchCommand.RaiseCanExecuteChanged();
             ToggleFavoriteCommand.RaiseCanExecuteChanged();
             PreviousPageCommand.RaiseCanExecuteChanged();
             NextPageCommand.RaiseCanExecuteChanged();
@@ -299,9 +341,11 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         IsBusy = true;
         Error = "";
         string requestedSearch = _appliedSearch;
+        int requestedFilters = _filterVersion;
+        string filterQuery = BuildFilterQuery();
         try
         {
-            if (!await LoadAssetsAsync(_currentPage, requestedSearch)) return;
+            if (!await LoadAssetsAsync(_currentPage, requestedSearch, filterQuery, requestedFilters)) return;
             if (_disposed) return;
             await LoadFavoritesAsync();
             if (_disposed) return;
@@ -310,7 +354,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex) when (IsRequestError(ex))
         {
-            if (SearchText.Trim() == requestedSearch) AddError(ex);
+            if (SearchText.Trim() == requestedSearch && requestedFilters == _filterVersion) AddError(ex);
         }
         finally
         {
@@ -324,14 +368,14 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     }
 
     // 1. Demander au backend la page de résultats, par symbole OU nom.
-    private async Task<bool> LoadAssetsAsync(int page, string requestedSearch)
+    private async Task<bool> LoadAssetsAsync(int page, string requestedSearch, string filterQuery, int requestedFilters)
     {
         string route = $"api/assets?page={page}&page_size={PageSize}";
         if (requestedSearch.Length > 0) route += "&search=" + Uri.EscapeDataString(requestedSearch);
-        if (FavoritesOnly) route += "&favorites_only=true";
+        route += filterQuery;
         var catalog = await GetAsync<AssetResponse>(route);
         // La saisie a changé pendant l'appel : ne pas afficher cette ancienne réponse.
-        if (_disposed || SearchText.Trim() != requestedSearch) return false;
+        if (_disposed || SearchText.Trim() != requestedSearch || requestedFilters != _filterVersion) return false;
         if (catalog.Items is null || catalog.Items.Any(a => a is null || string.IsNullOrWhiteSpace(a.Symbol)))
             throw new JsonException();
 

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FAAH_Frontend.ViewModels;
@@ -25,7 +26,7 @@ void PumpUntil(Func<bool> done)
 }
 using var handler = new SearchApi();
 using var http = new HttpClient(handler) { BaseAddress = new Uri("https://test/") };
-using var vm = new AssetListViewModel(http);
+using var vm = new AssetListViewModel(http, _ => { });
 await vm.RefreshAsync();
 Check(vm.Assets.Count == 20 && vm.PageCount == 3, "initial paginated catalogue");
 vm.SearchText = "  apple  ";
@@ -88,6 +89,57 @@ searchBox.Text = "ap";
 searchBox.Text = "apple";
 PumpUntil(() => handler.Search == "apple" && vm.Assets.Count == 1);
 Check(handler.Calls == beforeTyping + 2, "typing sends one debounced search plus favorites, without pressing Search");
+Check(!view.GetVisualDescendants().OfType<Button>().Any(b => Equals(b.Content, "Clear")), "Clear button removed");
+Check(view.FindControl<Border>("FiltersPanel")!.GetVisualDescendants().OfType<CheckBox>().Any(), "favorites moved into filters panel");
+await vm.SearchAsync(clear: true);
+var typeBox = view.FindControl<ComboBox>("AssetTypeFilterBox")!;
+typeBox.SelectedItem = "Crypto";
+Dispatcher.UIThread.RunJobs();
+Check(handler.Filters.GetValueOrDefault("asset_type") == "crypto" && vm.Assets.All(a => a.Type == "crypto"), "real type selector filters across the catalogue");
+vm.NextPageCommand.Execute(null);
+Check(handler.Page == 2 && vm.Assets.Count == 2 && handler.Filters["asset_type"] == "crypto", "pagination retains type filter");
+vm.CurrencyFilter = "usd";
+vm.CountryFilter = "United States";
+vm.ExchangeFilter = "nyq";
+await vm.SearchAsync();
+Check(handler.Page == 1 && handler.Filters["currency"] == "USD" && handler.Filters["exchange"] == "NYQ"
+    && handler.Filters["country"] == "United States", "text filters encoded and currency/exchange normalized");
+vm.FavoritesOnly = true;
+Check(handler.Filters["favorites_only"] == "true" && vm.Assets.Count == 2, "favorites combine with other filters");
+vm.SearchText = "Company 2";
+await vm.SearchAsync();
+Check(vm.Assets.Single().Id == 2 && handler.Filters["asset_type"] == "crypto", "main search combines with sidebar filters");
+vm.SectorFilter = "Technology";
+await vm.SearchAsync();
+Check(handler.Filters["sector"] == "Technology", "sector sent to backend");
+vm.CountryFilter = "A&B + %_";
+await vm.SearchAsync();
+Check(handler.Filters["country"] == "A&B + %_" && vm.IsEmpty, "filter special characters remain one parameter and empty results handled");
+vm.CurrencyFilter = vm.CountryFilter = vm.ExchangeFilter = vm.SectorFilter = "";
+vm.FavoritesOnly = false;
+await vm.SearchAsync(clear: true);
+handler.HoldNext = true;
+vm.AssetTypeFilter = "Stocks";
+vm.AssetTypeFilter = "Crypto";
+Check(vm.Assets.Count == 0, "filter changes hide stale rows while request pending");
+handler.Complete();
+PumpUntil(() => !vm.IsBusy && vm.Assets.Count > 0);
+Check(handler.Filters["asset_type"] == "crypto" && vm.Assets.All(a => a.Type == "crypto"), "late filter response discarded and newest selection loaded");
+vm.AssetTypeFilter = "All";
+await vm.SearchAsync();
+foreach (int width in new[] { 1100, 1920, 900 })
+{
+    window.Width = width;
+    window.Height = 800;
+    Dispatcher.UIThread.RunJobs();
+    Check(Grid.GetColumn(view.FindControl<Border>("FiltersPanel")!) == (width >= 1050 ? 1 : 0), "filters layout at width " + width);
+    using var screenshot = new RenderTargetBitmap(new PixelSize(width, 800));
+    screenshot.Render(window);
+    screenshot.Save(Path.Combine(Path.GetTempPath(), $"faah-asset-filters-{width}.png"));
+}
+view.FindControl<Expander>("AssetFilterExpander")!.IsExpanded = true;
+Dispatcher.UIThread.RunJobs();
+Check(view.FindControl<ScrollViewer>("FilterScroll")!.Bounds.Height <= 220, "expanded narrow filters leave room for asset rows");
 window.Close();
 vm.SearchText = "Company"; // Un timer en attente doit être arrêté à la fermeture.
 vm.Dispose();
@@ -98,6 +150,7 @@ Check(calls == handler.Calls, "disposed page makes no requests");
 class SearchApi : HttpMessageHandler
 {
     public string Search = "";
+    public Dictionary<string, string> Filters = new();
     public int Page, Calls;
     public bool Fail, IgnoreSearch, HoldNext;
     private TaskCompletionSource<HttpResponseMessage>? _pending;
@@ -107,15 +160,24 @@ class SearchApi : HttpMessageHandler
     {
         Calls++;
         if (Fail) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
-        if (request.RequestUri!.AbsolutePath == "/api/favorites") return Reply(new { asset_ids = Array.Empty<int>() });
+        if (request.RequestUri!.AbsolutePath == "/api/favorites") return Reply(new { asset_ids = new[] { 2, 4 } });
         if (request.RequestUri.AbsolutePath != "/api/assets") throw new Exception("Unexpected route");
         var query = request.RequestUri.Query.TrimStart('?').Split('&').Select(p => p.Split('=', 2))
             .ToDictionary(p => p[0], p => Uri.UnescapeDataString(p[1]));
         Search = query.GetValueOrDefault("search", "");
+        Filters = query;
         Page = int.Parse(query["page"]);
         int size = int.Parse(query["page_size"]);
-        var all = Enumerable.Range(1, 45).Select(i => new { id = i, symbol = i == 45 ? "AAPL" : "X" + i, name = i == 45 ? "Apple Inc." : "Company " + i });
-        var filtered = all.Where(a => IgnoreSearch || a.symbol.Contains(Search, StringComparison.OrdinalIgnoreCase) || a.name.Contains(Search, StringComparison.OrdinalIgnoreCase)).ToList();
+        var all = Enumerable.Range(1, 45).Select(i => new { id = i, symbol = i == 45 ? "AAPL" : "X" + i, name = i == 45 ? "Apple Inc." : "Company " + i,
+            type = i % 2 == 0 ? "crypto" : "stock", currency = "USD", country = "United States", exchange = "NYQ", sector = "Technology",
+            market = new { last_price = 123.45m, previous_close = 122m, change = 1.45m, change_percent = 1.19m, currency = "USD", volume = 1234567 } });
+        var filtered = all.Where(a => (IgnoreSearch || a.symbol.Contains(Search, StringComparison.OrdinalIgnoreCase) || a.name.Contains(Search, StringComparison.OrdinalIgnoreCase))
+            && (!query.ContainsKey("asset_type") || a.type == query["asset_type"])
+            && (!query.ContainsKey("currency") || a.currency == query["currency"])
+            && (!query.ContainsKey("country") || a.country == query["country"])
+            && (!query.ContainsKey("exchange") || a.exchange == query["exchange"])
+            && (!query.ContainsKey("sector") || a.sector == query["sector"])
+            && (!query.ContainsKey("favorites_only") || a.id == 2 || a.id == 4)).ToList();
         var response = Reply(new { count = filtered.Count, page = Page, page_size = size, items = filtered.Skip((Page - 1) * size).Take(size) });
         if (HoldNext) { HoldNext = false; _heldResponse = response.Result; _pending = new(); return _pending.Task; }
         return response;

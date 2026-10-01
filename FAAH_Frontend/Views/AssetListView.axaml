@@ -10,23 +10,13 @@
         <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Assets" Classes="h1"/><Button Grid.Column="1" Content="Refresh" Classes="ghost" Command="{Binding RefreshCommand}"/></Grid>
         <Border Grid.Row="1" Classes="rule" Margin="0,12,0,0"/>
 
-        <Grid Grid.Row="3" ColumnDefinitions="2*,1.2*,1.2*,1.2*,60" Margin="6,20,6,8">
-            <TextBlock Grid.Column="0" Classes="colHead" Text="SYMBOL"/>
-            <TextBlock Grid.Column="1" Classes="colHead" Text="PRICE" HorizontalAlignment="Center"/>
-            <TextBlock Grid.Column="2" Classes="colHead" Text="DAILY CHANGE" HorizontalAlignment="Center"/>
-            <TextBlock Grid.Column="3" Classes="colHead" Text="VOLUME" HorizontalAlignment="Center"/>
-        </Grid>
-
         <StackPanel Grid.Row="2" Margin="0,12,0,0" Spacing="5">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,8">
+            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                 <TextBox x:Name="AssetSearchBox" Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="200"
                          PlaceholderText="Search by symbol or name (e.g. BTC or Bitcoin)"
                          AutomationProperties.Name="Search assets by symbol or name"
                          KeyDown="SearchInputKeyDown"/>
                 <Button Grid.Column="1" Content="Search" Command="{Binding SearchCommand}" Margin="8,0,0,0"/>
-                <Button Grid.Column="2" Content="Clear" Command="{Binding ClearSearchCommand}" Margin="8,0,0,0"/>
-                <CheckBox Grid.Column="3" Content="Favorites only" IsChecked="{Binding FavoritesOnly, Mode=TwoWay}" Margin="14,0,0,0"
-                          VerticalAlignment="Center" AutomationProperties.Name="Show favorite assets only"/>
             </Grid>
             <TextBlock Text="{Binding SearchStatus}" Classes="muted" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding Updated}" Classes="muted"/>
@@ -34,7 +24,15 @@
             <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="{StaticResource Red}" TextWrapping="Wrap"/>
             <TextBlock Text="No assets found." IsVisible="{Binding IsEmpty}"/>
         </StackPanel>
-        <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
+        <Grid x:Name="CatalogGrid" Grid.Row="3" Grid.RowSpan="2" ColumnDefinitions="*,240" RowDefinitions="Auto,Auto,*">
+        <Grid Grid.Row="1" ColumnDefinitions="2*,1.2*,1.2*,1.2*,60" Margin="6,20,6,8">
+            <TextBlock Grid.Column="0" Classes="colHead" Text="SYMBOL"/>
+            <TextBlock Grid.Column="1" Classes="colHead" Text="PRICE" HorizontalAlignment="Center"/>
+            <TextBlock Grid.Column="2" Classes="colHead" Text="DAILY CHANGE" HorizontalAlignment="Center"/>
+            <TextBlock Grid.Column="3" Classes="colHead" Text="VOLUME" HorizontalAlignment="Center"/>
+        </Grid>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Assets}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -75,6 +73,30 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+            <Border x:Name="FiltersPanel" Grid.Column="1" Grid.RowSpan="3" Margin="16,12,0,0"
+                    Background="{StaticResource SurfaceAlt}" Padding="14" CornerRadius="8">
+                <Expander x:Name="AssetFilterExpander" Header="Filters" IsExpanded="True" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch">
+                    <ScrollViewer x:Name="FilterScroll" VerticalScrollBarVisibility="Auto" MaxHeight="560">
+                        <StackPanel Spacing="10" Margin="0,12,0,0">
+                            <CheckBox x:Name="FavoritesFilterBox" Content="Favorites only" IsChecked="{Binding FavoritesOnly, Mode=TwoWay}"/>
+                            <TextBlock Text="Asset type" Classes="label"/>
+                            <ComboBox x:Name="AssetTypeFilterBox" ItemsSource="{Binding AssetTypeOptions}" SelectedItem="{Binding AssetTypeFilter, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
+                            <TextBlock Text="Currency" Classes="label"/>
+                            <TextBox Text="{Binding CurrencyFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="e.g. USD" MaxLength="20"/>
+                            <TextBlock Text="Country" Classes="label"/>
+                            <TextBox Text="{Binding CountryFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="e.g. United States" MaxLength="100"/>
+                            <TextBlock Text="Exchange" Classes="label"/>
+                            <TextBox Text="{Binding ExchangeFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="e.g. NYQ" MaxLength="50"/>
+                            <TextBlock Text="Sector (stocks)" Classes="label"/>
+                            <TextBox Text="{Binding SectorFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="e.g. Technology" MaxLength="100"/>
+                            <TextBlock Text="Filters combine automatically. Use the exact country, exchange and sector names. Empty fields mean all."
+                                       Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Expander>
+            </Border>
+        </Grid>
 
         <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="5" Margin="6,18,0,0"
                     HorizontalAlignment="Center">
