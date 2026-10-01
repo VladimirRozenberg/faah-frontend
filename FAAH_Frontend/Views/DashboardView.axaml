@@ -6,12 +6,49 @@
    <Grid ColumnDefinitions="*,*,Auto"><StackPanel Spacing="8"><TextBlock Text="Available cash" Classes="label"/><TextBlock Text="{Binding Cash}" FontSize="24"/></StackPanel><StackPanel Grid.Column="1" Spacing="8"><TextBlock Text="Asset value" ToolTip.Tip="Sum of held quantities multiplied by the latest available USD prices." Classes="label"/><TextBlock Text="{Binding Assets}" FontSize="24"/></StackPanel><Button Grid.Column="2" Content="Profile and transactions" Command="{Binding ProfileCommand}"/></Grid>
    <TextBlock Text="{Binding AccountMessage}" TextWrapping="Wrap" Classes="muted"/>
    <Border Classes="rule"/>
-   <TextBlock Text="Opportunities" FontSize="24" FontWeight="Bold"/>
-   <TextBlock Text="Top 10 active recommendations, ranked by confidence and then by recency." Classes="muted" TextWrapping="Wrap"/>
-   <StackPanel Orientation="Horizontal" Spacing="10"><Button Content="Buy" Classes="chip" Classes.selected="{Binding IsBuy}" Command="{Binding BuyCommand}"/><Button Content="Sell" Classes="chip" Classes.selected="{Binding IsSell}" Command="{Binding SellCommand}"/></StackPanel>
+   <TextBlock Text="Recommendations" FontSize="24" FontWeight="Bold"/>
+   <TextBlock Text="Browse recommendations across your portfolios. Use the filters to narrow by type, status, or recency." Classes="muted" TextWrapping="Wrap"/>
+   <StackPanel Orientation="Horizontal" Spacing="10">
+    <Button Content="All" Classes="chip" Command="{Binding AllCommand}"/>
+    <Button Content="Buy" Classes="chip" Command="{Binding BuyCommand}"/>
+    <Button Content="Sell" Classes="chip" Command="{Binding SellCommand}"/>
+   </StackPanel>
+   <StackPanel Orientation="Horizontal" Spacing="12">
+    <StackPanel Spacing="4"><TextBlock Text="Kind" Classes="label"/><ComboBox Width="190" ItemsSource="{Binding KindOptions}" SelectedItem="{Binding SelectedKind}"/></StackPanel>
+    <StackPanel Spacing="4"><TextBlock Text="Status" Classes="label"/><ComboBox Width="170" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus}"/></StackPanel>
+    <CheckBox Content="Last hour only" IsChecked="{Binding RecentOnly}" VerticalAlignment="Bottom"/>
+    <StackPanel Spacing="4"><TextBlock Text="Page size" Classes="label"/><ComboBox Width="90" ItemsSource="{Binding PageSizeOptions}" SelectedItem="{Binding SelectedPageSize}"/></StackPanel>
+   </StackPanel>
    <TextBlock Text="Loading…" IsVisible="{Binding IsBusy}"/><TextBlock Text="{Binding Message}" TextWrapping="Wrap"/>
-   <TextBlock Text="No active opportunities for this selection." IsVisible="{Binding IsEmpty}" Classes="muted"/>
-   <ItemsControl ItemsSource="{Binding Opportunities}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="row" Padding="8,12"><Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="4"><TextBlock Text="{Binding Label}" FontWeight="Bold"/><TextBlock Text="{Binding Context}" Classes="muted" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="Details" Click="OpenOpportunityDetails" Tag="{Binding}"/></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+   <TextBlock Text="No recommendations for this selection." IsVisible="{Binding IsEmpty}" Classes="muted"/>
+   <ItemsControl ItemsSource="{Binding Recommendations}"><ItemsControl.ItemTemplate><DataTemplate>
+    <Border Classes="row" Padding="16">
+     <StackPanel Spacing="8">
+      <TextBlock Text="{Binding Label}" FontSize="18" FontWeight="Bold" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding PortfolioDisplay}" Classes="muted" TextWrapping="Wrap"/>
+      <WrapPanel ItemSpacing="16" LineSpacing="6">
+       <TextBlock><Run Text="Type: "/><Run Text="{Binding KindDisplay}"/></TextBlock>
+       <TextBlock><Run Text="Action: "/><Run Text="{Binding Action}"/></TextBlock>
+       <TextBlock><Run Text="Status: "/><Run Text="{Binding Status}"/></TextBlock>
+       <TextBlock><Run Text="Created: "/><Run Text="{Binding CreatedAtDisplay}"/></TextBlock>
+       <TextBlock Text="{Binding ConfidenceDisplay}"/>
+       <TextBlock IsVisible="{Binding HasSignalId}"><Run Text="Signal: "/><Run Text="{Binding SignalDisplay}"/></TextBlock>
+      </WrapPanel>
+      <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap"/>
+     </StackPanel>
+    </Border>
+   </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4" Margin="0,10,0,0">
+     <Button Classes="page" Content="«" ToolTip.Tip="First page" Command="{Binding FirstPageCommand}"/>
+     <Button Classes="page" Content="‹" ToolTip.Tip="Previous page" Command="{Binding PreviousPageCommand}"/>
+     <ItemsControl ItemsSource="{Binding PageNumbers}">
+      <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate><DataTemplate><Button Classes="page" Content="{Binding}" Command="{Binding $parent[ItemsControl].DataContext.GoToPageCommand}" CommandParameter="{Binding}"/></DataTemplate></ItemsControl.ItemTemplate>
+     </ItemsControl>
+     <Button Classes="page" Content="›" ToolTip.Tip="Next page" Command="{Binding NextPageCommand}"/>
+     <Button Classes="page" Content="»" ToolTip.Tip="Last page" Command="{Binding LastPageCommand}"/>
+     <TextBlock Text="{Binding PageLabel}" Classes="muted" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
+   </StackPanel>
   </StackPanel></ScrollViewer>
  </Grid>
 </UserControl>

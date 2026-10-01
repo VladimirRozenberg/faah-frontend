@@ -36,29 +36,6 @@ public class TransactionPage
     public List<AccountTransaction> Transactions { get; set; } = new();
     public List<AssetTransactionSummary> ByAsset { get; set; } = new();
 }
-public class Opportunity
-{
-    public int RecommendationId { get; set; }
-    public int PortfolioId { get; set; }
-    public string PortfolioName { get; set; } = "";
-    public int RunId { get; set; }
-    public int? AssetId { get; set; }
-    public string AssetSymbol { get; set; } = "";
-    public int? SignalId { get; set; }
-    public string Action { get; set; } = "";
-    public string? Reason { get; set; }
-    public int? Confidence { get; set; }
-    public string? Status { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public int SigId => RecommendationId;
-    public string SigAction => Action;
-    public int? SigConfidence => Confidence;
-    public string Label => string.IsNullOrWhiteSpace(PortfolioName) ? AssetSymbol : $"{AssetSymbol} — {PortfolioName}";
-    public string Context => $"{CreatedAt.ToLocalTime():dd.MM.yyyy HH:mm} · Confidence: {Confidence?.ToString() ?? "unavailable"} · Status: {Status ?? "unknown"}";
-    public string Explanation => string.IsNullOrWhiteSpace(Reason) ? "No explanation is available for this signal." : Reason;
-}
-public class OpportunityPage { public int Count { get; set; } public List<Opportunity> Items { get; set; } = new(); }
 public class AssetValueResponse
 {
     public string Currency { get; set; } = "USD";

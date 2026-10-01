@@ -20,9 +20,14 @@ public sealed class RecentRecommendation
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
+    public string PortfolioDisplay => string.IsNullOrWhiteSpace(PortfolioName) ? $"Portfolio #{PortfolioId}" : PortfolioName;
     public string AssetSymbolDisplay => string.IsNullOrWhiteSpace(AssetSymbol) ? "General recommendation" : AssetSymbol;
     public string ConfidenceDisplay => Confidence.HasValue ? $"{Confidence.Value:0.#}% confidence" : "Confidence unavailable";
     public string CreatedAtDisplay => CreatedAt.ToLocalTime().ToString("dd MMM yyyy · HH:mm");
+    public string Label => string.IsNullOrWhiteSpace(PortfolioName) ? AssetSymbolDisplay : $"{AssetSymbolDisplay} — {PortfolioName}";
+    public string KindDisplay => Kind.Replace('_', ' ');
+    public string Context => $"{KindDisplay} · {Action} · {CreatedAtDisplay} · {ConfidenceDisplay} · Status: {Status}";
+    public string Explanation => string.IsNullOrWhiteSpace(Reason) ? "No explanation is available for this recommendation." : Reason;
     public bool HasSignalId => SignalId.HasValue;
     public string SignalDisplay => SignalId.HasValue ? $"Signal #{SignalId.Value}" : "";
 }
