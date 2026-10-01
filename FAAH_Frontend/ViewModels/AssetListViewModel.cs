@@ -38,6 +38,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     private int _currentPage = 1, _pageCount = 1, _totalCount;
     private string _pageInput = "1";
     private string _searchText = "", _appliedSearch = "";
+    private bool _favoritesOnly;
     private bool _isBusy, _isPaging, _disposed, _catalogLoaded, _favoritesLoaded, _loadingPrices;
     private string _error = "", _updated = "Not loaded yet";
     public const int PageSize = 20;
@@ -86,6 +87,16 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     public RelayCommand GoToPageCommand { get; }
     public RelayCommand SearchCommand { get; }
     public RelayCommand ClearSearchCommand { get; }
+    public bool FavoritesOnly
+    {
+        get => _favoritesOnly;
+        set
+        {
+            if (_disposed || !SetField(ref _favoritesOnly, value)) return;
+            _currentPage = 1;
+            _ = RefreshAsync();
+        }
+    }
     public string SearchText
     {
         get => _searchText;
@@ -317,6 +328,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     {
         string route = $"api/assets?page={page}&page_size={PageSize}";
         if (requestedSearch.Length > 0) route += "&search=" + Uri.EscapeDataString(requestedSearch);
+        if (FavoritesOnly) route += "&favorites_only=true";
         var catalog = await GetAsync<AssetResponse>(route);
         // La saisie a changé pendant l'appel : ne pas afficher cette ancienne réponse.
         if (_disposed || SearchText.Trim() != requestedSearch) return false;
@@ -368,6 +380,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     public async Task ToggleFavoriteAsync(Asset asset)
     {
         if (IsBusy || _disposed || !_favoritesLoaded || !Assets.Contains(asset)) return;
+        bool refreshFilteredFavorites = false;
         IsBusy = true;
         Error = "";
         try
@@ -377,7 +390,12 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             using var request = new HttpRequestMessage(method, $"api/favorites/{asset.Id}");
             using var response = await _http.SendAsync(request, _lifetime.Token);
             CheckResponse(response);
-            if (!_disposed) asset.IsFavorite = add;
+            if (!_disposed)
+            {
+                asset.IsFavorite = add;
+                refreshFilteredFavorites = FavoritesOnly;
+                if (refreshFilteredFavorites) _currentPage = 1;
+            }
         }
         catch (Exception ex) when (IsRequestError(ex)) { AddError(ex); }
         finally
@@ -385,7 +403,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             if (!_disposed)
             {
                 IsBusy = false;
-                ResumePendingSearch();
+                if (refreshFilteredFavorites) _ = RefreshAsync(isPaging: true);
+                else ResumePendingSearch();
             }
         }
     }
