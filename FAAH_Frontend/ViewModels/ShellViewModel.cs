@@ -78,8 +78,12 @@ public class ShellViewModel : ViewModelBase
     public string ProfileRoleDisplay => ProfileRole == "admin" ? "Administrator" : ProfileRole == "employe" ? "Employee" : "Not available";
     public HealthDetailsViewModel Health { get; }
 
-    public ShellViewModel()
+    public ShellViewModel() : this(null) { }
+
+    // Permet aux tests de remplacer l'API par des réponses locales, sans toucher au cloud.
+    public ShellViewModel(HttpClient? http)
     {
+        if (http is not null) _http = http;
         _logos = new AssetLogoService(_http);
         Health = new HealthDetailsViewModel(_http);
         ShowHealthCommand = new RelayCommand(ShowHealthDetails);

@@ -18,8 +18,9 @@ public class PortfolioCreateViewModel : ViewModelBase
     private readonly ShellViewModel _shell;
     private readonly RelayCommand _submitCommand;
     private readonly Portfolio? _portfolio;
-    private readonly string[] _originalPreferredAssetTypes;
-    private readonly int[] _originalPreferredNicheIds;
+    private string[] _originalPreferredAssetTypes;
+    private int[] _originalPreferredNicheIds;
+    private bool _isLoadingSettings, _settingsLoaded;
     private string _name = string.Empty;
     private string _description = string.Empty;
     private string _strategyType = "balanced";
@@ -53,8 +54,7 @@ public class PortfolioCreateViewModel : ViewModelBase
             if (_portfolio is null) _shell.ShowPortfolios();
             else _shell.ShowPortfolio(_portfolio);
         });
-        if (_portfolio is not null) InitializeFromPortfolio(_portfolio);
-        _ = LoadNichesAsync();
+        Initialization = InitializeAsync();
     }
 
     public bool IsEditMode => _portfolio is not null;
@@ -96,8 +96,64 @@ public class PortfolioCreateViewModel : ViewModelBase
     public string? MaxOpenPositionsError { get => _maxOpenPositionsError; private set => SetField(ref _maxOpenPositionsError, value); }
     public string? ErrorMessage { get => _errorMessage; private set => SetField(ref _errorMessage, value); }
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
-    public bool IsSubmitting { get => _isSubmitting; private set { if (SetField(ref _isSubmitting, value)) _submitCommand.RaiseCanExecuteChanged(); } }
-    public bool CanSubmit => !IsSubmitting && !string.IsNullOrWhiteSpace(Name);
+    public bool IsSubmitting
+    {
+        get => _isSubmitting;
+        private set
+        {
+            if (!SetField(ref _isSubmitting, value)) return;
+            OnPropertyChanged(nameof(CanEditSettings));
+            OnPropertyChanged(nameof(CanSubmit));
+            _submitCommand.RaiseCanExecuteChanged();
+        }
+    }
+    public bool CanSubmit => CanEditSettings && !IsLoadingNiches && !string.IsNullOrWhiteSpace(Name);
+    public bool CanEditSettings => !IsSubmitting && !IsLoadingSettings && (!IsEditMode || _settingsLoaded);
+    public bool IsLoadingSettings
+    {
+        get => _isLoadingSettings;
+        private set
+        {
+            SetField(ref _isLoadingSettings, value);
+            OnPropertyChanged(nameof(CanEditSettings));
+            OnPropertyChanged(nameof(CanSubmit));
+            _submitCommand.RaiseCanExecuteChanged();
+        }
+    }
+    public System.Threading.Tasks.Task Initialization { get; }
+
+    private async System.Threading.Tasks.Task InitializeAsync()
+    {
+        if (_portfolio is not null)
+        {
+            IsLoadingSettings = true;
+            try
+            {
+                // La liste contient seulement un résumé : relire le détail avant d'éditer.
+                var detail = await _shell.Http.GetFromJsonAsync<PortfolioUpdateResponse>(
+                    $"api/users/{_shell.ProfileUserId}/portfolios/{_portfolio.Id}", ShellViewModel.JsonOptions);
+                if (detail is null || detail.Id != _portfolio.Id ||
+                    detail.UserId.ToString(CultureInfo.InvariantCulture) != _shell.ProfileUserId ||
+                    detail.PreferredAssetTypes is null || detail.PreferredNicheIds is null)
+                    throw new JsonException("Incomplete portfolio settings.");
+                _shell.ApplyPortfolioUpdate(_portfolio, detail);
+                _originalPreferredAssetTypes = _portfolio.PreferredAssetTypes.ToArray();
+                _originalPreferredNicheIds = _portfolio.PreferredNicheIds.ToArray();
+                InitializeFromPortfolio(_portfolio);
+                _settingsLoaded = true;
+            }
+            catch (Exception)
+            {
+                ErrorMessage = "Unable to load saved settings. Cancel and reopen this page to retry.";
+                OnPropertyChanged(nameof(HasError));
+                return; // Ne jamais enregistrer des valeurs par défaut après un échec de lecture.
+            }
+            finally { IsLoadingSettings = false; }
+        }
+        await LoadNichesAsync();
+        OnPropertyChanged(nameof(CanSubmit));
+        _submitCommand.RaiseCanExecuteChanged();
+    }
     public bool IsLoadingNiches { get => _isLoadingNiches; private set => SetField(ref _isLoadingNiches, value); }
     public string? NicheLoadError { get => _nicheLoadError; private set => SetField(ref _nicheLoadError, value); }
     public bool HasNicheLoadError => !string.IsNullOrWhiteSpace(NicheLoadError);
@@ -121,6 +177,7 @@ public class PortfolioCreateViewModel : ViewModelBase
 
     private async System.Threading.Tasks.Task SubmitAsync()
     {
+        if (!CanSubmit) return;
         ClearErrors();
         if (!Validate()) return;
         if (!int.TryParse(_shell.ProfileUserId, NumberStyles.None, CultureInfo.InvariantCulture, out var userId) || userId <= 0)
@@ -151,9 +208,9 @@ public class PortfolioCreateViewModel : ViewModelBase
                 }
 
                 var updatedPortfolio = await updateResponse.Content.ReadFromJsonAsync<PortfolioUpdateResponse>(ShellViewModel.JsonOptions);
-                if (updatedPortfolio is null)
+                if (updatedPortfolio is null || updatedPortfolio.Id != _portfolio.Id || updatedPortfolio.UserId != userId)
                 {
-                    ErrorMessage = "The server returned an empty portfolio.";
+                    ErrorMessage = "The server returned an invalid portfolio response.";
                     OnPropertyChanged(nameof(HasError));
                     return;
                 }
@@ -180,14 +237,17 @@ public class PortfolioCreateViewModel : ViewModelBase
 
             if (response.StatusCode == HttpStatusCode.Created)
             {
-                var portfolio = await response.Content.ReadFromJsonAsync<Portfolio>(ShellViewModel.JsonOptions);
-                if (portfolio is null)
+                var created = await response.Content.ReadFromJsonAsync<PortfolioUpdateResponse>(ShellViewModel.JsonOptions);
+                if (created is null || created.Id <= 0 || created.UserId != userId)
                 {
                     ErrorMessage = "The server returned an empty portfolio.";
                     OnPropertyChanged(nameof(HasError));
                     return;
                 }
 
+                // POST renvoie "id" et "is_active", contrairement au résumé de la liste.
+                var portfolio = new Portfolio { Id = created.Id };
+                _shell.ApplyPortfolioUpdate(portfolio, created);
                 _shell.Portfolios.Add(portfolio);
                 _shell.ShowPortfolio(portfolio);
                 return;
@@ -407,12 +467,13 @@ public class PortfolioCreateViewModel : ViewModelBase
         public NicheOption[] Items { get; set; } = Array.Empty<NicheOption>();
     }
 
-    public sealed class AssetTypeOption
+    public sealed class AssetTypeOption : ViewModelBase
     {
         public AssetTypeOption(string value, string displayName) { Value = value; DisplayName = displayName; }
         public string Value { get; }
         public string DisplayName { get; }
-        public bool IsSelected { get; set; }
+        private bool _isSelected;
+        public bool IsSelected { get => _isSelected; set => SetField(ref _isSelected, value); }
     }
 
     public sealed class NicheOption

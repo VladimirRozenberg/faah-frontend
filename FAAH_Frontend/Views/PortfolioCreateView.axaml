@@ -5,7 +5,7 @@
     <TextBlock Grid.Row="0" Text="{Binding PageTitle}" Classes="h1"/>
     <Border Grid.Row="1" Classes="rule" Margin="0,14,0,0"/>
     <ScrollViewer Grid.Row="2" Margin="0,28,0,20" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-      <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="1*,80,1*" RowSpacing="28">
+      <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="1*,80,1*" RowSpacing="28" IsEnabled="{Binding CanEditSettings}">
         <StackPanel Grid.Row="0" Grid.Column="0" Spacing="16">
           <StackPanel>
             <TextBlock Classes="label" Text="Name *"/>
@@ -83,7 +83,10 @@
         </StackPanel>
       </Grid>
     </ScrollViewer>
-    <TextBlock Grid.Row="3" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Foreground="{StaticResource Red}"/>
+    <StackPanel Grid.Row="3">
+      <TextBlock Text="Loading saved settings…" IsVisible="{Binding IsLoadingSettings}" Classes="muted"/>
+      <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Foreground="{StaticResource Red}"/>
+    </StackPanel>
     <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="26">
       <Button Classes="primary" Content="{Binding SubmitButtonText}" Width="145" IsEnabled="{Binding CanSubmit}" Command="{Binding SubmitCommand}"/>
       <Button Classes="ghost" Content="Cancel" Width="110" Command="{Binding CancelCommand}"/>

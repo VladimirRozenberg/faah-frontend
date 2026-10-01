@@ -5,6 +5,8 @@ namespace FAAH_Frontend.Models;
 
 public sealed class PortfolioUpdateResponse
 {
+    public int Id { get; set; }
+    public int UserId { get; set; }
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
