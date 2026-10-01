@@ -1,6 +1,7 @@
 using System;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -22,6 +23,15 @@ public sealed class HealthDetailsViewModel : ViewModelBase
     private string _rssStatus = "Unknown";
     private string _strategistDetails = "";
     private string _rssDetails = "";
+    private ExternalSourceHealth? _yahoo, _twelve;
+    private string _externalError = "Checking sources…";
+
+    public string YahooStatus => SourceStatus(_yahoo);
+    public string TwelveStatus => SourceStatus(_twelve);
+    public string YahooDetails => SourceDetails(_yahoo);
+    public string TwelveDetails => SourceDetails(_twelve);
+    public string YahooColor => SourceColor(_yahoo);
+    public string TwelveColor => SourceColor(_twelve);
 
     public HealthDetailsViewModel(HttpClient http)
     {
@@ -48,6 +58,8 @@ public sealed class HealthDetailsViewModel : ViewModelBase
     {
         if (IsRefreshing) return;
         IsRefreshing = true;
+        // Les sources externes ne bloquent pas l'affichage du statut interne de l'API.
+        var externalTask = RefreshExternalAsync();
         try
         {
             using var response = await _http.GetAsync("health");
@@ -82,8 +94,80 @@ public sealed class HealthDetailsViewModel : ViewModelBase
         }
         finally
         {
+            await externalTask;
             IsRefreshing = false;
         }
+    }
+
+    private async Task RefreshExternalAsync()
+    {
+        try
+        {
+            using var response = await _http.GetAsync("health/external");
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _externalError = "Backend update required for source checks.";
+                _yahoo = _twelve = null;
+            }
+            else
+            {
+                response.EnsureSuccessStatusCode();
+                var sources = await response.Content.ReadFromJsonAsync<ExternalHealthResponse>();
+                _yahoo = sources?.Yahoo;
+                _twelve = sources?.Twelve;
+                _externalError = "Source status not provided by the backend.";
+            }
+        }
+        catch (Exception)
+        {
+            _yahoo = _twelve = null;
+            _externalError = "Unable to check sources through the backend.";
+        }
+        OnPropertyChanged(nameof(YahooStatus));
+        OnPropertyChanged(nameof(TwelveStatus));
+        OnPropertyChanged(nameof(YahooDetails));
+        OnPropertyChanged(nameof(TwelveDetails));
+        OnPropertyChanged(nameof(YahooColor));
+        OnPropertyChanged(nameof(TwelveColor));
+    }
+
+    private static string SourceStatus(ExternalSourceHealth? source) => source?.Status switch
+    {
+        "connected" => "Connected",
+        "rate_limited" => "Rate limited",
+        "not_configured" => "Not configured",
+        "authentication_failed" => "Access refused",
+        "unavailable" => "Unavailable",
+        _ => "Unknown"
+    };
+
+    private static string SourceColor(ExternalSourceHealth? source) => source?.Status switch
+    {
+        "connected" => "#278348",
+        "unavailable" or "authentication_failed" => "#C63838",
+        "rate_limited" or "not_configured" => "#A56400",
+        _ => "#64748B"
+    };
+
+    private string SourceDetails(ExternalSourceHealth? source)
+    {
+        if (source is null) return _externalError;
+        string date = source.CheckedAt?.ToLocalTime().ToString("dd.MM HH:mm:ss") ?? "unknown";
+        return $"{source.Detail}\nChecked: {date} · cache: {source.CacheSeconds / 60} min";
+    }
+
+    private sealed class ExternalHealthResponse
+    {
+        [JsonPropertyName("yfinance")] public ExternalSourceHealth? Yahoo { get; set; }
+        [JsonPropertyName("twelve_data")] public ExternalSourceHealth? Twelve { get; set; }
+    }
+
+    private sealed class ExternalSourceHealth
+    {
+        [JsonPropertyName("status")] public string? Status { get; set; }
+        [JsonPropertyName("detail")] public string? Detail { get; set; }
+        [JsonPropertyName("checked_at")] public DateTimeOffset? CheckedAt { get; set; }
+        [JsonPropertyName("cache_seconds")] public int CacheSeconds { get; set; }
     }
 
     private void SetUnavailable(string message)

@@ -16,7 +16,15 @@ public class TradePortfolioResponse
 
 public class TradePortfolioListResponse
 {
-    public required List<TradePortfolioResponse> Items { get; set; }
+    public required List<TradePortfolioSummary> Items { get; set; }
+}
+
+// La liste renvoie des résumés ; les positions et les types autorisés sont dans le détail.
+public class TradePortfolioSummary
+{
+    public required int PortfolioId { get; set; }
+    public required string Status { get; set; }
+    public required string BaseCurrency { get; set; }
 }
 
 public class TradePosition

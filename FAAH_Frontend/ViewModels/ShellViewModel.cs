@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -68,39 +69,7 @@ public class ShellViewModel : ViewModelBase
     private string _profileUserId = "Unavailable";
     private string _profileRegistrationDate = "Not available";
 
-    public ObservableCollection<Portfolio> Portfolios { get; } = new()
-    {
-        new Portfolio
-        {
-            Name = "Momentum Alpha", Description = "Short-term futures momentum",
-            Risk = RiskLevel.High, MaxPositions = 8, ReturnPercent = 18.4m,
-            Status = PortfolioStatus.Active
-        },
-        new Portfolio
-        {
-            Name = "Risky Takes", Description = "High-leverage speculative play",
-            Risk = RiskLevel.VeryHigh, MaxPositions = 12, ReturnPercent = -4.2m,
-            Status = PortfolioStatus.Active
-        },
-        new Portfolio
-        {
-            Name = "Conservative Investment", Description = "Blue-chip long-only, capital preservation",
-            Risk = RiskLevel.Low, MaxPositions = 4, ReturnPercent = 6.1m,
-            Status = PortfolioStatus.Active
-        },
-        new Portfolio
-        {
-            Name = "Arb Core", Description = "Cross-exchange arbitrage sleeve",
-            Risk = RiskLevel.Medium, MaxPositions = 15, ReturnPercent = 9.7m,
-            Status = PortfolioStatus.Active
-        },
-        new Portfolio
-        {
-            Name = "Legacy Swing", Description = "Old swing strategy, paused",
-            Risk = RiskLevel.Medium, MaxPositions = 5, ReturnPercent = 1.3m,
-            Status = PortfolioStatus.Paused
-        }
-    };
+    public ObservableCollection<Portfolio> Portfolios { get; } = new();
 
     public string ProfileEmail { get => _profileEmail; private set => SetField(ref _profileEmail, value); }
     public string ProfileRole { get => _profileRole; private set { if (SetField(ref _profileRole, value)) OnPropertyChanged(nameof(ProfileRoleDisplay)); } }
@@ -233,6 +202,28 @@ public class ShellViewModel : ViewModelBase
     {
         Section = "PORTFOLIO";
         CurrentPage = new PortfolioListView { DataContext = new PortfolioListViewModel(this) };
+        _ = LoadPortfoliosAsync();
+    }
+
+    private sealed class PortfolioListResponse
+    {
+        public int Count { get; set; }
+        public List<Portfolio> Items { get; set; } = new();
+    }
+
+    private async System.Threading.Tasks.Task LoadPortfoliosAsync()
+    {
+        if (!int.TryParse(ProfileUserId, out var userId)) return;
+        try
+        {
+            var page = await _http.GetFromJsonAsync<PortfolioListResponse>($"api/users/{userId}/portfolios", JsonOptions);
+            Portfolios.Clear();
+            foreach (var p in page?.Items ?? new()) Portfolios.Add(p);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException)
+        {
+            System.Diagnostics.Debug.WriteLine($"ERREUR /portfolios : {ex}");
+        }
     }
 
     public void ShowProfile()
@@ -263,7 +254,7 @@ public class ShellViewModel : ViewModelBase
     public void ShowPortfolio(Portfolio portfolio)
     {
         Section = "PORTFOLIO";
-        CurrentPage = new PortfolioView { DataContext = portfolio };
+        CurrentPage = new PortfolioView { DataContext = new PortfolioDetailViewModel(this, portfolio) };
     }
 
     public void ShowPortfolioCreate()
@@ -284,13 +275,15 @@ public class ShellViewModel : ViewModelBase
     }
 
     // Le detail remplace la liste dans la fenetre existante (pas de nouvelle fenetre).
-    public void ShowAssetDetail(Asset asset)
+    public void ShowAssetDetail(Asset asset) => ShowAssetDetail(asset, null);
+
+    public void ShowAssetDetail(Asset asset, Portfolio? preferredPortfolio)
     {
         // Réutiliser le cache si le détail est ouvert avant la fin du téléchargement.
         _ = _logos.LoadAsync(asset, System.Threading.CancellationToken.None);
         Section = "ASSETS";
         int.TryParse(ProfileUserId, out int userId);
-        var detail = new AssetDetailViewModel(_http, asset, ShowAssets, userId, ShowNewsDetail);
+        var detail = new AssetDetailViewModel(_http, asset, ShowAssets, userId, ShowNewsDetail, preferredPortfolio?.Id);
         CurrentPage = new AssetDetailView { DataContext = detail };
         detail.Start();
     }

@@ -23,7 +23,8 @@ Pas de nouveau package graphique : le graphique utilise les outils de dessin d�
 | Cours de l’actif | `GET /api/assets/{symbol}/market` |
 | Bougies | `GET /api/assets/{symbol}/candles?period=1d&interval=5m` |
 | Actualités classées pour l'actif | `GET /api/assets/{symbol}/news` |
-| Portefeuilles et positions | `GET /api/users/{user_id}/portfolios` |
+| Résumés des portefeuilles | `GET /api/users/{user_id}/portfolios` |
+| Types autorisés et positions d'un portefeuille | `GET /api/users/{user_id}/portfolios/{portfolio_id}` |
 | Achat simulé | `POST /api/users/{user_id}/portfolios/{portfolio_id}/assets/buy` |
 | Vente simulée | `POST /api/users/{user_id}/portfolios/{portfolio_id}/assets/sell` |
 
@@ -34,6 +35,8 @@ La page recharge ses données toutes les 60 secondes, ou avec **Actualiser**. En
 Les métadonnées (nom, type, place boursière, secteur…) proviennent de l’actif déjà chargé dans la liste.
 
 ## Achat et vente
+
+Depuis le changement du backend du 30 septembre, la liste fournit `portfolio_id` et `status`, sans positions. `LoadPortfoliosAsync` lit les résumés, puis charge un par un les détails des portefeuilles actifs en USD. Les détails servent au filtre de type et au calcul de la quantité détenue. Si un détail ne peut pas être lu, les transactions restent désactivées jusqu'à une actualisation réussie.
 
 1. Sélectionner un portefeuille puis cliquer sur **Acheter** ou **Vendre**.
 2. Saisir une quantité positive dans le formulaire intégré à la page.

@@ -4,158 +4,191 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="640"
              x:Class="FAAH_Frontend.Views.PortfolioView">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="42,26,42,30" Spacing="20">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="5">
+          <TextBlock Text="{Binding Portfolio.Name}" Classes="h1" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding Portfolio.Description}" Classes="muted" TextWrapping="Wrap"/>
+        </StackPanel>
+        <Button Grid.Column="1" Content="Settings" Classes="ghost" IsEnabled="False"
+                ToolTip.Tip="Portfolio settings will be available later." VerticalAlignment="Top"/>
+      </Grid>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="42,26,42,30" RowDefinitions="Auto,Auto,*">
+      <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="12">
+        <Border Classes="card" Padding="14">
+          <StackPanel Spacing="6"><TextBlock Text="Risk" Classes="label"/><TextBlock Text="{Binding Portfolio.RiskDisplay}" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+        </Border>
+        <Border Grid.Column="1" Classes="card" Padding="14">
+          <StackPanel Spacing="6"><TextBlock Text="Max positions" Classes="label"/><TextBlock Text="{Binding Portfolio.MaxPositions}" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="card" Padding="14">
+          <StackPanel Spacing="6"><TextBlock Text="Return" Classes="label"/><TextBlock Text="{Binding Portfolio.ReturnDisplay}" FontSize="18" FontWeight="SemiBold" Classes.up="{Binding Portfolio.IsUp}" Classes.down="{Binding Portfolio.IsDown}"/></StackPanel>
+        </Border>
+        <Border Grid.Column="3" Classes="card" Padding="14">
+          <StackPanel Spacing="6"><TextBlock Text="Base currency" Classes="label"/><TextBlock Text="{Binding Portfolio.BaseCurrency}" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+        </Border>
+        <Border Grid.Column="4" Classes="card" Padding="14">
+          <StackPanel Spacing="6"><TextBlock Text="Status" Classes="label"/><TextBlock Text="{Binding Portfolio.StatusDisplay}" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+        </Border>
+      </Grid>
 
-            <TextBlock Grid.Row="0" Text="{Binding Name}" Classes="h1"/>
-            <Border Grid.Row="1" Classes="rule" Margin="0,12,0,0"/>
-
-            <Grid Grid.Row="2" ColumnDefinitions="1.15*,1*" Margin="0,24,0,0">
-
-                <!-- Colonne gauche : courbe + positions -->
-                <StackPanel Grid.Column="0" Margin="0,0,34,0" Spacing="18">
-
-                    <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
-                        <TextBlock Text="+1 434 $" FontSize="11" Classes="up"/>
-                        <TextBlock Text="+1.43%" FontSize="11" Classes="up"/>
-                        <TextBlock Text="·" FontSize="11" Classes="muted"/>
-                        <TextBlock Text="max DD −150 $" FontSize="11" Classes="muted"/>
-                    </StackPanel>
-
-                    <Grid ColumnDefinitions="Auto,*">
-                        <StackPanel Grid.Column="0" Margin="0,0,10,18">
-                            <TextBlock Text="101 500" FontSize="9" Classes="muted"/>
-                            <TextBlock Text="101 000" FontSize="9" Classes="muted" Margin="0,26,0,0"/>
-                            <TextBlock Text="100 500" FontSize="9" Classes="muted" Margin="0,26,0,0"/>
-                            <TextBlock Text="100 000" FontSize="9" Classes="muted" Margin="0,26,0,0"/>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1">
-                            <Canvas Height="130" ClipToBounds="True">
-                                <Polygon Fill="#5C4CAF7D"
-                                         Points="0,105 20,98 40,101 60,88 80,92 100,78 120,84 140,70 160,80 180,62 200,72 220,55 240,64 260,46 280,56 300,40 320,50 340,34 360,42 380,26 400,18 400,130 0,130"/>
-                                <Polyline Stroke="#2E9E63" StrokeThickness="1.6" Fill="Transparent"
-                                          Points="0,105 20,98 40,101 60,88 80,92 100,78 120,84 140,70 160,80 180,62 200,72 220,55 240,64 260,46 280,56 300,40 320,50 340,34 360,42 380,26 400,18"/>
-                            </Canvas>
-
-                            <Grid ColumnDefinitions="*,*,*,Auto" Margin="0,8,0,0">
-                                <TextBlock Grid.Column="0" Text="3-24" FontSize="9" Classes="muted"/>
-                                <TextBlock Grid.Column="1" Text="3-16" FontSize="9" Classes="muted"/>
-                                <TextBlock Grid.Column="2" Text="3-8" FontSize="9" Classes="muted"/>
-                                <TextBlock Grid.Column="3" Text="3-1" FontSize="9" Classes="muted"/>
-                            </Grid>
-                        </StackPanel>
-                    </Grid>
-
-                    <StackPanel Spacing="2" Margin="0,10,0,0">
-
-                        <Border Classes="row" CornerRadius="4" Padding="6,10">
-                            <Grid ColumnDefinitions="1.6*,1*,1*,1*">
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                    <Border Width="20" Height="20" CornerRadius="10" Background="#F7931A">
-                                        <TextBlock Text="₿" FontSize="11" FontWeight="Bold" Foreground="#FFFFFF"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <TextBlock Classes="cell" Text="BTC-USD"/>
-                                </StackPanel>
-                                <TextBlock Grid.Column="1" Classes="cell" Text="$96,412" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Classes="cell up" Text="+2.14%" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Column="3" Classes="cell" Text="4.2B" HorizontalAlignment="Center"/>
-                            </Grid>
-                        </Border>
-
-                        <Border Classes="row" CornerRadius="4" Padding="6,10">
-                            <Grid ColumnDefinitions="1.6*,1*,1*,1*">
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                    <Border Width="20" Height="20" CornerRadius="10" Background="#4B5A78">
-                                        <TextBlock Text="Ξ" FontSize="11" FontWeight="Bold" Foreground="#FFFFFF"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <TextBlock Classes="cell" Text="ETH-USD"/>
-                                </StackPanel>
-                                <TextBlock Grid.Column="1" Classes="cell" Text="$3,284" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Classes="cell down" Text="−0.68%" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Column="3" Classes="cell" Text="1.8B" HorizontalAlignment="Center"/>
-                            </Grid>
-                        </Border>
-
-                        <Border Classes="row" CornerRadius="4" Padding="6,10">
-                            <Grid ColumnDefinitions="1.6*,1*,1*,1*">
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                    <Border Width="20" Height="20" CornerRadius="4" Background="{StaticResource Navy}">
-                                        <TextBlock Text="ES" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <TextBlock Classes="cell" Text="ES-FUT"/>
-                                </StackPanel>
-                                <TextBlock Grid.Column="1" Classes="cell" Text="$5,921.50" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Classes="cell up" Text="+0.31%" HorizontalAlignment="Center"/>
-                                <TextBlock Grid.Column="3" Classes="cell" Text="612K" HorizontalAlignment="Center"/>
-                            </Grid>
-                        </Border>
-                    </StackPanel>
-                </StackPanel>
-
-                <!-- Colonne droite -->
-                <StackPanel Grid.Column="1" Spacing="16">
-
-                    <StackPanel Spacing="14">
-                        <StackPanel Spacing="3">
-                            <TextBlock Text="BTC-USD :" FontSize="14" FontWeight="Bold"/>
-                            <TextBlock Text="Momentum strengthening, holding long bias." FontSize="13" TextWrapping="Wrap"/>
-                        </StackPanel>
-                        <StackPanel Spacing="3">
-                            <TextBlock Text="ES-FUT :" FontSize="14" FontWeight="Bold"/>
-                            <TextBlock Text="Range-bound, low conviction signal." FontSize="13" TextWrapping="Wrap"/>
-                        </StackPanel>
-                        <StackPanel Spacing="3">
-                            <TextBlock Text="ETH-USD :" FontSize="14" FontWeight="Bold"/>
-                            <TextBlock Text="Weakening trend, reducing exposure." FontSize="13" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <Border Classes="rule" Margin="0,6,0,6"/>
-
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="Trading Bot" Classes="h2" VerticalAlignment="Center"/>
-                        <Border Grid.Column="1" Classes="pill green">
-                            <TextBlock Text="{Binding StatusDisplay}"/>
-                        </Border>
-                    </Grid>
-
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Base currency" Classes="label"/><TextBlock Text="{Binding BaseCurrency}" FontWeight="SemiBold"/>
-                        <TextBlock Text="Types of covered assets" FontSize="13"/>
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Border Classes="pill"><TextBlock Text="CRYPTO"/></Border>
-                            <Border Classes="pill"><TextBlock Text="STOCKS"/></Border>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <Border Classes="card" Padding="16,14" HorizontalAlignment="Left">
-                        <Grid Width="150" Height="100">
-                            <Canvas Width="150" Height="96" VerticalAlignment="Top">
-                                <Path Stroke="#D14343" StrokeThickness="10" Data="M 13,78 A 62,62 0 0 1 44,24.3"/>
-                                <Path Stroke="#F0A020" StrokeThickness="10" Data="M 44,24.3 A 62,62 0 0 1 106,24.3"/>
-                                <Path Stroke="#2E9E63" StrokeThickness="10" Data="M 106,24.3 A 62,62 0 0 1 137,78"/>
-                            </Canvas>
-
-                            <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Spacing="1"
-                                        Margin="0,0,6,6">
-                                <TextBlock Text="{Binding ReturnDisplay}" FontSize="21" FontWeight="Bold"
-                                           Foreground="{StaticResource Green}" HorizontalAlignment="Center"/>
-                                <TextBlock Text="Total return" FontSize="10" Classes="muted"
-                                           HorizontalAlignment="Center"/>
-                                <TextBlock Text="↗ +2.31% vs. previous 7 days" FontSize="9"
-                                           Foreground="{StaticResource Green}" HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <Button Classes="primary" Content="Settings" HorizontalAlignment="Left" Width="150"/>
-                </StackPanel>
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="20" MinHeight="380">
+        <Border Classes="card" Padding="20">
+          <StackPanel Spacing="12">
+            <TextBlock Text="Assets / positions" Classes="h2"/>
+            <TextBlock Text="Loading portfolio positions…" Classes="muted" IsVisible="{Binding IsLoadingPositions}"/>
+            <TextBlock Text="{Binding PositionsErrorMessage}" Foreground="{StaticResource Red}" TextWrapping="Wrap" IsVisible="{Binding HasPositionsError}"/>
+            <TextBlock Text="No positions in this portfolio." Classes="muted" IsVisible="{Binding IsPositionsEmpty}"/>
+            <Grid ColumnDefinitions="1.5*,*,*,*,*" ColumnSpacing="8">
+              <TextBlock Classes="colHead" Text="ASSET"/>
+              <TextBlock Grid.Column="1" Classes="colHead" Text="QUANTITY" HorizontalAlignment="Right"/>
+              <TextBlock Grid.Column="2" Classes="colHead" Text="AVG. COST" HorizontalAlignment="Right"/>
+              <TextBlock Grid.Column="3" Classes="colHead" Text="PRICE" HorizontalAlignment="Right"/>
+              <TextBlock Grid.Column="4" Classes="colHead" Text="VALUE" HorizontalAlignment="Right"/>
             </Grid>
-        </Grid>
-    </ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Positions}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button Classes="rowButton" Padding="8,10" Margin="0,0,0,4"
+                          Command="{Binding $parent[UserControl].DataContext.OpenAssetCommand}" CommandParameter="{Binding}">
+                    <Grid ColumnDefinitions="1.5*,*,*,*,*" ColumnSpacing="8">
+                      <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding Symbol}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Name}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                      </StackPanel>
+                      <TextBlock Grid.Column="1" Text="{Binding QuantityDisplay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="2" Text="{Binding AveragePurchasePriceDisplay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="3" Text="{Binding CurrentPriceDisplay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                      <StackPanel Grid.Column="4" Spacing="2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding CurrentValueDisplay}" HorizontalAlignment="Right"/>
+                        <TextBlock Text="{Binding ProfitLossDisplay}" Classes.up="{Binding IsProfit}" Classes.down="{Binding IsLoss}" FontSize="11" HorizontalAlignment="Right"/>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Border Classes="rule" Margin="0,8,0,4"/>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Transactions" Classes="h2"/>
+              <TextBlock Grid.Column="1" Text="{Binding TransactionCount}" Classes="muted"/>
+            </Grid>
+            <TextBlock Text="Loading transactions…" Classes="muted" IsVisible="{Binding IsLoadingTransactions}"/>
+            <TextBlock Text="{Binding TransactionsErrorMessage}" Foreground="{StaticResource Red}" TextWrapping="Wrap" IsVisible="{Binding HasTransactionsError}"/>
+            <TextBlock Text="No transactions for this portfolio." Classes="muted" IsVisible="{Binding IsTransactionsEmpty}"/>
+            <ItemsControl ItemsSource="{Binding Transactions}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Classes="row" Padding="10" Margin="0,0,0,6">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                      <Border Classes="pill" Classes.green="{Binding IsBuy}" Classes.red="{Binding IsSell}" VerticalAlignment="Top">
+                        <TextBlock Text="{Binding TypeDisplay}" FontSize="11" FontWeight="SemiBold"/>
+                      </Border>
+                      <StackPanel Grid.Column="1" Spacing="3">
+                        <TextBlock Text="{Binding Symbol}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Name}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding CreatedAtDisplay}" Classes="muted" FontSize="11"/>
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Spacing="3" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding QuantityDisplay}" HorizontalAlignment="Right"/>
+                        <TextBlock Classes="muted" FontSize="11" HorizontalAlignment="Right">
+                          <Run Text="@ "/><Run Text="{Binding PriceDisplay}"/><Run Text=" "/><Run Text="{Binding Currency}"/>
+                        </TextBlock>
+                        <TextBlock FontWeight="SemiBold" HorizontalAlignment="Right">
+                          <Run Text="{Binding AmountDisplay}"/><Run Text=" "/><Run Text="{Binding Currency}"/>
+                        </TextBlock>
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1" Classes="card" Padding="20">
+          <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="3">
+                <TextBlock Text="Portfolio recommendations" Classes="h2"/>
+                <TextBlock Text="Newest first · filter by kind or status." Classes="muted" TextWrapping="Wrap"/>
+              </StackPanel>
+              <Button Grid.Column="1" Content="Refresh" Classes="ghost" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsLoading}"/>
+            </Grid>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,14,0,10">
+              <StackPanel Spacing="4">
+                <TextBlock Text="Kind" Classes="label"/>
+                <ComboBox Width="170" ItemsSource="{Binding KindOptions}" SelectedItem="{Binding SelectedKind, Mode=TwoWay}" IsEnabled="{Binding !IsLoading}"/>
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <TextBlock Text="Status" Classes="label"/>
+                <ComboBox Width="130" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus, Mode=TwoWay}" IsEnabled="{Binding !IsLoading}"/>
+              </StackPanel>
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Spacing="8" Margin="0,0,0,10">
+              <TextBlock Text="Loading recommendations…" Classes="muted" IsVisible="{Binding IsLoading}"/>
+              <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource Red}" TextWrapping="Wrap" IsVisible="{Binding HasError}"/>
+              <TextBlock Text="No recommendations match these filters." Classes="muted" TextWrapping="Wrap" IsVisible="{Binding IsEmpty}"/>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+              <ItemsControl ItemsSource="{Binding Recommendations}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button Classes="rowButton" Background="{StaticResource SurfaceAlt}" Padding="14" Margin="0,0,0,10"
+                            Command="{Binding $parent[UserControl].DataContext.OpenAssetCommand}" CommandParameter="{Binding}">
+                      <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <StackPanel Spacing="3">
+                            <TextBlock Text="{Binding AssetSymbolDisplay}" FontSize="16" FontWeight="SemiBold"/>
+                            <TextBlock Classes="muted" FontSize="11">
+                              <Run Text="Recommendation #"/><Run Text="{Binding RecommendationId}"/>
+                              <Run Text=" · "/><Run Text="{Binding Kind}"/>
+                            </TextBlock>
+                          </StackPanel>
+                          <Border Grid.Column="1" Classes="pill">
+                            <TextBlock Text="{Binding Action}" FontWeight="SemiBold"/>
+                          </Border>
+                        </Grid>
+                        <TextBlock Text="{Binding Reason}" TextWrapping="Wrap"/>
+                        <WrapPanel ItemSpacing="12" LineSpacing="4">
+                          <TextBlock Text="{Binding Status}" Classes="muted"/>
+                          <TextBlock Text="{Binding ConfidenceDisplay}" Classes="muted"/>
+                          <TextBlock Text="{Binding CreatedAtDisplay}" Classes="muted"/>
+                          <TextBlock Text="{Binding SignalDisplay}" Classes="muted" IsVisible="{Binding HasSignalId}"/>
+                        </WrapPanel>
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+
+            <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="4" Margin="0,10,0,0" HorizontalAlignment="Center">
+              <Button Classes="page" Content="«" ToolTip.Tip="First page" Command="{Binding FirstPageCommand}"/>
+              <Button Classes="page" Content="‹" ToolTip.Tip="Previous page" Command="{Binding PreviousPageCommand}"/>
+              <ItemsControl ItemsSource="{Binding PageNumbers}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button Classes="page" Content="{Binding}"
+                            Command="{Binding $parent[ItemsControl].DataContext.GoToPageCommand}"
+                            CommandParameter="{Binding}"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button Classes="page" Content="›" ToolTip.Tip="Next page" Command="{Binding NextPageCommand}"/>
+              <Button Classes="page" Content="»" ToolTip.Tip="Last page" Command="{Binding LastPageCommand}"/>
+              <TextBlock Text="{Binding PageLabel}" Classes="muted" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
+            </StackPanel>
+          </Grid>
+        </Border>
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
 </UserControl>

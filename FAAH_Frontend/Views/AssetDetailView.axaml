@@ -3,59 +3,91 @@
              xmlns:controls="using:FAAH_Frontend.Controls"
              x:Class="FAAH_Frontend.Views.AssetDetailView">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="42,26,42,26" Spacing="16">
+        <StackPanel x:Name="PageContent" Margin="42,26,42,26" Spacing="20">
             <Grid ColumnDefinitions="*,Auto">
                  <Button Content="← Back to assets" Classes="ghost" Command="{Binding BackCommand}" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Left"/>
                  <Button Grid.Column="1" Content="Refresh" Classes="ghost" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
             </Grid>
-            <Grid ColumnDefinitions="Auto,*">
-                <Grid Width="36" Height="36" Margin="0,0,12,0">
-                    <Border CornerRadius="18" Background="{Binding Asset.IconColor}" IsVisible="{Binding !Asset.HasLogo}">
-                        <TextBlock Text="{Binding Asset.IconText}" Foreground="White" FontWeight="Bold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <!-- Résumé aligné sur le graphique, sans largeur maximale centrée. -->
+            <Grid x:Name="OverviewGrid" ColumnDefinitions="*,360" RowDefinitions="Auto,Auto">
+                <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Grid Width="36" Height="36" Margin="0,0,12,0">
+                            <Border CornerRadius="18" Background="{Binding Asset.IconColor}" IsVisible="{Binding !Asset.HasLogo}">
+                                <TextBlock Text="{Binding Asset.IconText}" Foreground="White" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <Image Source="{Binding Asset.Logo}" IsVisible="{Binding Asset.HasLogo}" Stretch="Uniform"/>
+                        </Grid>
+                        <TextBlock Grid.Column="1" Text="{Binding Title}" Classes="h1" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock Text="{Binding Details}" Classes="muted" TextWrapping="Wrap"/>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding Asset.PriceDisplay}" FontSize="30" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Asset.ChangeDisplay}" Classes.up="{Binding Asset.IsUp}" Classes.down="{Binding Asset.IsDown}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Volume:" Classes="muted"/>
+                            <TextBlock Text="{Binding Asset.Volume}" Classes="muted"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding QuoteStatus}" Classes="muted" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel x:Name="TradingPanel" Grid.Column="1" Margin="24,0,0,0" Spacing="10">
+                    <TextBlock Text="Your portfolio" FontWeight="SemiBold"/>
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                        <ComboBox x:Name="TradePortfolioSelector" HorizontalAlignment="Stretch" PlaceholderText="Select portfolio"
+                                  ItemsSource="{Binding Portfolios}" SelectedItem="{Binding SelectedPortfolio, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanSelectPortfolio}" AutomationProperties.Name="Transaction portfolio">
+                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Grid.Column="1" Margin="8,0,0,0" Content="Buy" Classes="tradeBuy" Command="{Binding BuyCommand}" IsEnabled="{Binding CanBuy}"/>
+                        <Button Grid.Column="2" Margin="8,0,0,0" Content="Sell" Classes="tradeSell" Command="{Binding SellCommand}" IsEnabled="{Binding CanSell}"/>
+                    </Grid>
+                    <Border x:Name="HoldingsCard" IsVisible="{Binding HasHoldings}" Background="{StaticResource SurfaceAlt}"
+                            BorderBrush="#D5DEE9" BorderThickness="1" CornerRadius="8" Padding="14,10">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Your holdings" Classes="muted" FontSize="12"/>
+                            <TextBlock Text="{Binding HoldingsDisplay}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SelectedPortfolio.Name}" Classes="muted" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
                     </Border>
-                    <Image Source="{Binding Asset.Logo}" IsVisible="{Binding Asset.HasLogo}" Stretch="Uniform"/>
+                </StackPanel>
+            </Grid>
+            <TextBlock Text="{Binding TradingNotice}" IsVisible="{Binding HasTradingNotice}" Classes="muted" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding PortfolioStatus}" IsVisible="{Binding HasPortfolioStatus}" Classes="muted" TextWrapping="Wrap"/>
+            <!-- Le formulaire s'étale en colonnes sur grand écran, puis se replie sans dupliquer les champs. -->
+            <Border x:Name="OrderCard" IsVisible="{Binding IsOrderOpen}" Background="{StaticResource SurfaceAlt}"
+                    BorderBrush="#CBD7E5" BorderThickness="1" Padding="22" CornerRadius="10">
+                <Grid x:Name="OrderGrid" ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                    <StackPanel x:Name="OrderIdentity" Spacing="8">
+                        <TextBlock Text="{Binding OrderTitle}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock Text="Review your order" Classes="muted"/>
+                        <TextBlock Text="{Binding SelectedPortfolio.Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel x:Name="OrderQuantity" Grid.Column="1" Margin="24,0,0,0" Spacing="8">
+                        <TextBlock Text="Quantity" FontWeight="SemiBold"/>
+                        <NumericUpDown Value="{Binding Quantity}" Minimum="0.00000001" Maximum="99999999" Increment="1"
+                                       FormatString="0.########" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Stretch" MinHeight="40"/>
+                        <TextBlock Text="Estimated unit price" Classes="muted"/>
+                        <TextBlock Text="{Binding OrderUnitPrice}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Border x:Name="OrderSummary" Grid.Column="2" Margin="24,0,0,0" Background="White" CornerRadius="6" Padding="14">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Estimated total" Classes="muted"/>
+                            <TextBlock Text="{Binding OrderTotal}" FontSize="24" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock Text="Excluding fees. The final execution price may vary." Classes="muted" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel x:Name="OrderActions" Grid.Column="3" Margin="24,0,0,0" Spacing="8" VerticalAlignment="Center">
+                        <Button Content="{Binding ConfirmOrderLabel}" Classes.tradeBuy="{Binding IsBuyOrder}" Classes.tradeSell="{Binding !IsBuyOrder}"
+                                Command="{Binding SubmitOrderCommand}" IsEnabled="{Binding CanSubmitOrder}" HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" Padding="18,12"/>
+                        <Button Content="Cancel" Classes="ghost" Padding="18,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                Command="{Binding CloseOrderCommand}" IsEnabled="{Binding !IsSubmitting}"/>
+                    </StackPanel>
                 </Grid>
-                <TextBlock Grid.Column="1" Text="{Binding Title}" Classes="h1" TextWrapping="Wrap" VerticalAlignment="Center"/>
-            </Grid>
-            <TextBlock Text="{Binding Details}" Classes="muted" TextWrapping="Wrap"/>
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="{Binding Asset.PriceDisplay}" FontSize="28" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding Asset.ChangeDisplay}" Classes.up="{Binding Asset.IsUp}" Classes.down="{Binding Asset.IsDown}"/>
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                         <TextBlock Text="Volume:" Classes="muted"/>
-                        <TextBlock Text="{Binding Asset.Volume}" Classes="muted"/>
-                    </StackPanel>
-                    <TextBlock Text="{Binding QuoteStatus}" Classes="muted" TextWrapping="Wrap"/>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Top" Margin="16,0,0,0">
-                    <ComboBox x:Name="TradePortfolioSelector" Width="200" PlaceholderText="Select portfolio"
-                              ItemsSource="{Binding Portfolios}" SelectedItem="{Binding SelectedPortfolio, Mode=TwoWay}"
-                              IsEnabled="{Binding CanSelectPortfolio}" AutomationProperties.Name="Transaction portfolio">
-                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate>
-                    </ComboBox>
-                     <Button Content="Buy" Classes="tradeBuy" Command="{Binding BuyCommand}" IsEnabled="{Binding CanBuy}"/>
-                     <Button Content="Sell" Classes="tradeSell" Command="{Binding SellCommand}" IsEnabled="{Binding CanSell}"/>
-                </StackPanel>
-            </Grid>
-            <TextBlock Text="{Binding TradingNotice}" Classes="muted" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding PortfolioStatus}" Classes="muted" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding HoldingsDisplay}" Classes="muted"/>
-            <Border IsVisible="{Binding IsOrderOpen}" Background="{StaticResource SurfaceAlt}" Padding="16" CornerRadius="6">
-                <StackPanel Spacing="10">
-                    <TextBlock Text="{Binding OrderSide}" Classes="h2"/>
-                     <TextBlock Text="Simulation only - no real money is involved."/>
-                     <TextBlock Text="Quantity"/>
-                    <NumericUpDown Value="{Binding Quantity}" Minimum="0.00000001" Maximum="99999999" Increment="1" FormatString="0.########" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Left" Width="220"/>
-                    <TextBlock Text="{Binding OrderEstimate}" TextWrapping="Wrap"/>
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                         <Button Content="Confirm simulation" Command="{Binding SubmitOrderCommand}" IsEnabled="{Binding CanSubmitOrder}"/>
-                         <Button Content="Cancel" Command="{Binding CloseOrderCommand}" IsEnabled="{Binding !IsSubmitting}"/>
-                    </StackPanel>
-                </StackPanel>
             </Border>
-            <TextBlock Text="{Binding OrderStatus}" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding OrderStatus}" IsVisible="{Binding HasOrderStatus}" TextWrapping="Wrap"/>
             <Border Classes="rule"/>
              <TextBlock Text="Price history" Classes="h2"/>
             <StackPanel Orientation="Horizontal" Spacing="20" IsEnabled="{Binding HasHistoryOptions}">
