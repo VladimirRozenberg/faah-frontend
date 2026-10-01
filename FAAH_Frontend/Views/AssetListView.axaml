@@ -11,9 +11,9 @@
         <Border Grid.Row="1" Classes="rule" Margin="0,12,0,0"/>
 
         <StackPanel Grid.Row="2" Margin="0,12,0,0" Spacing="5">
-            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8" MaxWidth="850" HorizontalAlignment="Left" Width="{Binding $parent[StackPanel].Bounds.Width}">
                 <TextBox x:Name="AssetSearchBox" Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="200"
-                         PlaceholderText="Search by symbol or name (e.g. BTC or Bitcoin)"
+                         PlaceholderText="Search by symbol or name (ex : BTC or Bitcoin)"
                          AutomationProperties.Name="Search assets by symbol or name"
                          KeyDown="SearchInputKeyDown"/>
                 <Button Grid.Column="1" Content="Search" Command="{Binding SearchCommand}" Margin="8,0,0,0"/>
@@ -76,25 +76,34 @@
 
             <Border x:Name="FiltersPanel" Grid.Column="1" Grid.RowSpan="3" Margin="16,12,0,0"
                     Background="{StaticResource SurfaceAlt}" Padding="14" CornerRadius="8">
-                <Expander x:Name="AssetFilterExpander" Header="Filters" IsExpanded="True" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch">
-                    <ScrollViewer x:Name="FilterScroll" VerticalScrollBarVisibility="Auto" MaxHeight="560">
+                <Grid RowDefinitions="Auto,*">
+                    <TextBlock Text="Filters" FontSize="16" FontWeight="SemiBold"/>
+                    <ScrollViewer x:Name="FilterScroll" Grid.Row="1" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" MaxHeight="560">
                         <StackPanel Spacing="10" Margin="0,12,0,0">
-                            <CheckBox x:Name="FavoritesFilterBox" Content="Favorites only" IsChecked="{Binding FavoritesOnly, Mode=TwoWay}"/>
                             <TextBlock Text="Asset type" Classes="label"/>
                             <ComboBox x:Name="AssetTypeFilterBox" ItemsSource="{Binding AssetTypeOptions}" SelectedItem="{Binding AssetTypeFilter, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
+                            <StackPanel x:Name="NicheFilterPanel" Spacing="8" IsVisible="{Binding ShowSectorFilter}">
+                                <TextBlock Text="Sector / niche" Classes="label"/>
+                                <TextBox Text="{Binding NicheSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Search niches (ex : energy)"/>
+                                <ComboBox ItemsSource="{Binding NicheOptions}" SelectedItem="{Binding SelectedNiche, Mode=TwoWay}" HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate><TextBlock Text="{Binding Name}" TextWrapping="Wrap" MaxWidth="210"/></DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Text="{Binding NicheError}" IsVisible="{Binding HasNicheError}" Classes="muted" TextWrapping="Wrap"/>
+                            </StackPanel>
                             <TextBlock Text="Currency" Classes="label"/>
-                            <TextBox Text="{Binding CurrencyFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="e.g. USD" MaxLength="20"/>
+                            <TextBox Text="{Binding CurrencyFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="ex : USD" MaxLength="20"/>
                             <TextBlock Text="Country" Classes="label"/>
-                            <TextBox Text="{Binding CountryFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="e.g. United States" MaxLength="100"/>
+                            <TextBox Text="{Binding CountryFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="ex : United States" MaxLength="100"/>
                             <TextBlock Text="Exchange" Classes="label"/>
-                            <TextBox Text="{Binding ExchangeFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="e.g. NYQ" MaxLength="50"/>
-                            <TextBlock Text="Sector (stocks)" Classes="label"/>
-                            <TextBox Text="{Binding SectorFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="e.g. Technology" MaxLength="100"/>
-                            <TextBlock Text="Filters combine automatically. Use the exact country, exchange and sector names. Empty fields mean all."
+                            <TextBox Text="{Binding ExchangeFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="ex : NYQ" MaxLength="50"/>
+                            <CheckBox x:Name="FavoritesFilterBox" Content="Favorites only" IsChecked="{Binding FavoritesOnly, Mode=TwoWay}"/>
+                            <TextBlock Text="Type part of a name to filter automatically. Empty fields mean all."
                                        Classes="muted" FontSize="11" TextWrapping="Wrap"/>
                         </StackPanel>
                     </ScrollViewer>
-                </Expander>
+                </Grid>
             </Border>
         </Grid>
 

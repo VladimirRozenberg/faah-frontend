@@ -39,7 +39,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     private string _pageInput = "1";
     private string _searchText = "", _appliedSearch = "";
     private bool _favoritesOnly;
-    private string _assetTypeFilter = "All", _currencyFilter = "", _countryFilter = "", _exchangeFilter = "", _sectorFilter = "";
+    private string _assetTypeFilter = "All", _currencyFilter = "", _countryFilter = "", _exchangeFilter = "";
     private int _filterVersion;
     private bool _isBusy, _isPaging, _disposed, _catalogLoaded, _favoritesLoaded, _loadingPrices;
     private string _error = "", _updated = "Not loaded yet";
@@ -94,13 +94,84 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         set
         {
             if (value is null || !AssetTypeOptions.Contains(value) || !SetField(ref _assetTypeFilter, value)) return;
+            OnPropertyChanged(nameof(ShowSectorFilter));
             FiltersChanged();
         }
     }
     public string CurrencyFilter { get => _currencyFilter; set { if (SetField(ref _currencyFilter, value ?? "")) FiltersChanged(false); } }
     public string CountryFilter { get => _countryFilter; set { if (SetField(ref _countryFilter, value ?? "")) FiltersChanged(false); } }
     public string ExchangeFilter { get => _exchangeFilter; set { if (SetField(ref _exchangeFilter, value ?? "")) FiltersChanged(false); } }
-    public string SectorFilter { get => _sectorFilter; set { if (SetField(ref _sectorFilter, value ?? "")) FiltersChanged(false); } }
+
+    public bool ShowSectorFilter => AssetTypeFilter == "Stocks";
+    public sealed class NicheChoice
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public override string ToString() => Name;
+    }
+    private sealed class NicheCatalog { public List<NicheChoice> Items { get; set; } = new(); }
+    private List<NicheChoice> _niches = new();
+    private string _nicheSearch = "", _nicheError = "";
+    private NicheChoice? _selectedNiche;
+    private bool _loadingNiches, _nichesLoaded, _updatingNicheOptions;
+    public ObservableCollection<NicheChoice> NicheOptions { get; } = new();
+    public bool HasNicheError => NicheError.Length > 0;
+    public string NicheError
+    {
+        get => _nicheError;
+        private set { if (SetField(ref _nicheError, value)) OnPropertyChanged(nameof(HasNicheError)); }
+    }
+    public NicheChoice? SelectedNiche
+    {
+        get => _selectedNiche;
+        set
+        {
+            int previousId = _selectedNiche?.Id ?? 0;
+            if (SetField(ref _selectedNiche, value) && !_updatingNicheOptions &&
+                previousId != (value?.Id ?? 0)) FiltersChanged();
+        }
+    }
+    public string NicheSearch
+    {
+        get => _nicheSearch;
+        set
+        {
+            if (!SetField(ref _nicheSearch, value ?? "")) return;
+            UpdateNicheOptions();
+        }
+    }
+    private void UpdateNicheOptions()
+    {
+        // Cette saisie réduit les choix du menu ; sélectionner une niche filtre les actifs.
+        var selected = SelectedNiche;
+        _updatingNicheOptions = true;
+        NicheOptions.Clear();
+        NicheOptions.Add(new NicheChoice { Name = "All niches" });
+        foreach (var niche in _niches.Where(n => n == selected ||
+                     n.Name.Contains(NicheSearch.Trim(), StringComparison.OrdinalIgnoreCase)))
+            NicheOptions.Add(niche);
+        SelectedNiche = selected is not null && selected.Id > 0 ? selected : NicheOptions[0];
+        _updatingNicheOptions = false;
+    }
+    public async Task LoadNichesAsync()
+    {
+        if (_loadingNiches || _nichesLoaded || _disposed) return;
+        _loadingNiches = true;
+        NicheError = "";
+        try
+        {
+            var catalog = await GetAsync<NicheCatalog>("api/niches");
+            if (_disposed) return;
+            _niches = catalog.Items.OrderBy(n => n.Name).ToList();
+            _nichesLoaded = true;
+            UpdateNicheOptions();
+        }
+        catch (Exception ex) when (IsRequestError(ex))
+        {
+            if (!_disposed) NicheError = "Unable to load niches. Press Refresh to retry.";
+        }
+        finally { _loadingNiches = false; }
+    }
 
     private void FiltersChanged(bool immediate = true)
     {
@@ -124,7 +195,8 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             ["currency"] = CurrencyFilter.Trim().ToUpperInvariant(),
             ["country"] = CountryFilter.Trim(),
             ["exchange"] = ExchangeFilter.Trim().ToUpperInvariant(),
-            ["sector"] = SectorFilter.Trim()
+            // Une niche masquée ne doit jamais filtrer les cryptos ou le forex.
+            ["niche_id"] = ShowSectorFilter && SelectedNiche?.Id > 0 ? SelectedNiche.Id.ToString() : ""
         };
         // Le serveur combine ces critères AVANT de découper les résultats en pages.
         return string.Concat(filters.Where(f => f.Value.Length > 0)
@@ -343,6 +415,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         string requestedSearch = _appliedSearch;
         int requestedFilters = _filterVersion;
         string filterQuery = BuildFilterQuery();
+        _ = LoadNichesAsync();
         try
         {
             if (!await LoadAssetsAsync(_currentPage, requestedSearch, filterQuery, requestedFilters)) return;

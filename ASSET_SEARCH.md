@@ -16,7 +16,11 @@ Exemple : `GET /api/assets?page=1&page_size=20&search=apple`.
 
 ## Panneau de filtres
 
-À droite : favoris, type (All, Stocks, Crypto, Forex, Futures), devise, pays, place boursière et secteur. En petite fenêtre, le panneau devient repliable au-dessus du tableau. Les filtres texte utilisent les valeurs exactes de la base ; devise et place boursière sont converties en majuscules. Un champ vide ou le type All retire ce critère.
+À droite : type (All, Stocks, Crypto, Forex, Futures), niche pour Stocks uniquement, devise, pays, place boursière et favoris. Le panneau reste toujours ouvert ; en petite fenêtre il se place au-dessus du tableau avec défilement. La recherche principale est limitée à 850 pixels.
+
+Pays, devise et place boursière acceptent une partie du nom, sans distinction de casse : « uni » retrouve United States. Un champ vide ou le type All retire ce critère.
+
+Le menu « Sector / niche » utilise les niches de la BDD via GET /api/niches (ce ne sont pas les secteurs Yahoo). Sa saisie réduit les choix du menu ; sélectionner un choix envoie niche_id au backend. All niches retire ce filtre. Il est ignoré pour les autres types d'actifs. Les choix sont chargés une seule fois par ouverture de page ; Refresh réessaie en cas d'échec.
 
 `BuildFilterQuery` construit l'URL ; `FiltersChanged` relance la recherche à la page 1. Le compteur `_filterVersion` empêche une ancienne réponse de remplacer les nouveaux résultats. Le backend combine les critères avec la recherche et les favoris avant la pagination.
 

@@ -23,7 +23,7 @@
       <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="{StaticResource Red}" TextWrapping="Wrap"/>
       <TextBlock Text="No news available yet." IsVisible="{Binding IsEmpty}" Classes="muted"/>
     </StackPanel>
-    <Grid Grid.Row="3" ColumnDefinitions="*,240" ColumnSpacing="14">
+    <Grid Grid.Row="3" ColumnDefinitions="*,270" ColumnSpacing="16">
       <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
         <ItemsControl ItemsSource="{Binding Articles}"><ItemsControl.ItemTemplate><DataTemplate>
           <Button Classes="rowButton" Classes.zebra="{Binding IsAlternateRow}" Margin="0,0,22,8" Padding="10" HorizontalContentAlignment="Stretch" ToolTip.Tip="Read article"
@@ -37,28 +37,31 @@
           </Grid></Button>
         </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
       </ScrollViewer>
-      <Border Grid.Column="1" Background="{StaticResource SurfaceAlt}" Padding="12" CornerRadius="6">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-          <StackPanel Spacing="8">
-            <TextBlock Text="Filters" Classes="h2"/>
+      <!-- Même présentation que les filtres Assets ; les bindings restent inchangés. -->
+      <Border Grid.Column="1" Background="{StaticResource SurfaceAlt}" Padding="14" CornerRadius="8">
+        <Grid RowDefinitions="Auto,*">
+          <TextBlock Text="Filters" FontSize="16" FontWeight="SemiBold"/>
+          <ScrollViewer Grid.Row="1" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="10" Margin="0,12,0,0">
             <TextBlock Text="Search" Classes="label"/>
-            <TextBox Classes="field" Height="28" FontSize="11" Watermark="Title, content or URL" Text="{Binding SearchQuery, Mode=TwoWay}"/>
+            <TextBox PlaceholderText="Title, content or URL" Text="{Binding SearchQuery, Mode=TwoWay}"/>
             <TextBlock Text="Processing status" Classes="label"/>
-            <ComboBox Classes="field" ItemsSource="{Binding ProcessedOptions}" SelectedItem="{Binding ProcessedFilter, Mode=TwoWay}"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ProcessedOptions}" SelectedItem="{Binding ProcessedFilter, Mode=TwoWay}"/>
             <TextBlock Text="Asset symbol" Classes="label"/>
-            <TextBox Classes="field" Watermark="Example: NVDA" Text="{Binding AssetSymbol, Mode=TwoWay}"/>
+            <TextBox PlaceholderText="ex : NVDA" Text="{Binding AssetSymbol, Mode=TwoWay}"/>
             <TextBlock Text="Importance" Classes="label"/>
-            <ComboBox Classes="field" ItemsSource="{Binding ImportanceOptions}" SelectedItem="{Binding ImportanceFilter, Mode=TwoWay}"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ImportanceOptions}" SelectedItem="{Binding ImportanceFilter, Mode=TwoWay}"/>
             <TextBlock Text="Sentiment" Classes="label"/>
-            <ComboBox Classes="field" ItemsSource="{Binding SentimentOptions}" SelectedItem="{Binding SentimentFilter, Mode=TwoWay}"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SentimentOptions}" SelectedItem="{Binding SentimentFilter, Mode=TwoWay}"/>
             <TextBlock Text="Trigger status" Classes="label"/>
-            <ComboBox Classes="field" ItemsSource="{Binding TriggerOptions}" SelectedItem="{Binding TriggerFilter, Mode=TwoWay}"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TriggerOptions}" SelectedItem="{Binding TriggerFilter, Mode=TwoWay}"/>
             <TextBlock Text="Sort field" Classes="label"/>
-            <ComboBox Classes="field" ItemsSource="{Binding SortByOptions}" SelectedItem="{Binding SortBy, Mode=TwoWay}"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SortByOptions}" SelectedItem="{Binding SortBy, Mode=TwoWay}"/>
             <TextBlock Text="Sort direction" Classes="label"/>
-            <ComboBox Classes="field" ItemsSource="{Binding SortOrderOptions}" SelectedItem="{Binding SortOrder, Mode=TwoWay}"/>
+            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SortOrderOptions}" SelectedItem="{Binding SortOrder, Mode=TwoWay}"/>
           </StackPanel>
-        </ScrollViewer>
+          </ScrollViewer>
+        </Grid>
       </Border>
     </Grid>
     <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="5" Margin="0,14,0,0" HorizontalAlignment="Center">

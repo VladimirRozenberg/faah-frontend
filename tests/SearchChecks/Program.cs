@@ -99,23 +99,31 @@ Check(handler.Filters.GetValueOrDefault("asset_type") == "crypto" && vm.Assets.A
 vm.NextPageCommand.Execute(null);
 Check(handler.Page == 2 && vm.Assets.Count == 2 && handler.Filters["asset_type"] == "crypto", "pagination retains type filter");
 vm.CurrencyFilter = "usd";
-vm.CountryFilter = "United States";
+vm.CountryFilter = "uni";
 vm.ExchangeFilter = "nyq";
 await vm.SearchAsync();
 Check(handler.Page == 1 && handler.Filters["currency"] == "USD" && handler.Filters["exchange"] == "NYQ"
-    && handler.Filters["country"] == "United States", "text filters encoded and currency/exchange normalized");
+    && handler.Filters["country"] == "uni" && vm.Assets.Count == 20, "partial text filters encoded and currency/exchange normalized");
 vm.FavoritesOnly = true;
 Check(handler.Filters["favorites_only"] == "true" && vm.Assets.Count == 2, "favorites combine with other filters");
 vm.SearchText = "Company 2";
 await vm.SearchAsync();
 Check(vm.Assets.Single().Id == 2 && handler.Filters["asset_type"] == "crypto", "main search combines with sidebar filters");
-vm.SectorFilter = "Technology";
+Check(!vm.ShowSectorFilter, "niches hidden for crypto");
+vm.AssetTypeFilter = "Stocks";
+await vm.LoadNichesAsync();
+vm.NicheSearch = "en";
+Check(vm.NicheOptions.Any(n => n.Name == "Energy") && vm.NicheOptions.All(n => n.Id == 0 || n.Name == "Energy"), "partial niche name filters dropdown");
+vm.SelectedNiche = vm.NicheOptions.First(n => n.Id == 1);
 await vm.SearchAsync();
-Check(handler.Filters["sector"] == "Technology", "sector sent to backend");
+Check(vm.ShowSectorFilter && handler.Filters["niche_id"] == "1", "selected niche sent as database ID for stocks");
+vm.AssetTypeFilter = "Crypto";
+Check(!handler.Filters.ContainsKey("niche_id"), "hidden niche does not filter other asset types");
 vm.CountryFilter = "A&B + %_";
 await vm.SearchAsync();
 Check(handler.Filters["country"] == "A&B + %_" && vm.IsEmpty, "filter special characters remain one parameter and empty results handled");
-vm.CurrencyFilter = vm.CountryFilter = vm.ExchangeFilter = vm.SectorFilter = "";
+vm.CurrencyFilter = vm.CountryFilter = vm.ExchangeFilter = "";
+vm.SelectedNiche = null;
 vm.FavoritesOnly = false;
 await vm.SearchAsync(clear: true);
 handler.HoldNext = true;
@@ -125,7 +133,8 @@ Check(vm.Assets.Count == 0, "filter changes hide stale rows while request pendin
 handler.Complete();
 PumpUntil(() => !vm.IsBusy && vm.Assets.Count > 0);
 Check(handler.Filters["asset_type"] == "crypto" && vm.Assets.All(a => a.Type == "crypto"), "late filter response discarded and newest selection loaded");
-vm.AssetTypeFilter = "All";
+vm.AssetTypeFilter = "Stocks";
+vm.NicheSearch = "";
 await vm.SearchAsync();
 foreach (int width in new[] { 1100, 1920, 900 })
 {
@@ -133,13 +142,15 @@ foreach (int width in new[] { 1100, 1920, 900 })
     window.Height = 800;
     Dispatcher.UIThread.RunJobs();
     Check(Grid.GetColumn(view.FindControl<Border>("FiltersPanel")!) == (width >= 1050 ? 1 : 0), "filters layout at width " + width);
+    Check(view.FindControl<TextBox>("AssetSearchBox")!.Bounds.Width <= 850, "search bar has limited width");
+    Check(view.FindControl<StackPanel>("NicheFilterPanel")!.IsVisible, "stocks show niche menu in real view");
     using var screenshot = new RenderTargetBitmap(new PixelSize(width, 800));
     screenshot.Render(window);
     screenshot.Save(Path.Combine(Path.GetTempPath(), $"faah-asset-filters-{width}.png"));
 }
-view.FindControl<Expander>("AssetFilterExpander")!.IsExpanded = true;
+Check(!view.GetVisualDescendants().OfType<Expander>().Any(), "filters cannot be collapsed");
 Dispatcher.UIThread.RunJobs();
-Check(view.FindControl<ScrollViewer>("FilterScroll")!.Bounds.Height <= 220, "expanded narrow filters leave room for asset rows");
+Check(view.FindControl<ScrollViewer>("FilterScroll")!.Bounds.Height <= 220, "fixed narrow filters leave room for asset rows");
 window.Close();
 vm.SearchText = "Company"; // Un timer en attente doit être arrêté à la fermeture.
 vm.Dispose();
@@ -161,6 +172,7 @@ class SearchApi : HttpMessageHandler
         Calls++;
         if (Fail) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
         if (request.RequestUri!.AbsolutePath == "/api/favorites") return Reply(new { asset_ids = new[] { 2, 4 } });
+        if (request.RequestUri.AbsolutePath == "/api/niches") return Reply(new { items = new[] { new { id = 1, name = "Energy" }, new { id = 2, name = "Software" } } });
         if (request.RequestUri.AbsolutePath != "/api/assets") throw new Exception("Unexpected route");
         var query = request.RequestUri.Query.TrimStart('?').Split('&').Select(p => p.Split('=', 2))
             .ToDictionary(p => p[0], p => Uri.UnescapeDataString(p[1]));
@@ -173,9 +185,9 @@ class SearchApi : HttpMessageHandler
             market = new { last_price = 123.45m, previous_close = 122m, change = 1.45m, change_percent = 1.19m, currency = "USD", volume = 1234567 } });
         var filtered = all.Where(a => (IgnoreSearch || a.symbol.Contains(Search, StringComparison.OrdinalIgnoreCase) || a.name.Contains(Search, StringComparison.OrdinalIgnoreCase))
             && (!query.ContainsKey("asset_type") || a.type == query["asset_type"])
-            && (!query.ContainsKey("currency") || a.currency == query["currency"])
-            && (!query.ContainsKey("country") || a.country == query["country"])
-            && (!query.ContainsKey("exchange") || a.exchange == query["exchange"])
+            && (!query.ContainsKey("currency") || a.currency.Contains(query["currency"], StringComparison.OrdinalIgnoreCase))
+            && (!query.ContainsKey("country") || a.country.Contains(query["country"], StringComparison.OrdinalIgnoreCase))
+            && (!query.ContainsKey("exchange") || a.exchange.Contains(query["exchange"], StringComparison.OrdinalIgnoreCase))
             && (!query.ContainsKey("sector") || a.sector == query["sector"])
             && (!query.ContainsKey("favorites_only") || a.id == 2 || a.id == 4)).ToList();
         var response = Reply(new { count = filtered.Count, page = Page, page_size = size, items = filtered.Skip((Page - 1) * size).Take(size) });
