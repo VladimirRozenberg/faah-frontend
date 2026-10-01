@@ -21,10 +21,13 @@ void Check(bool condition, string label)
 var handler = new FakeApi();
 using var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/") };
 http.DefaultRequestHeaders.Authorization = new("Bearer", "test-session");
-var asset = new Asset { Id = 7, Symbol = "BTC-USD", Name = "Bitcoin USD", Type = "crypto", Currency = "USD" };
+var asset = new Asset { Id = 7, Symbol = "BTC-USD", Currency = "USD" };
 bool returned = false;
 using var vm = new AssetDetailViewModel(http, asset, () => returned = true, 42);
 await vm.RefreshAsync();
+Check(vm.Asset.Name == "Bitcoin USD" && vm.Asset.Type == "crypto" && vm.Asset.Exchange == "Example Exchange"
+    && vm.Asset.Sector == "Digital assets" && vm.Details.Contains("Example Exchange"), "catalog lookup fills missing asset detail metadata");
+Check(handler.AssetCatalogQuery == "?page=1&page_size=20&search=BTC-USD", "asset details use the paginated catalog search route");
 Check(handler.DetailIds.SequenceEqual(new[] { 10, 11, 12 }), "summary list followed by details; paused and non-USD portfolios skipped");
 Check(vm.Portfolios.Select(p => p.Id).SequenceEqual(new[] { 10, 12 }), "only compatible active USD portfolios; empty preferences allow all types");
 Check(vm.SelectedPortfolio is null && !vm.CanBuy && !vm.CanSell, "no portfolio auto-selected; buy and sell disabled");
@@ -362,6 +365,7 @@ class FakeApi : HttpMessageHandler
     public bool EmptyPositions, WrongPortfolio, FailPortfolios, NoPortfolios;
     public bool FailPortfolioDetail, WrongDetailOwner;
     public List<int> DetailIds = new();
+    public string AssetCatalogQuery = "";
     public string LastChartQuery = "";
     private TaskCompletionSource<HttpResponseMessage>? _pendingChart;
     public void CompleteChart() => _pendingChart!.SetResult(Reply(HttpStatusCode.OK, """{"symbol":"BTC-USD","candles":[]}"""));
@@ -378,6 +382,13 @@ class FakeApi : HttpMessageHandler
         Calls++;
         if (request.Headers.Authorization?.Parameter != "test-session") throw new Exception("Missing bearer");
         string path = request.RequestUri!.AbsolutePath;
+        if (request.Method == HttpMethod.Get && path == "/api/assets")
+        {
+            AssetCatalogQuery = request.RequestUri.Query;
+            return Reply(HttpStatusCode.OK, """
+            {"count":1,"page":1,"page_size":20,"items":[{"id":7,"symbol":"BTC-USD","name":"Bitcoin USD","type":"crypto","exchange":"Example Exchange","country":"US","sector":"Digital assets","industry":"Cryptocurrency","currency":"USD","logo_url":"/api/assets/BTC-USD/logo"}]}
+            """);
+        }
         if (path == "/api/users/42/portfolios") return FailPortfolios ? Reply(HttpStatusCode.ServiceUnavailable, "{}")
             : Reply(HttpStatusCode.OK, NoPortfolios ? "{\"items\":[]}" : """
             {"items":[

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -9,14 +10,20 @@ public enum RiskLevel { Low, Medium, High, VeryHigh }
 
 public enum PortfolioStatus { Active, Paused }
 
-public class Portfolio
+public class Portfolio : INotifyPropertyChanged
 {
+    private string _statusText = string.Empty;
+    private bool _isStatusUpdating;
+    private string? _statusErrorMessage;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     [JsonPropertyName("portfolio_id")]
     public int Id { get; set; }
 
     public string Name { get; set; } = string.Empty;
 
-    public string Description { get; set; } = string.Empty;
+    public string? Description { get; set; } = string.Empty;
 
     public RiskLevel Risk { get; set; }
 
@@ -24,7 +31,7 @@ public class Portfolio
     public string RiskTolerance { get; set; } = string.Empty;
 
     [JsonPropertyName("strategy_type")]
-    public string StrategyType { get; set; } = string.Empty;
+    public string? StrategyType { get; set; } = string.Empty;
 
     [JsonPropertyName("preferred_asset_types")]
     public List<string> PreferredAssetTypes { get; set; } = new();
@@ -33,7 +40,7 @@ public class Portfolio
     public List<int> PreferredNicheIds { get; set; } = new();
 
     [JsonPropertyName("max_position_size_pct")]
-    public decimal MaxPositionSizePct { get; set; }
+    public decimal? MaxPositionSizePct { get; set; }
 
     [JsonPropertyName("max_open_positions")]
     public int MaxPositions { get; set; }
@@ -46,12 +53,56 @@ public class Portfolio
     public string Currency { get => BaseCurrency; set => BaseCurrency = value; }
 
     [JsonPropertyName("status")]
-    public string StatusText { get; set; } = string.Empty;
+    public string StatusText
+    {
+        get => _statusText;
+        set
+        {
+            if (_statusText == value) return;
+            _statusText = value;
+            OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(Status));
+            OnPropertyChanged(nameof(IsActive));
+            OnPropertyChanged(nameof(StatusDisplay));
+        }
+    }
+
+    [JsonIgnore]
+    public bool IsStatusUpdating
+    {
+        get => _isStatusUpdating;
+        set
+        {
+            if (_isStatusUpdating == value) return;
+            _isStatusUpdating = value;
+            OnPropertyChanged(nameof(IsStatusUpdating));
+            OnPropertyChanged(nameof(CanToggleStatus));
+        }
+    }
+
+    [JsonIgnore]
+    public bool CanToggleStatus => !IsStatusUpdating;
+
+    [JsonIgnore]
+    public string? StatusErrorMessage
+    {
+        get => _statusErrorMessage;
+        set
+        {
+            if (_statusErrorMessage == value) return;
+            _statusErrorMessage = value;
+            OnPropertyChanged(nameof(StatusErrorMessage));
+            OnPropertyChanged(nameof(HasStatusError));
+        }
+    }
+
+    [JsonIgnore]
+    public bool HasStatusError => !string.IsNullOrWhiteSpace(StatusErrorMessage);
 
     [JsonIgnore]
     public PortfolioStatus Status
     {
-        get => string.Equals(StatusText, "paused", StringComparison.OrdinalIgnoreCase) ? PortfolioStatus.Paused : PortfolioStatus.Active;
+        get => IsActive ? PortfolioStatus.Active : PortfolioStatus.Paused;
         set => StatusText = value == PortfolioStatus.Paused ? "paused" : "active";
     }
 
@@ -76,7 +127,13 @@ public class Portfolio
 
     public bool IsDown => ReturnPercent.HasValue && ReturnPercent.Value < 0;
 
-    public string StatusDisplay => Status == PortfolioStatus.Active ? "ACTIVE" : "PAUSED";
+    public string StatusDisplay => IsActive ? "ACTIVE" : "PAUSED";
 
-    public bool IsActive => Status == PortfolioStatus.Active;
+    public bool IsActive
+    {
+        get => string.Equals(StatusText, "active", StringComparison.OrdinalIgnoreCase);
+        set => StatusText = value ? "active" : "paused";
+    }
+
+    private void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

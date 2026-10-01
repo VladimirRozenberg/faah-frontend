@@ -10,6 +10,11 @@ public class PortfolioListViewModel : ViewModelBase
     {
         Portfolios = shell.Portfolios;
         CreateCommand = new RelayCommand(shell.ShowPortfolioCreate);
+        ToggleStatusCommand = new RelayCommand(p =>
+        {
+            if (p is Portfolio portfolio)
+                _ = shell.UpdatePortfolioActiveStateAsync(portfolio, portfolio.IsActive, !portfolio.IsActive);
+        }, p => p is Portfolio portfolio && !portfolio.IsStatusUpdating);
         OpenCommand = new RelayCommand(p =>
         {
             if (p is Portfolio portfolio) shell.ShowPortfolio(portfolio);
@@ -18,6 +23,7 @@ public class PortfolioListViewModel : ViewModelBase
 
     public ICommand CreateCommand { get; }
     public ICommand OpenCommand { get; }
+    public ICommand ToggleStatusCommand { get; }
 
     public ObservableCollection<Portfolio> Portfolios { get; }
 }

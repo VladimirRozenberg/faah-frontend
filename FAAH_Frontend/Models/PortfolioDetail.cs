@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace FAAH_Frontend.Models;
 
@@ -8,6 +9,8 @@ public sealed class PortfolioDetail
 {
     public int Id { get; set; }
     public int UserId { get; set; }
+    [JsonPropertyName("is_active")]
+    public bool? IsActive { get; set; }
     public string Name { get; set; } = "";
     public string? Description { get; set; }
     public int PositionsCount { get; set; }

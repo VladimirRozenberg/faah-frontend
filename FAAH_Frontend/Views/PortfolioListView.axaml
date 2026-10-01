@@ -26,10 +26,11 @@
             <ItemsControl ItemsSource="{Binding Portfolios}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Button Classes="rowButton"
-                                Command="{Binding $parent[ItemsControl].DataContext.OpenCommand}"
-                                CommandParameter="{Binding}">
-                            <Grid ColumnDefinitions="2.6*,1*,1.3*,1*,1*,1*">
+                        <Grid ColumnDefinitions="2.6*,1*,1.3*,1*,1*,1*">
+                            <Button Grid.Column="0" Grid.ColumnSpan="5" Classes="rowButton"
+                                    Command="{Binding $parent[ItemsControl].DataContext.OpenCommand}"
+                                    CommandParameter="{Binding}">
+                                <Grid ColumnDefinitions="2.6*,1*,1.3*,1*,1*">
                                 <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"/>
                                     <TextBlock Text="{Binding Description}" Classes="muted" FontSize="12"/>
@@ -40,10 +41,18 @@
                                            Classes.up="{Binding IsUp}" Classes.down="{Binding IsDown}"
                                            Text="{Binding ReturnDisplay}"/>
                                 <TextBlock Grid.Column="4" Classes="cell" Text="{Binding BaseCurrency}"/>
-                                <TextBlock Grid.Column="5" Classes="cell" Text="{Binding StatusDisplay}"
-                                           Foreground="{StaticResource Muted}"/>
-                            </Grid>
-                        </Button>
+                                </Grid>
+                            </Button>
+                            <StackPanel Grid.Column="5" Spacing="3" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <ToggleSwitch IsChecked="{Binding IsActive, Mode=TwoWay}"
+                                              IsEnabled="{Binding CanToggleStatus}"
+                                              Command="{Binding $parent[ItemsControl].DataContext.ToggleStatusCommand}"
+                                              CommandParameter="{Binding}"
+                                              ToolTip.Tip="{Binding StatusDisplay}"/>
+                                <TextBlock Text="{Binding StatusErrorMessage}" Foreground="{StaticResource Red}"
+                                           FontSize="10" TextWrapping="Wrap" IsVisible="{Binding HasStatusError}"/>
+                            </StackPanel>
+                        </Grid>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

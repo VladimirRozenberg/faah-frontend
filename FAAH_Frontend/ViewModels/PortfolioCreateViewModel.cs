@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -13,8 +14,12 @@ namespace FAAH_Frontend.ViewModels;
 
 public class PortfolioCreateViewModel : ViewModelBase
 {
+    private const string NullableStrategyTypeOption = "Not set";
     private readonly ShellViewModel _shell;
     private readonly RelayCommand _submitCommand;
+    private readonly Portfolio? _portfolio;
+    private readonly string[] _originalPreferredAssetTypes;
+    private readonly int[] _originalPreferredNicheIds;
     private string _name = string.Empty;
     private string _description = string.Empty;
     private string _strategyType = "balanced";
@@ -32,14 +37,29 @@ public class PortfolioCreateViewModel : ViewModelBase
     private bool _isLoadingNiches;
     private string? _nicheLoadError;
 
-    public PortfolioCreateViewModel(ShellViewModel shell)
+    public PortfolioCreateViewModel(ShellViewModel shell, Portfolio? portfolio = null)
     {
         _shell = shell;
+        _portfolio = portfolio;
+        StrategyTypes = IsEditMode
+            ? new[] { NullableStrategyTypeOption, "conservative", "income", "balanced", "growth", "aggressive", "custom" }
+            : new[] { "conservative", "income", "balanced", "growth", "aggressive", "custom" };
+        _originalPreferredAssetTypes = portfolio?.PreferredAssetTypes.ToArray() ?? Array.Empty<string>();
+        _originalPreferredNicheIds = portfolio?.PreferredNicheIds.ToArray() ?? Array.Empty<int>();
         _submitCommand = new RelayCommand(async _ => await SubmitAsync(), _ => CanSubmit);
         SubmitCommand = _submitCommand;
-        CancelCommand = new RelayCommand(_ => _shell.ShowPortfolios());
+        CancelCommand = new RelayCommand(_ =>
+        {
+            if (_portfolio is null) _shell.ShowPortfolios();
+            else _shell.ShowPortfolio(_portfolio);
+        });
+        if (_portfolio is not null) InitializeFromPortfolio(_portfolio);
         _ = LoadNichesAsync();
     }
+
+    public bool IsEditMode => _portfolio is not null;
+    public string PageTitle => IsEditMode ? "Edit portfolio" : "Create portfolio";
+    public string SubmitButtonText => IsEditMode ? "Save changes" : "Create portfolio";
 
     public string Name
     {
@@ -82,10 +102,22 @@ public class PortfolioCreateViewModel : ViewModelBase
     public string? NicheLoadError { get => _nicheLoadError; private set => SetField(ref _nicheLoadError, value); }
     public bool HasNicheLoadError => !string.IsNullOrWhiteSpace(NicheLoadError);
 
-    public string[] StrategyTypes { get; } = { "conservative", "income", "balanced", "growth", "aggressive", "custom" };
+    public string[] StrategyTypes { get; }
     public string[] RiskTolerances { get; } = { "low", "medium", "high" };
     public ICommand SubmitCommand { get; }
     public ICommand CancelCommand { get; }
+
+    private void InitializeFromPortfolio(Portfolio portfolio)
+    {
+        Name = portfolio.Name;
+        Description = portfolio.Description ?? string.Empty;
+        StrategyType = string.IsNullOrWhiteSpace(portfolio.StrategyType) ? NullableStrategyTypeOption : portfolio.StrategyType;
+        RiskTolerance = portfolio.RiskTolerance;
+        MaxPositionSizePct = portfolio.MaxPositionSizePct?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+        MaxOpenPositions = portfolio.MaxPositions.ToString(CultureInfo.InvariantCulture);
+        foreach (var option in AssetTypes)
+            option.IsSelected = portfolio.PreferredAssetTypes.Contains(option.Value, StringComparer.Ordinal);
+    }
 
     private async System.Threading.Tasks.Task SubmitAsync()
     {
@@ -101,6 +133,36 @@ public class PortfolioCreateViewModel : ViewModelBase
         IsSubmitting = true;
         try
         {
+            if (_portfolio is not null)
+            {
+                var patch = BuildPatchPayload();
+                if (patch.Count == 0)
+                {
+                    _shell.ShowPortfolio(_portfolio);
+                    return;
+                }
+
+                using var updateResponse = await _shell.Http.PatchAsJsonAsync(
+                    $"api/users/{userId}/portfolios/{_portfolio.Id}", patch, ShellViewModel.JsonOptions);
+                if (!updateResponse.IsSuccessStatusCode)
+                {
+                    await SetBackendErrorsAsync(updateResponse);
+                    return;
+                }
+
+                var updatedPortfolio = await updateResponse.Content.ReadFromJsonAsync<PortfolioUpdateResponse>(ShellViewModel.JsonOptions);
+                if (updatedPortfolio is null)
+                {
+                    ErrorMessage = "The server returned an empty portfolio.";
+                    OnPropertyChanged(nameof(HasError));
+                    return;
+                }
+
+                _shell.ApplyPortfolioUpdate(_portfolio, updatedPortfolio);
+                _shell.ShowPortfolio(_portfolio);
+                return;
+            }
+
             var request = new PortfolioCreateRequest
             {
                 Name = Name.Trim(),
@@ -151,14 +213,68 @@ public class PortfolioCreateViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(Name)) { NameError = "Name is required."; valid = false; }
         else if (Name.Trim().Length > 200) { NameError = "Name must be 200 characters or fewer."; valid = false; }
         if (Description.Length > 2000) { DescriptionError = "Description must be 2,000 characters or fewer."; valid = false; }
-        if (Array.IndexOf(StrategyTypes, StrategyType) < 0) { StrategyTypeError = "Select a valid strategy."; valid = false; }
+        if (!(IsEditMode && StrategyType == NullableStrategyTypeOption) && Array.IndexOf(StrategyTypes, StrategyType) < 0)
+        { StrategyTypeError = "Select a valid strategy."; valid = false; }
         if (Array.IndexOf(RiskTolerances, RiskTolerance) < 0) { RiskToleranceError = "Select low, medium, or high."; valid = false; }
-        if (!decimal.TryParse(MaxPositionSizePct, NumberStyles.Number, CultureInfo.InvariantCulture, out var positionSize) || positionSize <= 0 || positionSize > 100)
+        if ((!IsEditMode || !string.IsNullOrWhiteSpace(MaxPositionSizePct)) &&
+            (!decimal.TryParse(MaxPositionSizePct, NumberStyles.Number, CultureInfo.InvariantCulture, out var positionSize) || positionSize <= 0 || positionSize > 100))
         { MaxPositionSizePctError = "Enter a value greater than 0 and at most 100."; valid = false; }
         if (!int.TryParse(MaxOpenPositions, NumberStyles.None, CultureInfo.InvariantCulture, out var openPositions) || openPositions < 1 || openPositions > 1000)
         { MaxOpenPositionsError = "Enter a whole number from 1 to 1,000."; valid = false; }
         return valid;
     }
+
+    private Dictionary<string, object?> BuildPatchPayload()
+    {
+        var patch = new Dictionary<string, object?>();
+        if (_portfolio is null) return patch;
+
+        var name = Name.Trim();
+        if (!string.Equals(name, _portfolio.Name.Trim(), StringComparison.Ordinal))
+            patch["name"] = name;
+
+        var description = NormalizeOptionalText(Description);
+        if (!string.Equals(description, NormalizeOptionalText(_portfolio.Description), StringComparison.Ordinal))
+            patch["description"] = description;
+
+        var strategyType = StrategyType == NullableStrategyTypeOption ? null : StrategyType;
+        if (!string.Equals(strategyType, _portfolio.StrategyType, StringComparison.Ordinal))
+            patch["strategy_type"] = strategyType;
+
+        if (!string.Equals(RiskTolerance, _portfolio.RiskTolerance, StringComparison.Ordinal))
+            patch["risk_tolerance"] = RiskTolerance;
+
+        decimal? maxPositionSize = string.IsNullOrWhiteSpace(MaxPositionSizePct)
+            ? null
+            : decimal.Parse(MaxPositionSizePct, CultureInfo.InvariantCulture);
+        if (maxPositionSize != _portfolio.MaxPositionSizePct)
+            patch["max_position_size_pct"] = maxPositionSize;
+
+        var maxOpenPositions = int.Parse(MaxOpenPositions, CultureInfo.InvariantCulture);
+        if (maxOpenPositions != _portfolio.MaxPositions)
+            patch["max_open_positions"] = maxOpenPositions;
+
+        var preferredAssetTypes = AssetTypes.Where(option => option.IsSelected)
+            .Select(option => option.Value).Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal).ToArray();
+        var originalAssetTypes = _originalPreferredAssetTypes.Distinct(StringComparer.Ordinal)
+            .OrderBy(value => value, StringComparer.Ordinal).ToArray();
+        if (!preferredAssetTypes.SequenceEqual(originalAssetTypes, StringComparer.Ordinal))
+            patch["preferred_asset_types"] = preferredAssetTypes;
+
+        if (!IsLoadingNiches && !HasNicheLoadError && _originalPreferredNicheIds.All(id => Niches.Any(niche => niche.Id == id)))
+        {
+            var preferredNicheIds = Niches.Where(niche => niche.IsSelected)
+                .Select(niche => niche.Id).Distinct().OrderBy(id => id).ToArray();
+            var originalNicheIds = _originalPreferredNicheIds.Distinct().OrderBy(id => id).ToArray();
+            if (!preferredNicheIds.SequenceEqual(originalNicheIds))
+                patch["preferred_niche_ids"] = preferredNicheIds;
+        }
+
+        return patch;
+    }
+
+    private static string? NormalizeOptionalText(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private async System.Threading.Tasks.Task LoadNichesAsync()
     {
@@ -179,7 +295,12 @@ public class PortfolioCreateViewModel : ViewModelBase
             var result = await response.Content.ReadFromJsonAsync<NicheResponse>(ShellViewModel.JsonOptions);
             Niches.Clear();
             foreach (var niche in result?.Items ?? Enumerable.Empty<NicheOption>())
-                if (!Niches.Any(existing => existing.Id == niche.Id)) Niches.Add(niche);
+            {
+                if (Niches.Any(existing => existing.Id == niche.Id)) continue;
+                if (_portfolio is not null)
+                    niche.IsSelected = _portfolio.PreferredNicheIds.Contains(niche.Id);
+                Niches.Add(niche);
+            }
         }
         catch (Exception ex)
         {
@@ -222,7 +343,7 @@ public class PortfolioCreateViewModel : ViewModelBase
             // Fall back to a status-specific message when the response is not JSON.
         }
 
-        if (!HasAnyError()) ErrorMessage = $"Portfolio creation failed ({(int)response.StatusCode}).";
+        if (!HasAnyError()) ErrorMessage = $"Portfolio {(IsEditMode ? "update" : "creation")} failed ({(int)response.StatusCode}).";
         OnPropertyChanged(nameof(HasError));
     }
 
@@ -272,7 +393,7 @@ public class PortfolioCreateViewModel : ViewModelBase
     {
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public string StrategyType { get; set; } = string.Empty;
+        public string? StrategyType { get; set; }
         public string RiskTolerance { get; set; } = string.Empty;
         public decimal MaxPositionSizePct { get; set; }
         public int MaxOpenPositions { get; set; }

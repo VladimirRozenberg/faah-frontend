@@ -30,6 +30,8 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
 
     public RelayCommand RefreshCommand { get; }
     public RelayCommand OpenAssetCommand { get; }
+    public RelayCommand ToggleStatusCommand { get; }
+    public RelayCommand EditPortfolioCommand { get; }
     public RelayCommand FirstPageCommand { get; }
     public RelayCommand PreviousPageCommand { get; }
     public RelayCommand NextPageCommand { get; }
@@ -144,6 +146,12 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     {
         _shell = shell;
         Portfolio = portfolio;
+        EditPortfolioCommand = new RelayCommand(_ => _shell.ShowPortfolioEdit(Portfolio));
+        ToggleStatusCommand = new RelayCommand(parameter =>
+        {
+            if (parameter is Portfolio selectedPortfolio)
+                _ = _shell.UpdatePortfolioActiveStateAsync(selectedPortfolio, selectedPortfolio.IsActive, !selectedPortfolio.IsActive);
+        }, parameter => parameter is Portfolio selectedPortfolio && !selectedPortfolio.IsStatusUpdating);
         OpenAssetCommand = new RelayCommand(parameter =>
         {
             if (parameter is PortfolioPosition position)
@@ -153,14 +161,16 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
                     Symbol = position.Symbol,
                     Name = position.Name,
                     Type = position.Type,
-                    Currency = Portfolio.BaseCurrency
+                    Currency = Portfolio.BaseCurrency,
+                    LogoUrl = $"/api/assets/{Uri.EscapeDataString(position.Symbol)}/logo"
                 }, Portfolio);
             else if (parameter is RecentRecommendation recommendation && !string.IsNullOrWhiteSpace(recommendation.AssetSymbol))
                 _shell.ShowAssetDetail(new Asset
                 {
                     Id = recommendation.AssetId ?? 0,
                     Symbol = recommendation.AssetSymbol,
-                    Currency = Portfolio.BaseCurrency
+                    Currency = Portfolio.BaseCurrency,
+                    LogoUrl = $"/api/assets/{Uri.EscapeDataString(recommendation.AssetSymbol)}/logo"
                 }, Portfolio);
         }, parameter => !_disposed && (parameter is PortfolioPosition
             || parameter is RecentRecommendation { AssetSymbol: not null and not "" }));
@@ -249,6 +259,8 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
         {
             var detail = await _shell.Http.GetFromJsonAsync<PortfolioDetail>(
                 $"api/users/{userId}/portfolios/{Portfolio.Id}", ShellViewModel.JsonOptions, _lifetime.Token);
+            if (detail?.IsActive is bool isActive && !Portfolio.IsStatusUpdating)
+                Portfolio.IsActive = isActive;
             foreach (var position in detail?.Positions ?? new()) Positions.Add(position);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)

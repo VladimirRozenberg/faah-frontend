@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
 using FAAH_Frontend.Models;
+using FAAH_Frontend.Services;
 
 namespace FAAH_Frontend.ViewModels;
 
@@ -18,12 +19,13 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     private readonly HttpClient _http;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(60) };
+    private readonly AssetLogoService? _logos;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         NumberHandling = JsonNumberHandling.AllowReadingFromString
     };
-    private bool _busy, _disposed;
+    private bool _busy, _disposed, _catalogMetadataLoaded;
     private string _quoteStatus = "", _chartStatus = "", _newsStatus = "";
     private IReadOnlyList<Candle> _candles = Array.Empty<Candle>();
     private IReadOnlyList<NewsArticle> _news = Array.Empty<NewsArticle>();
@@ -105,9 +107,10 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public AssetDetailViewModel(HttpClient http, Asset asset, Action goBack, int userId = 0, Action<int>? openArticle = null, int? preferredPortfolioId = null)
+    public AssetDetailViewModel(HttpClient http, Asset asset, Action goBack, int userId = 0, Action<int>? openArticle = null, int? preferredPortfolioId = null, AssetLogoService? logos = null)
     {
         _http = http;
+        _logos = logos;
         Asset = asset;
         _userId = userId;
         _preferredPortfolioId = preferredPortfolioId;
@@ -274,9 +277,48 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     {
         if (_disposed || IsBusy || IsSubmitting) return;
         IsBusy = true;
-        // Les trois blocs sont independants : une panne des news ne masque pas le graphique.
-        try { await Task.WhenAll(LoadQuoteAsync(), RefreshChartAsync(), LoadNewsAsync(), LoadPortfoliosAsync()); }
+        try
+        {
+            await LoadCatalogMetadataAsync();
+            if (_disposed) return;
+            await Task.WhenAll(LoadQuoteAsync(), RefreshChartAsync(), LoadNewsAsync(), LoadPortfoliosAsync());
+        }
         finally { if (!_disposed) { IsBusy = false; NotifyTrading(); } }
+    }
+
+    private async Task LoadCatalogMetadataAsync()
+    {
+        if (_disposed || _catalogMetadataLoaded) return;
+        try
+        {
+            var catalog = await GetAsync<AssetResponse>(
+                $"api/assets?page=1&page_size={AssetListViewModel.PageSize}&search={Uri.EscapeDataString(Asset.Symbol)}");
+            if (_disposed) return;
+            if (catalog.Items is null) throw new JsonException("Asset catalog response did not contain items.");
+
+            _catalogMetadataLoaded = true;
+            var catalogAsset = catalog.Items.FirstOrDefault(item =>
+                string.Equals(item.Symbol, Asset.Symbol, StringComparison.OrdinalIgnoreCase));
+            if (catalogAsset is null) return;
+
+            Asset.Id = catalogAsset.Id;
+            Asset.Name = catalogAsset.Name ?? Asset.Name;
+            Asset.Type = catalogAsset.Type ?? Asset.Type;
+            Asset.Exchange = catalogAsset.Exchange ?? Asset.Exchange;
+            Asset.Country = catalogAsset.Country ?? Asset.Country;
+            Asset.Sector = catalogAsset.Sector ?? Asset.Sector;
+            Asset.Industry = catalogAsset.Industry ?? Asset.Industry;
+            Asset.Currency = catalogAsset.Currency ?? Asset.Currency;
+            Asset.LogoUrl = catalogAsset.LogoUrl ?? Asset.LogoUrl ?? $"/api/assets/{Uri.EscapeDataString(Asset.Symbol)}/logo";
+            OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(Details));
+            if (_logos is not null) await _logos.LoadAsync(Asset, _lifetime.Token);
+        }
+        catch (OperationCanceledException) when (_disposed) { }
+        catch (Exception ex)
+        {
+            if (!_disposed) System.Diagnostics.Debug.WriteLine($"ASSET CATALOG METADATA ERROR: {ex}");
+        }
     }
 
     private async Task<T> GetAsync<T>(string route)

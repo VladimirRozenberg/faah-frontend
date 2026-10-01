@@ -11,8 +11,18 @@
           <TextBlock Text="{Binding Portfolio.Name}" Classes="h1" TextWrapping="Wrap"/>
           <TextBlock Text="{Binding Portfolio.Description}" Classes="muted" TextWrapping="Wrap"/>
         </StackPanel>
-        <Button Grid.Column="1" Content="Settings" Classes="ghost" IsEnabled="False"
-                ToolTip.Tip="Portfolio settings will be available later." VerticalAlignment="Top"/>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="14" VerticalAlignment="Top" HorizontalAlignment="Right">
+          <Button Content="Settings" Classes="ghost" Command="{Binding EditPortfolioCommand}"/>
+          <StackPanel Spacing="4" VerticalAlignment="Top">
+            <ToggleSwitch IsChecked="{Binding Portfolio.IsActive, Mode=TwoWay}"
+                          IsEnabled="{Binding Portfolio.CanToggleStatus}"
+                          Command="{Binding ToggleStatusCommand}"
+                          CommandParameter="{Binding Portfolio}"
+                          ToolTip.Tip="{Binding Portfolio.StatusDisplay}"/>
+            <TextBlock Text="{Binding Portfolio.StatusErrorMessage}" Foreground="{StaticResource Red}"
+                       FontSize="10" TextWrapping="Wrap" IsVisible="{Binding Portfolio.HasStatusError}"/>
+          </StackPanel>
+        </StackPanel>
       </Grid>
 
       <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="12">

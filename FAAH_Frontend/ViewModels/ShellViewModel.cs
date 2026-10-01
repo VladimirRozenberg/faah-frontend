@@ -109,6 +109,60 @@ public class ShellViewModel : ViewModelBase
         }
     }
 
+    public async System.Threading.Tasks.Task UpdatePortfolioActiveStateAsync(Portfolio portfolio, bool isActive, bool previousState)
+    {
+        if (portfolio.IsStatusUpdating) return;
+
+        if (!int.TryParse(ProfileUserId, out var userId))
+        {
+            portfolio.IsActive = previousState;
+            portfolio.StatusErrorMessage = "Unable to identify the signed-in user.";
+            return;
+        }
+
+        portfolio.IsStatusUpdating = true;
+        portfolio.StatusErrorMessage = null;
+        try
+        {
+            using var response = await _http.PatchAsJsonAsync(
+                $"api/users/{userId}/portfolios/{portfolio.Id}", new { is_active = isActive }, JsonOptions);
+            if (!response.IsSuccessStatusCode)
+                throw new HttpRequestException($"Portfolio status update failed (HTTP {(int)response.StatusCode}).");
+
+            var updated = await response.Content.ReadFromJsonAsync<PortfolioUpdateResponse>(JsonOptions)
+                ?? throw new JsonException("The server returned an empty portfolio response.");
+            ApplyPortfolioUpdate(portfolio, updated);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PORTFOLIO STATUS UPDATE ERROR: {ex}");
+            portfolio.IsActive = previousState;
+            portfolio.StatusErrorMessage = ex is HttpRequestException httpException && httpException.Message.Contains("HTTP ", StringComparison.Ordinal)
+                ? httpException.Message
+                : "Unable to update portfolio status.";
+        }
+        finally
+        {
+            portfolio.IsStatusUpdating = false;
+        }
+    }
+
+    internal void ApplyPortfolioUpdate(Portfolio portfolio, PortfolioUpdateResponse updated)
+    {
+        portfolio.Name = updated.Name;
+        portfolio.Description = updated.Description;
+        portfolio.StrategyType = updated.StrategyType;
+        if (updated.PreferredAssetTypes is not null)
+            portfolio.PreferredAssetTypes = new List<string>(updated.PreferredAssetTypes);
+        if (updated.PreferredNicheIds is not null)
+            portfolio.PreferredNicheIds = new List<int>(updated.PreferredNicheIds);
+        portfolio.RiskTolerance = updated.RiskTolerance;
+        portfolio.MaxPositionSizePct = updated.MaxPositionSizePct;
+        portfolio.MaxPositions = updated.MaxOpenPositions;
+        portfolio.BaseCurrency = updated.BaseCurrency;
+        portfolio.IsActive = updated.IsActive;
+    }
+
     public bool IsLoggedIn
     {
         get => _isLoggedIn;
@@ -245,6 +299,15 @@ public class ShellViewModel : ViewModelBase
         };
     }
 
+    public void ShowPortfolioEdit(Portfolio portfolio)
+    {
+        Section = "PORTFOLIO";
+        CurrentPage = new PortfolioCreateView
+        {
+            DataContext = new PortfolioCreateViewModel(this, portfolio)
+        };
+    }
+
     public void ShowSettings()
     {
         Section = "SETTINGS";
@@ -283,7 +346,7 @@ public class ShellViewModel : ViewModelBase
         _ = _logos.LoadAsync(asset, System.Threading.CancellationToken.None);
         Section = "ASSETS";
         int.TryParse(ProfileUserId, out int userId);
-        var detail = new AssetDetailViewModel(_http, asset, ShowAssets, userId, ShowNewsDetail, preferredPortfolio?.Id);
+        var detail = new AssetDetailViewModel(_http, asset, ShowAssets, userId, ShowNewsDetail, preferredPortfolio?.Id, _logos);
         CurrentPage = new AssetDetailView { DataContext = detail };
         detail.Start();
     }

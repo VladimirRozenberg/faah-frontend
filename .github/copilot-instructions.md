@@ -2,6 +2,7 @@
 
 ## General Guidelines
 - User prefers responses in English instead of French.
+- All questions and answers must be in English.
 - Prefer an incremental, collaborative implementation process: first understand the existing system and API contracts, then make small verified changes.
 - Remove redundant UI controls when equivalent functionality exists elsewhere.
 - Strongly prefer calendar/date-picker controls over manually typing dates in calendar format.
@@ -12,3 +13,4 @@
 - For news UI, keep the Read Article action but reposition the button to improve layout; avoid large per-item buttons and focus on displaying source-level classification/analysis related to each news item while maintaining a compact layout for the main content area.
 - For the news source detail UI, show a compact source metadata section (original title, URL, published date), a limited source-content excerpt, classification data (importance, sentiment, reason, assets, niches), and a large analysis section with summary, direction, market sentiment, confidence/risk/timeframe, and other non-asset analysis fields. Signals should be handled on a separate page, not this news detail page.
 - The published date pickers must be compact controls in the top news header, immediately to the left of the Refresh button; they must not occupy width inside the right filter sidebar.
+- For portfolio editing, reuse the existing create portfolio view: when it receives an existing portfolio ID/model, initialize values and PATCH only changed fields; when no portfolio is supplied, create a new portfolio.
