@@ -42,8 +42,13 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             if (IsSubmitting || !OrderInputModes.Contains(value) || !SetField(ref _orderInputMode, value)) return;
             // Conserver l'équivalent de la quantité en passant au mode montant.
             if (IsAmountMode)
-                CashAmount = Quantity > 0 && Quantity <= 99999999 && _orderPrice > 0
-                    ? decimal.Round(Quantity.Value * _orderPrice, 2) : null;
+            {
+                if (OrderSide == "Sell" && Quantity == HeldQuantity && CanSellAll)
+                    FillSellAll();
+                else
+                    CashAmount = Quantity > 0 && Quantity <= 99999999 && _orderPrice > 0
+                        ? decimal.Round(Quantity.Value * _orderPrice, 2) : null;
+            }
             OnPropertyChanged(nameof(IsAmountMode));
             OnPropertyChanged(nameof(IsQuantityMode));
             NotifyTrading();
@@ -51,6 +56,8 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     }
     public bool IsAmountMode => OrderInputMode == "Amount (USD)";
     public bool IsQuantityMode => !IsAmountMode;
+    public decimal CashAmountMaximum => OrderSide == "Sell" && _orderPrice > 0
+        ? Math.Max(99999999m, decimal.Round(HeldQuantity * _orderPrice, 2)) : 99999999m;
     public decimal? CashAmount
     {
         get => _cashAmount;
@@ -60,7 +67,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             SetField(ref _cashAmount, value);
             // Quantité = montant / prix. Arrondir vers le bas à 8 décimales.
             // Le cours du ticket reste figé ; seul le serveur fixe le prix final.
-            Quantity = value > 0 && value <= 99999999 && _orderPrice > 0 && _orderPrice >= value.Value / 99999999m
+            Quantity = value > 0 && value <= CashAmountMaximum && _orderPrice > 0 && _orderPrice >= value.Value / 99999999m
                 ? decimal.Floor(value.Value / _orderPrice * 100000000m) / 100000000m : null;
         }
     }
@@ -165,6 +172,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         RefreshCommand = new RelayCommand(() => { _ = RefreshAsync(); });
         BuyCommand = new RelayCommand(() => PrepareOrder("Achat"));
         SellCommand = new RelayCommand(() => PrepareOrder("Vente"));
+        SellAllCommand = new RelayCommand(FillSellAll);
         CloseOrderCommand = new RelayCommand(() => { OrderSide = ""; });
         SubmitOrderCommand = new RelayCommand(() => { _ = SubmitOrderAsync(); });
         OpenArticleCommand = new RelayCommand(parameter =>
@@ -183,6 +191,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public ICommand RefreshCommand { get; }
     public ICommand BuyCommand { get; }
     public ICommand SellCommand { get; }
+    public ICommand SellAllCommand { get; }
     public ICommand CloseOrderCommand { get; }
     public ICommand SubmitOrderCommand { get; }
     public ICommand OpenArticleCommand { get; }
@@ -195,6 +204,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         && (!NeedsConversion || _usdQuote is not null);
     public bool CanBuy => CanPrepareOrder;
     public bool CanSell => CanPrepareOrder && HeldQuantity > 0;
+    public bool CanSellAll => IsOrderOpen && OrderSide == "Sell" && CanSell && HeldQuantity <= 99999999;
     public bool CanSubmitOrder => CanPrepareOrder && IsOrderOpen && Quantity > 0 && Quantity <= 99999999
         && SelectedPortfolio!.Id == _orderPortfolioId && (OrderSide != "Sell" || Quantity <= HeldQuantity)
         && _orderPrice > 0 && DateTimeOffset.UtcNow - _orderAt < TimeSpan.FromMinutes(2);
@@ -209,6 +219,8 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(CanPrepareOrder));
         OnPropertyChanged(nameof(CanBuy));
         OnPropertyChanged(nameof(CanSell));
+        OnPropertyChanged(nameof(CanSellAll));
+        OnPropertyChanged(nameof(CashAmountMaximum));
         OnPropertyChanged(nameof(CanSelectPortfolio));
         OnPropertyChanged(nameof(HeldQuantity));
         OnPropertyChanged(nameof(HoldingsDisplay));
@@ -263,6 +275,14 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public string OrderEstimate => Quantity > 0 && Quantity <= 99999999 && _orderPrice > 0
         ? $"Portfolio: {SelectedPortfolio?.Name} · Estimated price: {_orderPrice:G10} USD · amount: {Quantity.Value * _orderPrice:N2} USD (excluding fees)"
         : "Enter a positive quantity. A quote is required for the estimate.";
+    private void FillSellAll()
+    {
+        if (!CanSellAll) return;
+        // ALL conserve la quantité exacte : arrondir le montant USD ne doit pas laisser un reliquat.
+        _cashAmount = decimal.Round(HeldQuantity * _orderPrice, 2);
+        OnPropertyChanged(nameof(CashAmount));
+        Quantity = HeldQuantity;
+    }
     private void PrepareOrder(string side)
     {
         if (side == "Achat" ? !CanBuy : !CanSell) return;

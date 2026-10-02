@@ -48,6 +48,21 @@ vm.CashAmount = 201;
 Check(!vm.CanSubmitOrder, "cash sale exceeding holdings disabled");
 vm.CashAmount = 150;
 Check(vm.Quantity == 1.5m && vm.CanSubmitOrder, "cash sale converts to available quantity");
+vm.SellAllCommand.Execute(null);
+Check(vm.Quantity == 2 && vm.CashAmount == 200 && vm.CanSubmitOrder, "ALL fills the whole position in USD mode");
+var heldPosition = vm.SelectedPortfolio!.Positions.First(p => p.Symbol == asset.Symbol);
+heldPosition.Quantity = 2.12345678m;
+vm.OrderInputMode = "Quantity";
+vm.SellAllCommand.Execute(null);
+Check(vm.Quantity == 2.12345678m && vm.CanSubmitOrder, "ALL keeps all eight quantity decimals");
+vm.OrderInputMode = "Amount (USD)";
+Check(vm.CashAmount == 212.35m && vm.Quantity == 2.12345678m && vm.CanSubmitOrder,
+    "switching ALL to USD retains exact holdings despite rounding");
+vm.CashAmount = 100;
+Check(vm.Quantity == 1, "editing amount after ALL restores normal conversion");
+vm.SellAllCommand.Execute(null);
+Check(vm.Quantity == 2.12345678m && handler.Posts == 0, "ALL prepares the sale without submitting it");
+heldPosition.Quantity = 2;
 vm.SelectedPortfolio = vm.Portfolios[0];
 Check(vm.Asset.Price == 100 && vm.Candles.Count == 40, "market and candles decoded from actual backend formats");
 Check(vm.Asset.Market?.LastPrice == 100 && vm.Asset.PriceDisplay.Contains("100"), "detail refresh updates the shared market display model");
@@ -99,8 +114,10 @@ Check(handler.LastBody!.Value.GetProperty("quantity").GetDecimal() == 0.25m
 Check(vm.OrderStatus.Contains("recorded") && !vm.IsOrderOpen, "success shown only after server confirmation");
 Check(vm.CanSell && vm.HeldQuantity == 0.25m, "buy response enables sell using server holdings");
 vm.SellCommand.Execute(null);
+vm.SellAllCommand.Execute(null);
 await vm.SubmitOrderAsync();
 Check(handler.LastBody!.Value.TryGetProperty("sale_price", out _) && handler.LastPath.EndsWith("/sell"), "sell contract uses sale_price");
+Check(handler.LastBody.Value.GetProperty("quantity").GetDecimal() == 0.25m, "ALL submits the exact entire position after confirmation");
 handler.TradeStatus = HttpStatusCode.BadRequest;
 vm.SellCommand.Execute(null);
 await vm.SubmitOrderAsync();
@@ -179,6 +196,7 @@ Dispatcher.UIThread.RunJobs();
 view.FindControl<NumericUpDown>("OrderAmountInput")!.Value = 50;
 Dispatcher.UIThread.RunJobs();
 Check(vm.IsAmountMode && vm.CashAmount == 50 && vm.Quantity == 0.5m, "real cash field updates estimated quantity");
+Check(!view.FindControl<Button>("SellAllButton")!.IsVisible, "ALL is hidden when buying");
 Check(view.GetVisualDescendants().OfType<Button>().Any(b => Equals(b.Content, "Confirm buy")), "styled confirmation button bound to buy action");
 // Vérifier le plein écran et une fenêtre réduite avec le même formulaire ouvert.
 window.Width = 1920;
@@ -226,6 +244,23 @@ vm.SelectedPortfolio = vm.Portfolios[1];
 vm.SellCommand.Execute(null);
 Dispatcher.UIThread.RunJobs();
 Check(vm.ConfirmOrderLabel == "Confirm sell" && !vm.IsBuyOrder, "sell ticket has its own label and colour");
+var allButton = view.FindControl<Button>("SellAllButton")!;
+Check(allButton.IsVisible && allButton.IsEnabled, "ALL button is visible and enabled for a valid sale");
+allButton.Command!.Execute(null);
+Dispatcher.UIThread.RunJobs();
+Check(vm.Quantity == vm.HeldQuantity && view.FindControl<NumericUpDown>("OrderQuantityInput")!.Value == vm.HeldQuantity,
+    "ALL button updates the real quantity input");
+var uiPosition = vm.SelectedPortfolio!.Positions.First(p => p.Symbol == asset.Symbol);
+uiPosition.Quantity = 2.12345678m;
+vm.OrderInputMode = "Amount (USD)";
+allButton.Command.Execute(null);
+Dispatcher.UIThread.RunJobs();
+Check(vm.Quantity == 2.12345678m && vm.CanSubmitOrder && view.FindControl<NumericUpDown>("OrderAmountInput")!.Value == 212.35m,
+    "real USD input keeps exact ALL quantity without rounding feedback");
+uiPosition.Quantity = 2;
+vm.OrderInputMode = "Quantity";
+allButton.Command.Execute(null);
+Dispatcher.UIThread.RunJobs();
 using (var sellImage = new RenderTargetBitmap(new PixelSize(1100, 900)))
 {
     sellImage.Render(window);
@@ -292,6 +327,13 @@ Check(!euro.CanBuy && euro.TradingNotice.Contains("conversion"), "conversion out
 handler.FailConversion = false;
 await euro.RefreshAsync();
 Check(euro.CanBuy, "conversion recovers on refresh");
+euro.SelectedPortfolio = euro.Portfolios[1];
+euro.SellCommand.Execute(null);
+euro.OrderInputMode = "Amount (USD)";
+euro.SellAllCommand.Execute(null);
+Check(euro.Quantity == euro.HeldQuantity && euro.CashAmount == euro.HeldQuantity * 120m && euro.CanSubmitOrder,
+    "ALL uses the USD-converted price for a foreign currency sale");
+euro.SelectedPortfolio = euro.Portfolios[0];
 euro.BuyCommand.Execute(null);
 euro.Quantity = 3;
 var fxView = new AssetDetailView { DataContext = euro };

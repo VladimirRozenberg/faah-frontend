@@ -69,12 +69,22 @@
                                   SelectedItem="{Binding OrderInputMode, Mode=TwoWay}" HorizontalAlignment="Stretch"
                                   IsEnabled="{Binding !IsSubmitting}" AutomationProperties.Name="Enter quantity or amount"/>
                         <TextBlock Text="Quantity" FontWeight="SemiBold" IsVisible="{Binding IsQuantityMode}"/>
-                        <NumericUpDown Value="{Binding Quantity, Mode=TwoWay}" IsVisible="{Binding IsQuantityMode}" Minimum="0" Maximum="99999999" ShowButtonSpinner="False" AllowSpin="False"
-                                       FormatString="0.########" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Stretch" MinHeight="40"/>
                         <TextBlock Text="{Binding AmountLabel}" FontWeight="SemiBold" IsVisible="{Binding IsAmountMode}"/>
-                        <NumericUpDown x:Name="OrderAmountInput" Value="{Binding CashAmount, Mode=TwoWay}" IsVisible="{Binding IsAmountMode}"
-                                       Minimum="0" Maximum="99999999" ShowButtonSpinner="False" AllowSpin="False" FormatString="0.00"
-                                       IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Stretch" MinHeight="40"/>
+                        <!-- Un seul encadré : le champ actif et ALL à droite, uniquement pour vendre. -->
+                        <Border BorderBrush="#8A8A8A" BorderThickness="1" CornerRadius="3" Background="#FAFAFB">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <NumericUpDown x:Name="OrderQuantityInput" Value="{Binding Quantity, Mode=TwoWay}" IsVisible="{Binding IsQuantityMode}"
+                                               Minimum="0" Maximum="99999999" ShowButtonSpinner="False" AllowSpin="False" BorderThickness="0"
+                                               FormatString="0.########" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Stretch" MinHeight="40"/>
+                                <NumericUpDown x:Name="OrderAmountInput" Value="{Binding CashAmount, Mode=TwoWay}" IsVisible="{Binding IsAmountMode}"
+                                               Minimum="0" Maximum="{Binding CashAmountMaximum}" ShowButtonSpinner="False" AllowSpin="False" BorderThickness="0"
+                                               FormatString="0.00" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Stretch" MinHeight="40"/>
+                                <Button x:Name="SellAllButton" Grid.Column="1" Content="ALL" Classes="ghost" Margin="4" Padding="12,5"
+                                        FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" IsVisible="{Binding !IsBuyOrder}"
+                                        IsEnabled="{Binding CanSellAll}" Command="{Binding SellAllCommand}"
+                                        ToolTip.Tip="Sell all your holdings" AutomationProperties.Name="Sell all holdings"/>
+                            </Grid>
+                        </Border>
                         <TextBlock Text="Estimated unit price" Classes="muted"/>
                         <TextBlock Text="{Binding OrderUnitPrice}" TextWrapping="Wrap"/>
                     </StackPanel>
