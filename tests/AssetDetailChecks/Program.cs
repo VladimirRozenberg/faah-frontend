@@ -414,11 +414,15 @@ await healthVm.RefreshAsync();
 Check(healthVm.IsHealthy && healthVm.YahooStatus == "Connected" && healthVm.TwelveStatus == "Rate limited",
     "health distinguishes internal LIVE and external provider quota");
 Check(healthVm.TwelveDetails.Contains("30 min") && healthVm.YahooDetails.Contains("5 min"), "source dates and cache intervals displayed");
+Check(healthVm.LiveMarketWorkerStatus == "degraded" && healthVm.LiveMarketWorkerColor == "#A56400"
+    && healthVm.LiveMarketWorkerAssets == 12 && healthVm.HasLiveMarketWorkerHeartbeat
+    && !healthVm.HasLiveMarketWorkerError, "live market worker displays degraded status, assets and optional heartbeat");
 var healthWindow = new HealthDetailsWindow { DataContext = healthVm };
 healthWindow.Show();
 Dispatcher.UIThread.RunJobs();
 Check(healthWindow.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "Yahoo Finance (yfinance)"), "Yahoo row rendered in Live window");
 Check(healthWindow.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "Twelve Data (logos)"), "Twelve row rendered in Live window");
+Check(healthWindow.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "Live market worker"), "live market worker row rendered in Live window");
 using (var healthImage = new RenderTargetBitmap(new PixelSize(420, 680)))
 {
     healthImage.Render(healthWindow);
@@ -431,10 +435,39 @@ Check(healthVm.IsHealthy && healthVm.YahooStatus == "Unknown" && healthVm.YahooD
 healthHandler.ExternalCode = HttpStatusCode.ServiceUnavailable;
 await healthVm.RefreshAsync();
 Check(healthVm.TwelveStatus == "Unknown" && healthVm.TwelveDetails.Contains("Unable"), "failed refresh clears old provider success");
+healthHandler.HealthJson = """
+    {"status":"degraded","checked_at":"2026-09-30T12:25:00Z","database":{"status":"connected"},
+     "live_market_worker":{"status":"down","healthy":false,"subscribed_assets":0,"last_heartbeat_at":null,"error":"worker stopped"}}
+    """;
+await healthVm.RefreshAsync();
+Check(!healthVm.IsHealthy && healthVm.DatabaseStatus == "connected" && healthVm.LiveMarketWorkerStatus == "down"
+    && healthVm.LiveMarketWorkerColor == "#C63838" && healthVm.HasLiveMarketWorkerError
+    && !healthVm.HasLiveMarketWorkerHeartbeat, "worker down remains distinct from a degraded API response");
+healthHandler.HealthJson = """
+    {"status":"ok","live_market_worker":{"status":"running","healthy":true,"live_prices":12,
+     "delayed_prices":549,"unavailable_prices":3,"subscribed_assets":564,"error":"Redis operational issue"}}
+    """;
+await healthVm.RefreshAsync();
+Check(healthVm.LiveMarketWorkerStatus == "running" && healthVm.LiveMarketWorkerColor == "#278348"
+    && healthVm.LiveMarketWorkerLivePrices == 12 && healthVm.LiveMarketWorkerDelayedPrices == 549
+    && healthVm.LiveMarketWorkerUnavailablePrices == 3 && healthVm.LiveMarketWorkerAssets == 564
+    && healthVm.HasLiveMarketWorkerError, "price counts and Redis error do not override healthy worker status");
+healthHandler.HealthJson = """
+    {"status":"ok","live_market_worker":{"healthy":true,"subscribed_assets":4,"error":null,"last_heartbeat_at":null}}
+    """;
+await healthVm.RefreshAsync();
+Check(healthVm.LiveMarketWorkerStatus == "running" && healthVm.LiveMarketWorkerAssets == 4
+    && !healthVm.HasLiveMarketWorkerError && !healthVm.HasLiveMarketWorkerHeartbeat,
+    "worker healthy boolean provides a running fallback and nullable fields are accepted");
 
 class FakeHealthApi : HttpMessageHandler
 {
     public HttpStatusCode ExternalCode = HttpStatusCode.OK;
+    public string HealthJson = """
+        {"status":"ok","checked_at":"2026-09-30T12:25:00Z","database":{"status":"connected"},"orchestrator":{"status":"running"},
+         "portfolio_strategists":{"status":"running","active":10},"rss_feeds":{"status":"running","active":16},
+         "live_market_worker":{"status":"degraded","healthy":false,"subscribed_assets":12,"last_heartbeat_at":"2026-09-30T12:24:00Z","error":null}}
+        """;
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
         bool external = request.RequestUri!.AbsolutePath == "/health/external";
@@ -443,10 +476,7 @@ class FakeHealthApi : HttpMessageHandler
             Content = new StringContent(external ? """
                 {"yfinance":{"status":"connected","detail":"AAPL price received via yfinance.","checked_at":"2026-09-30T12:25:00Z","cache_seconds":300},
                  "twelve_data":{"status":"rate_limited","detail":"Twelve Data request quota reached.","checked_at":"2026-09-30T12:25:00Z","cache_seconds":1800}}
-                """ : """
-                {"status":"ok","checked_at":"2026-09-30T12:25:00Z","database":{"status":"connected"},"orchestrator":{"status":"running"},
-                 "portfolio_strategists":{"status":"running","active":10},"rss_feeds":{"status":"running","active":16}}
-                """)
+                """ : HealthJson)
         });
     }
 }

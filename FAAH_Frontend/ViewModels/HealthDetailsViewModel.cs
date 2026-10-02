@@ -23,6 +23,16 @@ public sealed class HealthDetailsViewModel : ViewModelBase
     private string _rssStatus = "Unknown";
     private string _strategistDetails = "";
     private string _rssDetails = "";
+    private string _liveMarketWorkerStatus = "unavailable";
+    private string _liveMarketWorkerColor = "#64748B";
+    private int _liveMarketWorkerAssets;
+    private int _liveMarketWorkerLivePrices;
+    private int _liveMarketWorkerDelayedPrices;
+    private int _liveMarketWorkerUnavailablePrices;
+    private string _liveMarketWorkerHeartbeat = "";
+    private string _liveMarketWorkerError = "";
+    private bool _hasLiveMarketWorkerHeartbeat;
+    private bool _hasLiveMarketWorkerError;
     private ExternalSourceHealth? _yahoo, _twelve;
     private string _externalError = "Checking sources…";
 
@@ -51,6 +61,16 @@ public sealed class HealthDetailsViewModel : ViewModelBase
     public string RssStatus { get => _rssStatus; private set => SetField(ref _rssStatus, value); }
     public string StrategistDetails { get => _strategistDetails; private set => SetField(ref _strategistDetails, value); }
     public string RssDetails { get => _rssDetails; private set => SetField(ref _rssDetails, value); }
+    public string LiveMarketWorkerStatus { get => _liveMarketWorkerStatus; private set => SetField(ref _liveMarketWorkerStatus, value); }
+    public string LiveMarketWorkerColor { get => _liveMarketWorkerColor; private set => SetField(ref _liveMarketWorkerColor, value); }
+    public int LiveMarketWorkerAssets { get => _liveMarketWorkerAssets; private set => SetField(ref _liveMarketWorkerAssets, value); }
+    public int LiveMarketWorkerLivePrices { get => _liveMarketWorkerLivePrices; private set => SetField(ref _liveMarketWorkerLivePrices, value); }
+    public int LiveMarketWorkerDelayedPrices { get => _liveMarketWorkerDelayedPrices; private set => SetField(ref _liveMarketWorkerDelayedPrices, value); }
+    public int LiveMarketWorkerUnavailablePrices { get => _liveMarketWorkerUnavailablePrices; private set => SetField(ref _liveMarketWorkerUnavailablePrices, value); }
+    public string LiveMarketWorkerHeartbeat { get => _liveMarketWorkerHeartbeat; private set => SetField(ref _liveMarketWorkerHeartbeat, value); }
+    public string LiveMarketWorkerError { get => _liveMarketWorkerError; private set => SetField(ref _liveMarketWorkerError, value); }
+    public bool HasLiveMarketWorkerHeartbeat { get => _hasLiveMarketWorkerHeartbeat; private set => SetField(ref _hasLiveMarketWorkerHeartbeat, value); }
+    public bool HasLiveMarketWorkerError { get => _hasLiveMarketWorkerError; private set => SetField(ref _hasLiveMarketWorkerError, value); }
     public bool IsRefreshing { get => _isRefreshing; private set { if (SetField(ref _isRefreshing, value)) _refreshCommand.RaiseCanExecuteChanged(); } }
     public ICommand RefreshCommand { get; }
 
@@ -86,6 +106,7 @@ public sealed class HealthDetailsViewModel : ViewModelBase
             RssStatus = FormatStatus(health.RssFeeds?.Status, health.RssFeeds?.Running);
             StrategistDetails = $"{health.PortfolioStrategists?.Active ?? 0} active · {health.PortfolioStrategists?.Paused ?? 0} paused";
             RssDetails = $"{health.RssFeeds?.Active ?? 0} active · {health.RssFeeds?.Paused ?? 0} paused · {health.RssFeeds?.FailedFeeds ?? 0} failed";
+            UpdateLiveMarketWorker(health.LiveMarketWorker);
         }
         catch (Exception ex)
         {
@@ -177,7 +198,42 @@ public sealed class HealthDetailsViewModel : ViewModelBase
         Summary = message;
         DatabaseStatus = OrchestratorStatus = StrategistStatus = RssStatus = "Unavailable";
         StrategistDetails = RssDetails = "";
+        UpdateLiveMarketWorker(null);
     }
+
+    private void UpdateLiveMarketWorker(LiveMarketWorkerHealth? worker)
+    {
+        LiveMarketWorkerStatus = worker is null ? "unavailable" : WorkerStatus(worker);
+        LiveMarketWorkerColor = LiveMarketWorkerStatus switch
+        {
+            "running" => "#278348",
+            "degraded" => "#A56400",
+            "down" => "#C63838",
+            _ => "#64748B"
+        };
+        LiveMarketWorkerAssets = worker?.SubscribedAssets ?? 0;
+        LiveMarketWorkerLivePrices = worker?.LivePrices ?? 0;
+        LiveMarketWorkerDelayedPrices = worker?.DelayedPrices ?? 0;
+        LiveMarketWorkerUnavailablePrices = worker?.UnavailablePrices ?? 0;
+        LiveMarketWorkerHeartbeat = worker?.LastHeartbeatAt?.ToLocalTime().ToString("dd.MM HH:mm:ss") ?? "";
+        HasLiveMarketWorkerHeartbeat = worker?.LastHeartbeatAt is not null;
+        LiveMarketWorkerError = worker?.Error ?? "";
+        HasLiveMarketWorkerError = !string.IsNullOrWhiteSpace(worker?.Error);
+    }
+
+    private static string WorkerStatus(LiveMarketWorkerHealth worker) => worker.Status?.ToLowerInvariant() switch
+    {
+        "running" => "running",
+        "degraded" => "degraded",
+        "down" => "down",
+        "unavailable" => "unavailable",
+        _ => worker.Healthy switch
+        {
+            true => "running",
+            false => "down",
+            _ => "unavailable"
+        }
+    };
 
     private static string FormatStatus(string? status, bool? running) =>
         string.IsNullOrWhiteSpace(status) ? (running == true ? "Running" : "Unknown") : status;
@@ -190,6 +246,19 @@ public sealed class HealthDetailsViewModel : ViewModelBase
         public ComponentHealth? Orchestrator { get; set; }
         [JsonPropertyName("portfolio_strategists")] public StrategistHealth? PortfolioStrategists { get; set; }
         [JsonPropertyName("rss_feeds")] public RssHealth? RssFeeds { get; set; }
+        [JsonPropertyName("live_market_worker")] public LiveMarketWorkerHealth? LiveMarketWorker { get; set; }
+    }
+
+    private sealed class LiveMarketWorkerHealth
+    {
+        [JsonPropertyName("status")] public string? Status { get; set; }
+        [JsonPropertyName("healthy")] public bool? Healthy { get; set; }
+        [JsonPropertyName("live_prices")] public int LivePrices { get; set; }
+        [JsonPropertyName("delayed_prices")] public int DelayedPrices { get; set; }
+        [JsonPropertyName("unavailable_prices")] public int UnavailablePrices { get; set; }
+        [JsonPropertyName("subscribed_assets")] public int SubscribedAssets { get; set; }
+        [JsonPropertyName("last_heartbeat_at")] public DateTimeOffset? LastHeartbeatAt { get; set; }
+        [JsonPropertyName("error")] public string? Error { get; set; }
     }
 
     private class ComponentHealth

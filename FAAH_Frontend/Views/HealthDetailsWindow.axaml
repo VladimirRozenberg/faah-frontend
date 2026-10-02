@@ -54,6 +54,39 @@
                 </Grid>
                 <TextBlock Text="{Binding RssDetails}" FontSize="11"
                            Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                <Border Padding="10" CornerRadius="6"
+                        Background="{StaticResource SurfaceAlt}"
+                        BorderBrush="{StaticResource Hairline}"
+                        BorderThickness="1">
+                    <StackPanel Spacing="5">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Live market worker" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" Text="{Binding LiveMarketWorkerStatus}"
+                                       Foreground="{Binding LiveMarketWorkerColor}" FontWeight="SemiBold"/>
+                        </Grid>
+                        <TextBlock FontSize="11" Foreground="{StaticResource Muted}">
+                            <Run Text="Assets followed: "/><Run Text="{Binding LiveMarketWorkerAssets}"/>
+                        </TextBlock>
+                        <WrapPanel ItemSpacing="14" LineSpacing="2">
+                            <TextBlock FontSize="11" Foreground="{StaticResource Muted}">
+                                <Run Text="Live prices: "/><Run Text="{Binding LiveMarketWorkerLivePrices}"/>
+                            </TextBlock>
+                            <TextBlock FontSize="11" Foreground="{StaticResource Muted}">
+                                <Run Text="Delayed prices: "/><Run Text="{Binding LiveMarketWorkerDelayedPrices}"/>
+                            </TextBlock>
+                            <TextBlock FontSize="11" Foreground="{StaticResource Muted}">
+                                <Run Text="Unavailable prices: "/><Run Text="{Binding LiveMarketWorkerUnavailablePrices}"/>
+                            </TextBlock>
+                        </WrapPanel>
+                        <TextBlock IsVisible="{Binding HasLiveMarketWorkerHeartbeat}"
+                                   FontSize="11" Foreground="{StaticResource Muted}">
+                            <Run Text="Last heartbeat: "/><Run Text="{Binding LiveMarketWorkerHeartbeat}"/>
+                        </TextBlock>
+                        <TextBlock IsVisible="{Binding HasLiveMarketWorkerError}"
+                                   Text="{Binding LiveMarketWorkerError}" FontSize="11"
+                                   Foreground="{StaticResource Muted}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
                 <Border Height="1" Background="{StaticResource Hairline}" Margin="0,4"/>
                 <TextBlock Text="External sources" FontWeight="SemiBold"/>
                 <Grid ColumnDefinitions="*,Auto">
