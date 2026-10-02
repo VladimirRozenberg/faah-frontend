@@ -386,31 +386,75 @@
 
     <!-- ===================== BARRE DE NAVIGATION ===================== -->
 
+    <Style Selector="Border.windowCaptionBrand">
+        <Setter Property="Padding" Value="14,0,12,0"/>
+    </Style>
+
+    <Style Selector="Button.windowChromeButton">
+        <Setter Property="Width" Value="46"/>
+        <Setter Property="Height" Value="38"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#E5EDF5"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.windowChromeButton:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#285177"/>
+    </Style>
+    <Style Selector="Button.windowCloseButton:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#C42B1C"/>
+    </Style>
+
     <Style Selector="Button.navItem">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="9,5"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="15,10,15,8"/>
+        <Setter Property="CornerRadius" Value="7"/>
         <Setter Property="Cursor" Value="Hand"/>
     </Style>
     <Style Selector="Button.navItem /template/ ContentPresenter">
         <Setter Property="Background" Value="Transparent"/>
     </Style>
     <Style Selector="Button.navItem TextBlock">
-        <Setter Property="FontSize" Value="11"/>
-        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="#C0CEDA"/>
+    </Style>
+    <Style Selector="Button.navItem TextBlock.idx">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{StaticResource Amber}"/>
     </Style>
     <Style Selector="Button.navItem:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="{StaticResource ItemHover}"/>
+        <Setter Property="Background" Value="#1AFFFFFF"/>
     </Style>
     <Style Selector="Button.navItem.active /template/ ContentPresenter">
-        <Setter Property="Background" Value="{StaticResource Navy}"/>
+        <Setter Property="Background" Value="#1AFFFFFF"/>
     </Style>
     <Style Selector="Button.navItem.active TextBlock">
         <Setter Property="Foreground" Value="#FFFFFF"/>
     </Style>
     <Style Selector="Button.navItem.active TextBlock.idx">
         <Setter Property="Foreground" Value="{StaticResource Amber}"/>
+    </Style>
+    <Style Selector="Border.navUnderline">
+        <Setter Property="Width" Value="18"/>
+        <Setter Property="CornerRadius" Value="1"/>
+        <Setter Property="Background" Value="{StaticResource Amber}"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Button.healthButton.topbarHealth">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="13"/>
+    </Style>
+    <Style Selector="Button.healthButton.topbarHealth:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#20FFFFFF"/>
     </Style>
 
     <!-- Bouton utilisateur + menu déroulant -->
@@ -425,17 +469,31 @@
         <Setter Property="Background" Value="Transparent"/>
     </Style>
     <Style Selector="Button.userChip:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="{StaticResource ItemHover}"/>
+        <Setter Property="Background" Value="#20FFFFFF"/>
+    </Style>
+    <Style Selector="Button.userChip.topbarUser">
+        <Setter Property="MinWidth" Value="150"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="CornerRadius" Value="8"/>
     </Style>
 
     <Style Selector="MenuFlyoutPresenter">
-        <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="Padding" Value="0,4"/>
-        <Setter Property="Background" Value="{StaticResource SurfaceAlt}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Background" Value="{StaticResource NavyDeep}"/>
+        <Setter Property="BorderBrush" Value="#285177"/>
+    </Style>
+    <Style Selector="MenuItem">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Padding" Value="12,8"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+        <Setter Property="FontWeight" Value="Bold"/>
     </Style>
     <Style Selector="MenuItem:pointerover /template/ Border#PART_LayoutRoot">
-        <Setter Property="Background" Value="{StaticResource Amber}"/>
+        <Setter Property="Background" Value="#285177"/>
     </Style>
 
     <!-- ===================== CARTES ===================== -->

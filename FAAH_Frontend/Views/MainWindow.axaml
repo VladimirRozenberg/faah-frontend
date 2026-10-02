@@ -7,81 +7,117 @@
         Title="FAAH — Futures Arbitrage Assets Hub"
         Width="1100" Height="700"
         MinWidth="900" MinHeight="600"
+        WindowDecorations="None" CanResize="True"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource Surface}">
+        Background="{StaticResource NavyDeep}">
 
-    <DockPanel>
+    <Window.Icon>
+        <WindowIcon>avares://FAAH_Frontend/Assets/faah-logo.ico</WindowIcon>
+    </Window.Icon>
+
+    <Grid RowDefinitions="38,*" Background="{StaticResource Surface}">
+        <Border Grid.Row="0" Classes="windowTitleBar" Background="{StaticResource NavyDeep}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Grid.Column="0" Classes="windowCaptionBrand" Background="Transparent"
+                        PointerPressed="TitleBarPointerPressed">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                        <Image Source="avares://FAAH_Frontend/Assets/faah-logo.png"
+                               Width="26" Height="26" Stretch="Uniform"/>
+                        <TextBlock Text="FAAH" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="FUTURES ARBITRAGE ASSETS HUB" FontSize="9"
+                                   Foreground="#AFC0D0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Background="Transparent" PointerPressed="TitleBarPointerPressed"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Stretch" Spacing="0">
+                    <Button Classes="windowChromeButton" Content="—" ToolTip.Tip="Minimize"
+                            Click="MinimizeClick"/>
+                    <Button x:Name="MaximizeRestoreButton" Classes="windowChromeButton" Content="□"
+                            ToolTip.Tip="Maximize or restore" Click="MaximizeRestoreClick"/>
+                    <Button Classes="windowChromeButton windowCloseButton" Content="×" ToolTip.Tip="Close"
+                            Click="CloseClick"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+    <DockPanel Grid.Row="1">
 
         <!-- ================= BARRE DE NAVIGATION ================= -->
-        <Border DockPanel.Dock="Top" Height="64" IsVisible="{Binding IsLoggedIn}"
-                Background="{StaticResource Surface}">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="30,0">
-
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
-                    <Ellipse Width="13" Height="13" Fill="{StaticResource Amber}"/>
-                    <TextBlock VerticalAlignment="Center" FontSize="15">
-                        <Run Text="FAAH" FontWeight="Bold"/>
-                        <!-- Compact brand leaves room for the separate dashboard tab. -->
-                        
-                    </TextBlock>
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
-                            Margin="34,0,0,0" Spacing="2">
-
-                    <Button Classes="navItem" Classes.active="{Binding IsDashboardActive}" Command="{Binding ShowDashboardCommand}"><StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Classes="idx" Text="01"/><TextBlock Text="DASHBOARD"/></StackPanel></Button>
-                    <TextBlock Text="|" Foreground="{StaticResource Hairline}" VerticalAlignment="Center"/>
+        <Border DockPanel.Dock="Top" Height="74" IsVisible="{Binding IsLoggedIn}"
+                Background="{StaticResource NavyDeep}">
+            <Grid RowDefinitions="*,1" ColumnDefinitions="Auto,*,Auto" Margin="24,0">
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal"
+                            HorizontalAlignment="Left" VerticalAlignment="Center" Spacing="4">
+                    <Button Classes="navItem" Classes.active="{Binding IsDashboardActive}"
+                            Command="{Binding ShowDashboardCommand}">
+                        <Grid RowDefinitions="Auto,2">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <TextBlock Classes="idx" Text="01"/><TextBlock Text="DASHBOARD"/>
+                            </StackPanel>
+                            <Border Grid.Row="1" Classes="navUnderline" IsVisible="{Binding IsDashboardActive}"/>
+                        </Grid>
+                    </Button>
                     <Button Classes="navItem" Classes.active="{Binding IsPortfolioActive}"
                             Command="{Binding ShowPortfoliosCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Classes="idx" Text="02"/>
-                            <TextBlock Text="PORTFOLIO"/>
-                        </StackPanel>
+                        <Grid RowDefinitions="Auto,2">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <TextBlock Classes="idx" Text="02"/><TextBlock Text="PORTFOLIO"/>
+                            </StackPanel>
+                            <Border Grid.Row="1" Classes="navUnderline" IsVisible="{Binding IsPortfolioActive}"/>
+                        </Grid>
                     </Button>
-
-                    <TextBlock Text="|" Foreground="{StaticResource Hairline}" VerticalAlignment="Center"/>
-
                     <Button Classes="navItem" Classes.active="{Binding IsAssetsActive}"
                             Command="{Binding ShowAssetsCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Classes="idx" Text="03"/>
-                            <TextBlock Text="ASSETS"/>
-                        </StackPanel>
+                        <Grid RowDefinitions="Auto,2">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <TextBlock Classes="idx" Text="03"/><TextBlock Text="ASSETS"/>
+                            </StackPanel>
+                            <Border Grid.Row="1" Classes="navUnderline" IsVisible="{Binding IsAssetsActive}"/>
+                        </Grid>
                     </Button>
-
-                    <TextBlock Text="|" Foreground="{StaticResource Hairline}" VerticalAlignment="Center"/>
-
                     <Button Classes="navItem" Classes.active="{Binding IsNewsActive}"
                             Command="{Binding ShowNewsCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Classes="idx" Text="04"/>
-                            <TextBlock Text="NEWS"/>
-                        </StackPanel>
+                        <Grid RowDefinitions="Auto,2">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <TextBlock Classes="idx" Text="04"/><TextBlock Text="NEWS"/>
+                            </StackPanel>
+                            <Border Grid.Row="1" Classes="navUnderline" IsVisible="{Binding IsNewsActive}"/>
+                        </Grid>
                     </Button>
                 </StackPanel>
 
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="14"
-                            IsVisible="{Binding IsLoggedIn}">
-
-                    <Button Classes="healthButton" Command="{Binding ShowHealthCommand}"
+                <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal"
+                            VerticalAlignment="Center" Spacing="10">
+                    <Button Classes="healthButton topbarHealth" Command="{Binding ShowHealthCommand}"
                             ToolTip.Tip="Open API health details">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="7">
-                            <Ellipse Width="9" Height="9" Classes="healthDot"
-                                     Classes.healthy="{Binding Health.IsHealthy}"/>
-                            <TextBlock Text="{Binding Health.StatusLabel}" FontSize="12"
-                                       Foreground="{StaticResource Muted}"/>
-                        </StackPanel>
+                        <Border CornerRadius="13" Background="#1AFFFFFF" Padding="14,6" MinWidth="112">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                        VerticalAlignment="Center" Spacing="8">
+                                <Ellipse Width="11" Height="11" Classes="healthDot"
+                                         Classes.healthy="{Binding Health.IsHealthy}"/>
+                                <TextBlock FontSize="12" FontWeight="Bold" Foreground="#FFFFFF"
+                                           VerticalAlignment="Center">
+                                    <Run Text="API "/><Run Text="{Binding Health.StatusLabel}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
                     </Button>
 
-                    <Button Classes="userChip">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Border Width="26" Height="26" CornerRadius="13" Background="{StaticResource Amber}">
+                    <Button Classes="userChip topbarUser">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Border Width="30" Height="30" CornerRadius="15" Background="{StaticResource Amber}">
                                 <TextBlock Text="{Binding Initials}" FontSize="11" FontWeight="Bold"
-                                           Foreground="#FFFFFF"
+                                           Foreground="{StaticResource NavyDeep}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
+                            <StackPanel Spacing="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding UserName}" FontSize="14" FontWeight="Bold"
+                                           Foreground="#FFFFFF"/>
+                                <TextBlock Text="ACCOUNT" FontSize="9" FontWeight="Bold"
+                                           Foreground="#AFC0D0"/>
+                            </StackPanel>
+                            <TextBlock Text="⌄" FontSize="14" Foreground="#AFC0D0" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <Button.Flyout>
@@ -96,7 +132,7 @@
                         </Button.Flyout>
                     </Button>
                 </StackPanel>
-
+                <Border Grid.Row="1" Grid.ColumnSpan="3" Background="#405A748A"/>
             </Grid>
         </Border>
 
@@ -104,4 +140,5 @@
         <ContentControl Content="{Binding CurrentPage}"/>
 
     </DockPanel>
+    </Grid>
 </Window>

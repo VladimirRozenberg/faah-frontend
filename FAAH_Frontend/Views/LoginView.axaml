@@ -11,15 +11,9 @@
         <Border Grid.Column="0" Background="{StaticResource NavyDeep}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="18" Width="320">
 
-                <Border Width="62" Height="62" CornerRadius="16" Background="#16406F"
-                        HorizontalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="4"
-                                HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Rectangle Width="6" Height="16" RadiusX="2" RadiusY="2" Fill="#4CAF7D" VerticalAlignment="Bottom"/>
-                        <Rectangle Width="6" Height="26" RadiusX="2" RadiusY="2" Fill="#E7EBEF" VerticalAlignment="Bottom"/>
-                        <Rectangle Width="6" Height="21" RadiusX="2" RadiusY="2" Fill="{StaticResource Amber}" VerticalAlignment="Bottom"/>
-                    </StackPanel>
-                </Border>
+                <Image Source="avares://FAAH_Frontend/Assets/faah-logo.png"
+                       Width="88" Height="88" Stretch="Uniform"
+                       HorizontalAlignment="Center"/>
 
                 <TextBlock Text="FAAH" FontSize="42" FontWeight="Bold" Foreground="#FFFFFF"
                            HorizontalAlignment="Center"/>

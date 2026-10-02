@@ -6,9 +6,40 @@
         Height="680"
         MinWidth="420" MinHeight="450"
         CanResize="True"
+        WindowDecorations="None"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource Surface}">
-    <Grid Margin="24" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="16">
+
+    <Window.Icon>
+        <WindowIcon>avares://FAAH_Frontend/Assets/faah-logo.ico</WindowIcon>
+    </Window.Icon>
+
+    <Grid RowDefinitions="38,*" Background="{StaticResource Surface}">
+        <Border Grid.Row="0" Classes="windowTitleBar" Background="{StaticResource NavyDeep}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Grid.Column="0" Classes="windowCaptionBrand" Background="Transparent"
+                        PointerPressed="TitleBarPointerPressed">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                        <Image Source="avares://FAAH_Frontend/Assets/faah-logo.png"
+                               Width="26" Height="26" Stretch="Uniform"/>
+                        <TextBlock Text="FAAH" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="API HEALTH" FontSize="9" Foreground="#AFC0D0"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Background="Transparent" PointerPressed="TitleBarPointerPressed"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Stretch" Spacing="0">
+                    <Button Classes="windowChromeButton" Content="&#x2014;" ToolTip.Tip="Minimize"
+                            Click="MinimizeClick"/>
+                    <Button x:Name="MaximizeRestoreButton" Classes="windowChromeButton" Content="&#x25A1;"
+                            ToolTip.Tip="Maximize or restore" Click="MaximizeRestoreClick"/>
+                    <Button Classes="windowChromeButton windowCloseButton" Content="&#x00D7;" ToolTip.Tip="Close"
+                            Click="CloseClick"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        <Grid Grid.Row="1" Margin="24" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="16">
         <StackPanel Spacing="4">
             <TextBlock Text="API health" FontSize="22" FontWeight="Bold"/>
             <TextBlock Text="Internal API and external data sources" Opacity="0.7"/>
@@ -106,5 +137,6 @@
             <Button Content="Refresh" Command="{Binding RefreshCommand}"/>
             <Button Content="Close" Click="CloseClick"/>
         </StackPanel>
+        </Grid>
     </Grid>
 </Window>
