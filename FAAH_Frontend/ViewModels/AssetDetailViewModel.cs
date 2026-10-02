@@ -73,6 +73,16 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     private bool _submitting, _uncertain;
     private string _orderStatus = "";
     private decimal _orderPrice;
+    private UsdQuote? _usdQuote;
+    private string _conversionStatus = "";
+    private string _orderCurrency = "USD", _orderRateDate = "";
+    private decimal _orderOriginalPrice, _orderRate = 1;
+    private bool NeedsConversion => !string.Equals(Asset.Currency, "USD", StringComparison.Ordinal);
+    public bool HasOrderConversion => IsOrderOpen && _orderCurrency != "USD";
+    public string OrderOriginalTotal => Quantity > 0 && Quantity <= 99999999
+        ? $"{Quantity.Value * _orderOriginalPrice:N2} {_orderCurrency}" : "—";
+    public string OrderExchangeRate => $"1 {_orderCurrency} ≈ {_orderRate:0.########} USD";
+    public string OrderRateDate => $"Reference rate · {_orderRateDate}";
     private DateTimeOffset _quoteAt, _orderAt;
     private Dictionary<string, List<string>> _historyOptions = new();
     private string _selectedPeriod = "1d", _selectedInterval = "5m";
@@ -182,7 +192,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public bool CanPrepareOrder => !_disposed && !IsBusy && !IsSubmitting && !_uncertain && _userId > 0
         && _portfoliosReady && SelectedPortfolio is not null
         && Asset.Price > 0 && DateTimeOffset.UtcNow - _quoteAt < TimeSpan.FromMinutes(2)
-        && string.Equals(Asset.Currency, "USD", StringComparison.OrdinalIgnoreCase);
+        && (!NeedsConversion || _usdQuote is not null);
     public bool CanBuy => CanPrepareOrder;
     public bool CanSell => CanPrepareOrder && HeldQuantity > 0;
     public bool CanSubmitOrder => CanPrepareOrder && IsOrderOpen && Quantity > 0 && Quantity <= 99999999
@@ -190,7 +200,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         && _orderPrice > 0 && DateTimeOffset.UtcNow - _orderAt < TimeSpan.FromMinutes(2);
     public string TradingNotice => _userId <= 0 ? "Reconnecte-toi pour identifier ton portefeuille."
         : _uncertain ? "The result of the last request is uncertain: check your history before making another operation."
-        : !string.Equals(Asset.Currency, "USD", StringComparison.OrdinalIgnoreCase) ? "Trading unavailable: transactions are supported in USD only."
+        : NeedsConversion && _usdQuote is null ? (_conversionStatus.Length > 0 ? _conversionStatus : "Loading USD conversion…")
         : SelectedPortfolio is null ? "Select a compatible portfolio to trade."
         : "";
     public bool HasTradingNotice => !string.IsNullOrEmpty(TradingNotice);
@@ -213,6 +223,10 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(OrderTotal));
         OnPropertyChanged(nameof(OrderQuantityDisplay));
         OnPropertyChanged(nameof(AmountLabel));
+        OnPropertyChanged(nameof(HasOrderConversion));
+        OnPropertyChanged(nameof(OrderOriginalTotal));
+        OnPropertyChanged(nameof(OrderExchangeRate));
+        OnPropertyChanged(nameof(OrderRateDate));
     }
     public bool IsBusy { get => _busy; private set { SetField(ref _busy, value); NotifyTrading(); } }
     public string QuoteStatus { get => _quoteStatus; private set => SetField(ref _quoteStatus, value); }
@@ -232,7 +246,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public string OrderTitle => $"{OrderSide} {Asset.Symbol}";
     public string ConfirmOrderLabel => IsSubmitting ? "Processing…" : IsBuyOrder ? "Confirm buy" : "Confirm sell";
     // Estimation uniquement : le backend fixe toujours le prix final d'exécution.
-    public string OrderUnitPrice => $"{_orderPrice:0.00######} USD";
+    public string OrderUnitPrice => $"{_orderOriginalPrice:0.00######} {_orderCurrency}";
     public string OrderTotal => Quantity > 0 && Quantity <= 99999999 && _orderPrice > 0
         ? $"{Quantity.Value * _orderPrice:N2} USD" : "—";
     public decimal? Quantity
@@ -253,7 +267,12 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     {
         if (side == "Achat" ? !CanBuy : !CanSell) return;
         _orderPortfolioId = SelectedPortfolio!.Id;
-        _orderPrice = Asset.Price!.Value; // Prix fige pour que le montant ne change pas pendant la confirmation.
+        // Figer les deux prix et le taux pour éviter que le ticket change pendant la saisie.
+        _orderPrice = NeedsConversion ? _usdQuote!.PriceUsd : Asset.Price!.Value;
+        _orderOriginalPrice = NeedsConversion ? _usdQuote!.OriginalPrice : _orderPrice;
+        _orderCurrency = NeedsConversion ? _usdQuote!.OriginalCurrency : "USD";
+        _orderRate = NeedsConversion ? _usdQuote!.RateToUsd : 1;
+        _orderRateDate = NeedsConversion ? _usdQuote!.RateDate : "";
         _orderAt = _quoteAt;
         OrderInputMode = "Quantity";
         _cashAmount = null;
@@ -428,7 +447,9 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
 
     private async Task LoadQuoteAsync()
     {
-            QuoteStatus = "Refreshing quote…";
+        QuoteStatus = "Refreshing quote…";
+        _usdQuote = null;
+        _conversionStatus = "Loading USD conversion…";
         try
         {
             var quote = await GetAsync<AssetListMarket>($"api/assets/{Uri.EscapeDataString(Asset.Symbol)}/market");
@@ -440,6 +461,27 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             Asset.ChangePercent = quote?.ChangePercent;
             Asset.MarketVolume = quote?.Volume;
             if (quote?.Currency is not null) Asset.Currency = quote.Currency;
+            if (NeedsConversion)
+            {
+                try
+                {
+                    // Frankfurter reste côté backend : aucun appel externe depuis Avalonia.
+                    var converted = await GetAsync<UsdQuote>($"api/assets/{Uri.EscapeDataString(Asset.Symbol)}/usd-quote");
+                    if (_disposed) return;
+                    if (converted.Symbol != Asset.Symbol || converted.OriginalCurrency != Asset.Currency ||
+                        converted.OriginalPrice <= 0 || converted.PriceUsd <= 0 || converted.RateToUsd <= 0 ||
+                        !DateOnly.TryParse(converted.RateDate, out var rateDate) ||
+                        rateDate > DateOnly.FromDateTime(DateTime.UtcNow) ||
+                        rateDate < DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-7))
+                        throw new JsonException();
+                    _usdQuote = converted;
+                    _conversionStatus = "";
+                }
+                catch (Exception ex) when (ex is HttpRequestException or JsonException or OperationCanceledException)
+                {
+                    if (!_disposed) _conversionStatus = "USD conversion unavailable. " + Explain(ex);
+                }
+            }
             Asset.IsLoadingPrice = false;
             Asset.RefreshQuoteDisplay();
             _quoteAt = DateTimeOffset.UtcNow;
@@ -451,6 +493,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         {
             if (!_disposed) QuoteStatus = "Quote not refreshed (the last value was kept). " + Explain(ex);
         }
+        finally { if (!_disposed) NotifyTrading(); }
     }
 
     private async Task RefreshChartAsync()

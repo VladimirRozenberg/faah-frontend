@@ -83,6 +83,16 @@
                             <TextBlock Text="Estimated total" Classes="muted"/>
                             <TextBlock Text="{Binding OrderTotal}" FontSize="24" FontWeight="SemiBold" TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding OrderQuantityDisplay}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <!-- Prix local puis conversion : le total principal reste en USD. -->
+                            <Border x:Name="OrderConversionCard" IsVisible="{Binding HasOrderConversion}" Background="#EDF3FA"
+                                    CornerRadius="6" Padding="10">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Currency conversion" FontWeight="SemiBold" FontSize="12"/>
+                                    <TextBlock Text="{Binding OrderOriginalTotal}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding OrderExchangeRate}" Classes="muted" TextWrapping="Wrap" FontSize="12"/>
+                                    <TextBlock Text="{Binding OrderRateDate}" Classes="muted" FontSize="11"/>
+                                </StackPanel>
+                            </Border>
                             <TextBlock Text="Excluding fees. The final amount may vary with the execution price." Classes="muted" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>

@@ -270,10 +270,40 @@ vm.BuyCommand.Execute(null);
 await vm.SubmitOrderAsync();
 Check(!vm.CanPrepareOrder && vm.OrderStatus.Contains("peut-etre"), "uncertain result blocks immediate retry");
 using var euro = new AssetDetailViewModel(http, new Asset { Id = 8, Symbol = "BTC-USD", Currency = "EUR" }, () => { }, 42);
+handler.TradeStatus = HttpStatusCode.OK;
 Check(!euro.CanPrepareOrder, "no submission without fresh quote");
 handler.Currency = "EUR";
 await euro.RefreshAsync();
-Check(!euro.CanPrepareOrder && euro.TradingNotice.Contains("USD"), "non-USD trading blocked for current backend");
+euro.SelectedPortfolio = euro.Portfolios[0];
+Check(euro.CanBuy, "foreign currency trading enabled after USD conversion");
+euro.BuyCommand.Execute(null);
+euro.Quantity = 3;
+Check(euro.OrderTotal == $"{360m:N2} USD" && euro.OrderOriginalTotal == $"{300m:N2} EUR"
+    && euro.HasOrderConversion, "foreign order shows local and USD totals");
+euro.OrderInputMode = "Amount (USD)";
+euro.CashAmount = 240;
+Check(euro.Quantity == 2 && euro.CanSubmitOrder, "USD amount uses converted unit price");
+await euro.SubmitOrderAsync();
+Check(handler.LastBody!.Value.GetProperty("purchase_price").GetDecimal() == 120,
+    "foreign order submits USD estimate through existing buy endpoint");
+handler.FailConversion = true;
+await euro.RefreshAsync();
+Check(!euro.CanBuy && euro.TradingNotice.Contains("conversion"), "conversion outage disables new trades");
+handler.FailConversion = false;
+await euro.RefreshAsync();
+Check(euro.CanBuy, "conversion recovers on refresh");
+euro.BuyCommand.Execute(null);
+euro.Quantity = 3;
+var fxView = new AssetDetailView { DataContext = euro };
+var fxWindow = new Window { Width = 1100, Height = 1000, Content = fxView };
+fxWindow.Show(); Dispatcher.UIThread.RunJobs();
+Check(fxView.FindControl<Border>("OrderConversionCard")!.IsVisible, "conversion card visible for foreign asset");
+using (var fxImage = new RenderTargetBitmap(new PixelSize(1100, 1000)))
+{
+    fxImage.Render(fxWindow);
+    fxImage.Save(Path.Combine(Path.GetTempPath(), "faah-currency-conversion.png"));
+}
+fxWindow.Close();
 handler.Currency = "USD";
 handler.FailOptions = true;
 using var optionsFailure = new AssetDetailViewModel(http, asset, () => { });
@@ -385,7 +415,7 @@ class FakeApi : HttpMessageHandler
     public string LastPath = "", Currency = "USD";
     public JsonElement? LastBody;
     public bool FailChart, MalformedCandles, Empty, DelayTrade;
-    public bool FailOptions, HoldNextChart, FailNews;
+    public bool FailOptions, HoldNextChart, FailNews, FailConversion;
     public bool EmptyPositions, WrongPortfolio, FailPortfolios, NoPortfolios;
     public bool FailPortfolioDetail, WrongDetailOwner;
     public List<int> DetailIds = new();
@@ -406,6 +436,11 @@ class FakeApi : HttpMessageHandler
         Calls++;
         if (request.Headers.Authorization?.Parameter != "test-session") throw new Exception("Missing bearer");
         string path = request.RequestUri!.AbsolutePath;
+        if (path.EndsWith("/usd-quote"))
+            return FailConversion ? Reply(HttpStatusCode.BadRequest, "{\"detail\":\"Conversion unavailable\"}")
+                : Reply(HttpStatusCode.OK, JsonSerializer.Serialize(new { symbol = "BTC-USD",
+                    original_currency = Currency, original_price = 100m, price_usd = 120m,
+                    rate_to_usd = 1.2m, rate_date = DateTime.UtcNow.ToString("yyyy-MM-dd") }));
         if (request.Method == HttpMethod.Get && path == "/api/assets")
         {
             AssetCatalogQuery = request.RequestUri.Query;
