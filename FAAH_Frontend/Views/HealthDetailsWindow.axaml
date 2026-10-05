@@ -100,10 +100,7 @@
                         </TextBlock>
                         <WrapPanel ItemSpacing="14" LineSpacing="2">
                             <TextBlock FontSize="11" Foreground="{StaticResource Muted}">
-                                <Run Text="Live prices: "/><Run Text="{Binding LiveMarketWorkerLivePrices}"/>
-                            </TextBlock>
-                            <TextBlock FontSize="11" Foreground="{StaticResource Muted}">
-                                <Run Text="Delayed prices: "/><Run Text="{Binding LiveMarketWorkerDelayedPrices}"/>
+                                <Run Text="Live prices: "/><Run Text="{Binding LiveMarketWorkerDisplayedLivePrices}"/>
                             </TextBlock>
                             <TextBlock FontSize="11" Foreground="{StaticResource Muted}">
                                 <Run Text="Unavailable prices: "/><Run Text="{Binding LiveMarketWorkerUnavailablePrices}"/>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -36,6 +37,7 @@ public class ShellViewModel : ViewModelBase
     internal HttpClient Http => _http;
     private readonly AssetLogoService _logos;
     private readonly DispatcherTimer _healthTimer = new() { Interval = TimeSpan.FromSeconds(60) };
+    private readonly Dictionary<string, Avalonia.Controls.Control> _sectionPages = new(StringComparer.Ordinal);
 
     // Reponse de POST /auth/login : { "token": "...", "message": "..." }
     private class LoginResponse
@@ -108,7 +110,8 @@ public class ShellViewModel : ViewModelBase
         get => _currentPage;
         private set
         {
-            if (_currentPage is Avalonia.Controls.Control old && old.DataContext is IDisposable page) page.Dispose();
+            if (_currentPage is Avalonia.Controls.Control old && !_sectionPages.Values.Contains(old)
+                && old.DataContext is IDisposable page) page.Dispose();
             SetField(ref _currentPage, value);
         }
     }
@@ -253,14 +256,25 @@ public class ShellViewModel : ViewModelBase
     public void ShowDashboard()
     {
         Section = "DASHBOARD";
-        CurrentPage = new DashboardView { DataContext = new DashboardViewModel(this) };
+        CurrentPage = GetOrCreateSectionPage("DASHBOARD", () => new DashboardView { DataContext = new DashboardViewModel(this) });
     }
 
     public void ShowPortfolios()
     {
         Section = "PORTFOLIO";
-        CurrentPage = new PortfolioListView { DataContext = new PortfolioListViewModel(this) };
-        _ = LoadPortfoliosAsync();
+        CurrentPage = GetOrCreateSectionPage("PORTFOLIO", () =>
+        {
+            _ = LoadPortfoliosAsync();
+            return new PortfolioListView { DataContext = new PortfolioListViewModel(this) };
+        });
+    }
+
+    private Avalonia.Controls.Control GetOrCreateSectionPage(string section, Func<Avalonia.Controls.Control> create)
+    {
+        if (_sectionPages.TryGetValue(section, out var page)) return page;
+        page = create();
+        _sectionPages.Add(section, page);
+        return page;
     }
 
     private sealed class PortfolioListResponse
@@ -336,9 +350,13 @@ public class ShellViewModel : ViewModelBase
     public void ShowAssets()
     {
         Section = "ASSETS";
-        var assets = new AssetListViewModel(_http, ShowAssetDetail, _logos);
-        CurrentPage = new AssetListView { DataContext = assets };
-        assets.Start();
+        CurrentPage = GetOrCreateSectionPage("ASSETS", () =>
+        {
+            var assets = new AssetListViewModel(_http, ShowAssetDetail, _logos);
+            var page = new AssetListView { DataContext = assets };
+            assets.Start();
+            return page;
+        });
     }
 
     // Le detail remplace la liste dans la fenetre existante (pas de nouvelle fenetre).
@@ -358,9 +376,13 @@ public class ShellViewModel : ViewModelBase
     public void ShowNews()
     {
         Section = "NEWS";
-        var news = new NewsListViewModel(_http, ShowNewsDetail);
-        CurrentPage = new NewsListView { DataContext = news };
-        news.Start();
+        CurrentPage = GetOrCreateSectionPage("NEWS", () =>
+        {
+            var news = new NewsListViewModel(_http, ShowNewsDetail);
+            var page = new NewsListView { DataContext = news };
+            news.Start();
+            return page;
+        });
     }
 
     public void ShowNewsDetail(int articleId)
@@ -496,6 +518,15 @@ public class ShellViewModel : ViewModelBase
         _healthTimer.Stop();
 
         ShowLogin();
+        ClearSectionPages();
+    }
+
+    private void ClearSectionPages()
+    {
+        foreach (var page in _sectionPages.Values)
+            if (page.DataContext is IDisposable viewModel) viewModel.Dispose();
+        _sectionPages.Clear();
+        Portfolios.Clear();
     }
 
     private void ShowHealthDetails()

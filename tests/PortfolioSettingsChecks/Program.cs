@@ -18,6 +18,24 @@ shell.Username = "test"; shell.Password = "test";
 shell.LoginCommand.Execute(null);
 Dispatcher.UIThread.RunJobs();
 Check(shell.ProfileUserId == "42", "test login");
+var portfolioPage = (Control)shell.CurrentPage!;
+shell.ShowDashboard();
+var dashboardPage = (Control)shell.CurrentPage!;
+var dashboardState = (DashboardViewModel)dashboardPage.DataContext!;
+dashboardState.SelectedKind = "opportunity";
+shell.ShowAssets();
+var assetPage = (Control)shell.CurrentPage!;
+shell.ShowNews();
+var newsPage = (Control)shell.CurrentPage!;
+shell.ShowDashboard();
+Check(ReferenceEquals(shell.CurrentPage, dashboardPage) && dashboardState.SelectedKind == "opportunity",
+    "dashboard screen and filter are restored after switching sections");
+shell.ShowPortfolios();
+Check(ReferenceEquals(shell.CurrentPage, portfolioPage), "portfolio screen is restored after switching sections");
+shell.ShowAssets();
+Check(ReferenceEquals(shell.CurrentPage, assetPage), "asset screen is restored after switching sections");
+shell.ShowNews();
+Check(ReferenceEquals(shell.CurrentPage, newsPage), "news screen is restored after switching sections");
 var summary = new Portfolio { Id = 9, Name = "crypto", StatusText = "active" };
 var edit = new PortfolioCreateViewModel(shell, summary);
 await edit.Initialization;
@@ -51,6 +69,13 @@ api.FailDetails = true;
 var failed = new PortfolioCreateViewModel(shell, summary);
 await failed.Initialization;
 Check(failed.HasError && !failed.CanSubmit && !failed.CanEditSettings, "failed load cannot overwrite settings with defaults");
+shell.LogoutCommand.Execute(null);
+shell.Username = "test";
+shell.Password = "test";
+shell.LoginCommand.Execute(null);
+Dispatcher.UIThread.RunJobs();
+shell.ShowDashboard();
+Check(!ReferenceEquals(shell.CurrentPage, dashboardPage), "logout clears cached sections before the next login");
 window.Close();
 
 class Api : HttpMessageHandler

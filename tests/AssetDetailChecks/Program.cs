@@ -450,6 +450,7 @@ healthHandler.HealthJson = """
 await healthVm.RefreshAsync();
 Check(healthVm.LiveMarketWorkerStatus == "running" && healthVm.LiveMarketWorkerColor == "#278348"
     && healthVm.LiveMarketWorkerLivePrices == 12 && healthVm.LiveMarketWorkerDelayedPrices == 549
+    && healthVm.LiveMarketWorkerDisplayedLivePrices == 561
     && healthVm.LiveMarketWorkerUnavailablePrices == 3 && healthVm.LiveMarketWorkerAssets == 564
     && healthVm.HasLiveMarketWorkerError, "price counts and Redis error do not override healthy worker status");
 healthHandler.HealthJson = """

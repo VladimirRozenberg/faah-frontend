@@ -8,6 +8,7 @@
 - Strongly prefer calendar/date-picker controls over manually typing dates in calendar format.
 - When iterating on the top-bar design, preserve the refreshed in-app navigation bar the user liked; add the Windows-style custom window title bar above it rather than reverting the navigation redesign.
 - Do not push changes to the remote unless the user explicitly asks; when preparing a local executable, build/publish locally only and do not commit or push.
+- For navigation-state requests, prioritize preserving which page/screen the user was on; do not preserve scroll position unless explicitly requested.
 
 ## Project-Specific Rules
 - For backend integration, reuse the existing Football Hero pattern which includes persistent bearer-token storage under ApplicationData, a shared static HttpClient with a configured BaseAddress, generic GET/Post/SecurePost methods, Authorization headers, and token deletion/navigation to login on HTTP 401 when adapting FAAH if requested.

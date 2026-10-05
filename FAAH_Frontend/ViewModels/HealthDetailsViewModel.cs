@@ -64,8 +64,9 @@ public sealed class HealthDetailsViewModel : ViewModelBase
     public string LiveMarketWorkerStatus { get => _liveMarketWorkerStatus; private set => SetField(ref _liveMarketWorkerStatus, value); }
     public string LiveMarketWorkerColor { get => _liveMarketWorkerColor; private set => SetField(ref _liveMarketWorkerColor, value); }
     public int LiveMarketWorkerAssets { get => _liveMarketWorkerAssets; private set => SetField(ref _liveMarketWorkerAssets, value); }
-    public int LiveMarketWorkerLivePrices { get => _liveMarketWorkerLivePrices; private set => SetField(ref _liveMarketWorkerLivePrices, value); }
-    public int LiveMarketWorkerDelayedPrices { get => _liveMarketWorkerDelayedPrices; private set => SetField(ref _liveMarketWorkerDelayedPrices, value); }
+    public int LiveMarketWorkerLivePrices { get => _liveMarketWorkerLivePrices; private set { if (SetField(ref _liveMarketWorkerLivePrices, value)) OnPropertyChanged(nameof(LiveMarketWorkerDisplayedLivePrices)); } }
+    public int LiveMarketWorkerDelayedPrices { get => _liveMarketWorkerDelayedPrices; private set { if (SetField(ref _liveMarketWorkerDelayedPrices, value)) OnPropertyChanged(nameof(LiveMarketWorkerDisplayedLivePrices)); } }
+    public int LiveMarketWorkerDisplayedLivePrices => LiveMarketWorkerLivePrices + LiveMarketWorkerDelayedPrices;
     public int LiveMarketWorkerUnavailablePrices { get => _liveMarketWorkerUnavailablePrices; private set => SetField(ref _liveMarketWorkerUnavailablePrices, value); }
     public string LiveMarketWorkerHeartbeat { get => _liveMarketWorkerHeartbeat; private set => SetField(ref _liveMarketWorkerHeartbeat, value); }
     public string LiveMarketWorkerError { get => _liveMarketWorkerError; private set => SetField(ref _liveMarketWorkerError, value); }
