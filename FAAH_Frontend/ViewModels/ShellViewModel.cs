@@ -95,6 +95,7 @@ public class ShellViewModel : ViewModelBase
         ShowPortfoliosCommand = new RelayCommand(ShowPortfolios);
         ShowAssetsCommand = new RelayCommand(ShowAssets);
         ShowNewsCommand = new RelayCommand(ShowNews);
+        ShowOrchestratorCommand = new RelayCommand(ShowOrchestrator);
         ShowUsersCommand = new RelayCommand(ShowUsers);
         ShowProfileCommand = new RelayCommand(ShowProfile);
         ShowSettingsCommand = new RelayCommand(ShowSettings);
@@ -208,6 +209,7 @@ public class ShellViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsDashboardActive));
             OnPropertyChanged(nameof(IsAssetsActive));
             OnPropertyChanged(nameof(IsNewsActive));
+            OnPropertyChanged(nameof(IsOrchestratorActive));
         }
     }
 
@@ -215,6 +217,7 @@ public class ShellViewModel : ViewModelBase
     public bool IsPortfolioActive => Section == "PORTFOLIO";
     public bool IsAssetsActive => Section == "ASSETS";
     public bool IsNewsActive => Section == "NEWS";
+    public bool IsOrchestratorActive => Section == "ORCHESTRATOR";
 
     // ---------- champs de connexion ----------
 
@@ -240,6 +243,7 @@ public class ShellViewModel : ViewModelBase
     public ICommand ShowDashboardCommand { get; }
     public ICommand ShowAssetsCommand { get; }
     public ICommand ShowNewsCommand { get; }
+    public ICommand ShowOrchestratorCommand { get; }
     public ICommand ShowUsersCommand { get; }
     public ICommand ShowProfileCommand { get; }
     public ICommand ShowSettingsCommand { get; }
@@ -266,6 +270,20 @@ public class ShellViewModel : ViewModelBase
         {
             _ = LoadPortfoliosAsync();
             return new PortfolioListView { DataContext = new PortfolioListViewModel(this) };
+        });
+    }
+
+    public void ShowOrchestrator()
+    {
+        if (!IsAdmin) return;
+
+        Section = "ORCHESTRATOR";
+        CurrentPage = GetOrCreateSectionPage("ORCHESTRATOR", () =>
+        {
+            var history = new OrchestratorDecisionHistoryViewModel(_http);
+            var page = new OrchestratorDecisionView { DataContext = history };
+            history.Start();
+            return page;
         });
     }
 

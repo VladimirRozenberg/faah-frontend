@@ -85,6 +85,7 @@
                             <Border Grid.Row="1" Classes="navUnderline" IsVisible="{Binding IsNewsActive}"/>
                         </Grid>
                     </Button>
+                    <Button Classes="navItem" Classes.active="{Binding IsOrchestratorActive}" Command="{Binding ShowOrchestratorCommand}" IsVisible="{Binding IsAdmin}"><Grid RowDefinitions="Auto,2"><StackPanel Orientation="Horizontal" Spacing="7"><TextBlock Classes="idx" Text="05"/><TextBlock Text="ORCHESTRATOR"/></StackPanel><Border Grid.Row="1" Classes="navUnderline" IsVisible="{Binding IsOrchestratorActive}"/></Grid></Button>
                 </StackPanel>
 
                 <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal"
