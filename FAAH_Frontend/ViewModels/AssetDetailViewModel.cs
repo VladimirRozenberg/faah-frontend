@@ -92,7 +92,8 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public string OrderRateDate => $"Reference rate · {_orderRateDate}";
     private DateTimeOffset _quoteAt, _orderAt;
     private Dictionary<string, List<string>> _historyOptions = new();
-    private string _selectedPeriod = "1d", _selectedInterval = "5m";
+    // Afficher cinq jours par défaut pour avoir plus de bougies à l'ouverture.
+    private string _selectedPeriod = "5d", _selectedInterval = "5m";
     private int _chartRequest;
     private bool _changingPeriod;
     private IReadOnlyList<TradePortfolioResponse> _portfolios = Array.Empty<TradePortfolioResponse>();
