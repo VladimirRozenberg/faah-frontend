@@ -2,6 +2,7 @@ using Avalonia;
 using System.Globalization;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using FAAH_Frontend.Controls;
 using FAAH_Frontend.ViewModels;
 using FAAH_Frontend.Views;
 
@@ -20,10 +21,12 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow
+            var mainWindow = new MainWindow
             {
                 DataContext = new ShellViewModel()
             };
+            MiddleButtonAutoScroll.Attach(mainWindow);
+            desktop.MainWindow = mainWindow;
         }
 
         base.OnFrameworkInitializationCompleted();

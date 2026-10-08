@@ -28,6 +28,12 @@ public partial class AssetListView : UserControl
         FilterScroll.MaxHeight = wide ? 560 : 220;
     }
 
+    private void PageNumberClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { Content: int page } && DataContext is AssetListViewModel viewModel)
+            viewModel.GoToPageCommand.Execute(page);
+    }
+
     private void PageInputKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter || DataContext is not AssetListViewModel viewModel ||

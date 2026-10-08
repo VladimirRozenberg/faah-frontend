@@ -19,7 +19,7 @@
             <TextBlock Grid.Column="2" Classes="colHead" Text="MAX POSITIONS"/>
             <TextBlock Grid.Column="3" Classes="colHead" Text="RETURN"/>
             <TextBlock Grid.Column="4" Classes="colHead" Text="BASE CURRENCY"/>
-            <TextBlock Grid.Column="5" Classes="colHead" Text="STATUS"/>
+            <TextBlock Grid.Column="5" Classes="colHead" Text="AGENT"/>
         </Grid>
 
         <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
@@ -32,10 +32,13 @@
                                     Command="{Binding $parent[ItemsControl].DataContext.OpenCommand}"
                                     CommandParameter="{Binding}">
                                 <Grid ColumnDefinitions="2.6*,1*,1.3*,1*,1*">
-                                <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding Description}" Classes="muted" FontSize="12"/>
-                                </StackPanel>
+                                <Grid Grid.Column="0" ColumnDefinitions="9*,*">
+                                    <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Description}" Classes="muted" FontSize="12"
+                                                   TextWrapping="Wrap" MaxLines="2"/>
+                                    </StackPanel>
+                                </Grid>
                                 <TextBlock Grid.Column="1" Classes="cell" Text="{Binding RiskDisplay}"/>
                                 <TextBlock Grid.Column="2" Classes="cell" Text="{Binding MaxPositions}"/>
                                 <TextBlock Grid.Column="3" Classes="cell"

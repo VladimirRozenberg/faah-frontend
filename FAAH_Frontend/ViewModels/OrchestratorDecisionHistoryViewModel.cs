@@ -23,7 +23,7 @@ public sealed class OrchestratorDecisionHistoryViewModel : ViewModelBase, IDispo
     private int _count;
     private int _currentPage = 1;
     private int _pageCount = 1;
-    private int _selectedPageSize = 20;
+    private const int PageSize = 20;
     private string _pageInput = "1";
     private long _requestVersion;
 
@@ -41,7 +41,6 @@ public sealed class OrchestratorDecisionHistoryViewModel : ViewModelBase, IDispo
 
     public ObservableCollection<OrchestratorDecisionCycle> Cycles { get; } = new();
     public ObservableCollection<int> PageNumbers { get; } = new();
-    public int[] PageSizeOptions { get; } = Enumerable.Range(1, 100).ToArray();
     public ICommand RefreshCommand { get; }
     public ICommand FirstPageCommand { get; }
     public ICommand PreviousPageCommand { get; }
@@ -101,17 +100,6 @@ public sealed class OrchestratorDecisionHistoryViewModel : ViewModelBase, IDispo
             RaisePageCommandState();
         }
     }
-    public int SelectedPageSize
-    {
-        get => _selectedPageSize;
-        set
-        {
-            if (value is < 1 or > 100 || !SetField(ref _selectedPageSize, value)) return;
-            CurrentPage = 1;
-            PageCount = Math.Max(1, (int)Math.Ceiling(Count / (double)value));
-            _ = LoadPageAsync(1);
-        }
-    }
     public string PageInput { get => _pageInput; set => SetField(ref _pageInput, value); }
     public string PageLabel => $"Page {CurrentPage} of {PageCount}";
     public bool HasPreviousPage => CurrentPage > 1;
@@ -135,7 +123,7 @@ public sealed class OrchestratorDecisionHistoryViewModel : ViewModelBase, IDispo
         try
         {
             using var response = await _http.GetAsync(
-                $"api/orchestrator/decisions?page={page}&page_size={SelectedPageSize}", request.Token);
+                $"api/orchestrator/decisions?page={page}&page_size={PageSize}", request.Token);
             if (!response.IsSuccessStatusCode)
                 throw new InvalidOperationException(response.StatusCode switch
                 {
@@ -150,12 +138,7 @@ public sealed class OrchestratorDecisionHistoryViewModel : ViewModelBase, IDispo
             if (data?.Items is null || data.Items.Any(item => item is null)) throw new JsonException();
 
             Count = Math.Max(0, data.Count);
-            if (data.PageSize is >= 1 and <= 100 && _selectedPageSize != data.PageSize)
-            {
-                _selectedPageSize = data.PageSize;
-                OnPropertyChanged(nameof(SelectedPageSize));
-            }
-            PageCount = Math.Max(1, (int)Math.Ceiling(Count / (double)SelectedPageSize));
+            PageCount = Math.Max(1, (int)Math.Ceiling(Count / (double)PageSize));
             CurrentPage = Math.Clamp(data.Page > 0 ? data.Page : page, 1, PageCount);
             for (var index = 0; index < data.Items.Count; index++)
             {

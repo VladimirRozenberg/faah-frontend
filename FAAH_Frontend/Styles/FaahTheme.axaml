@@ -209,6 +209,16 @@
         <Setter Property="CornerRadius" Value="4"/>
         <Setter Property="Height" Value="28"/>
     </Style>
+    <Style Selector="Button.refreshButton">
+        <Setter Property="Width" Value="96"/>
+        <Setter Property="MinWidth" Value="96"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
 
     <!-- Boutons de tri (News) : pilule pleine verte / pilule contour -->
     <Style Selector="Button.chip">
@@ -457,6 +467,9 @@
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="13"/>
     </Style>
+    <Style Selector="ScrollViewer">
+        <Setter Property="Padding" Value="0,0,20,0"/>
+    </Style>
     <Style Selector="Button.healthButton.topbarHealth:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="#20FFFFFF"/>
     </Style>
@@ -476,8 +489,8 @@
         <Setter Property="Background" Value="#20FFFFFF"/>
     </Style>
     <Style Selector="Button.userChip.topbarUser">
-        <Setter Property="MinWidth" Value="150"/>
-        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="Padding" Value="8,6,4,6"/>
         <Setter Property="CornerRadius" Value="8"/>
     </Style>
 
@@ -496,8 +509,56 @@
         <Setter Property="Foreground" Value="#FFFFFF"/>
         <Setter Property="FontWeight" Value="Bold"/>
     </Style>
+    <Style Selector="MenuItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="MenuItem:pressed">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="MenuItem:pressed /template/ ContentPresenter">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="MenuItem:pressed TextBlock">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover:pressed">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover:pressed /template/ ContentPresenter">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover TextBlock">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
     <Style Selector="MenuItem:pointerover /template/ Border#PART_LayoutRoot">
         <Setter Property="Background" Value="#285177"/>
+    </Style>
+    <Style Selector="MenuItem:pressed /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="#285177"/>
+    </Style>
+    <Style Selector="MenuItem:selected /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="#285177"/>
+    </Style>
+    <Style Selector="MenuItem:selected">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="MenuItem:selected /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="MenuItem:pressed /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+    <Style Selector="MenuItem:pointerover:pressed /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="#285177"/>
+    </Style>
+    <Style Selector="MenuItem.logout, MenuItem.logout:selected, MenuItem.logout:pointerover, MenuItem.logout:pressed">
+        <Setter Property="Foreground" Value="{StaticResource Red}"/>
+    </Style>
+    <Style Selector="MenuItem.logout /template/ ContentPresenter#PART_HeaderPresenter, MenuItem.logout:selected /template/ ContentPresenter#PART_HeaderPresenter, MenuItem.logout:pointerover /template/ ContentPresenter#PART_HeaderPresenter, MenuItem.logout:pressed /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Foreground" Value="{StaticResource Red}"/>
     </Style>
 
     <!-- ===================== CARTES ===================== -->

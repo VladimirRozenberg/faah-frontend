@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -25,10 +26,12 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         NumberHandling = JsonNumberHandling.AllowReadingFromString
     };
-    private bool _busy, _disposed, _catalogMetadataLoaded;
+    private bool _busy, _disposed, _catalogMetadataLoaded, _newsBusy;
     private string _quoteStatus = "", _chartStatus = "", _newsStatus = "";
     private IReadOnlyList<Candle> _candles = Array.Empty<Candle>();
     private IReadOnlyList<NewsArticle> _news = Array.Empty<NewsArticle>();
+    private int _newsPage = 1, _newsPageCount = 1;
+    private readonly ObservableCollection<int> _newsPageNumbers = new();
     private string _orderSide = "";
     private decimal? _quantity = 1;
     private decimal? _cashAmount;
@@ -92,7 +95,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public string OrderRateDate => $"Reference rate · {_orderRateDate}";
     private DateTimeOffset _quoteAt, _orderAt;
     private Dictionary<string, List<string>> _historyOptions = new();
-    private string _selectedPeriod = "1d", _selectedInterval = "5m";
+    private string _selectedPeriod = "5d", _selectedInterval = "5m";
     private int _chartRequest;
     private bool _changingPeriod;
     private IReadOnlyList<TradePortfolioResponse> _portfolios = Array.Empty<TradePortfolioResponse>();
@@ -180,6 +183,13 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             if (parameter is int id) _openArticle?.Invoke(id);
             else if (parameter is NewsArticle article) _openArticle?.Invoke(article.Id);
         }, parameter => !_disposed && _openArticle is not null);
+        NewsFirstPageCommand = new RelayCommand(_ => _ = LoadNewsPageAsync(1), _ => !_disposed && !_newsBusy && _newsPage > 1);
+        NewsPreviousPageCommand = new RelayCommand(_ => _ = LoadNewsPageAsync(_newsPage - 1), _ => !_disposed && !_newsBusy && _newsPage > 1);
+        NewsNextPageCommand = new RelayCommand(_ => _ = LoadNewsPageAsync(_newsPage + 1), _ => !_disposed && !_newsBusy && _newsPage < _newsPageCount);
+        NewsLastPageCommand = new RelayCommand(_ => _ = LoadNewsPageAsync(_newsPageCount), _ => !_disposed && !_newsBusy && _newsPage < _newsPageCount);
+        NewsGoToPageCommand = new RelayCommand(
+            parameter => { if (parameter is int page) _ = LoadNewsPageAsync(page); },
+            parameter => !_disposed && !_newsBusy && parameter is int page && page >= 1 && page <= _newsPageCount && page != _newsPage);
         _timer.Tick += OnTick;
     }
 
@@ -246,6 +256,16 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public string NewsStatus { get => _newsStatus; private set => SetField(ref _newsStatus, value); }
     public IReadOnlyList<Candle> Candles { get => _candles; private set => SetField(ref _candles, value); }
     public IReadOnlyList<NewsArticle> News { get => _news; private set => SetField(ref _news, value); }
+    public ObservableCollection<int> NewsPageNumbers => _newsPageNumbers;
+    public int NewsPage => _newsPage;
+    public int NewsPageCount => _newsPageCount;
+    public bool HasMultipleNewsPages => _newsPageCount > 1;
+    public string NewsPageLabel => $"Page {_newsPage} of {_newsPageCount}";
+    public ICommand NewsFirstPageCommand { get; private set; } = null!;
+    public ICommand NewsPreviousPageCommand { get; private set; } = null!;
+    public ICommand NewsNextPageCommand { get; private set; } = null!;
+    public ICommand NewsLastPageCommand { get; private set; } = null!;
+    public ICommand NewsGoToPageCommand { get; private set; } = null!;
 
     // Le clic Acheter/Vendre ouvre le formulaire. Seule la confirmation envoie le POST.
     public string OrderSide
@@ -367,7 +387,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         {
             await LoadCatalogMetadataAsync();
             if (_disposed) return;
-            await Task.WhenAll(LoadQuoteAsync(), RefreshChartAsync(), LoadNewsAsync(), LoadPortfoliosAsync());
+        await Task.WhenAll(LoadQuoteAsync(), RefreshChartAsync(), LoadNewsAsync(_newsPage), LoadPortfoliosAsync());
         }
         finally { if (!_disposed) { IsBusy = false; NotifyTrading(); } }
     }
@@ -583,17 +603,27 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task LoadNewsAsync()
+    private async Task LoadNewsAsync(int page)
     {
+        if (_newsBusy || _disposed) return;
+        _newsBusy = true;
+        RaiseNewsPageCommandState();
         NewsStatus = "Loading news…";
         try
         {
             // Le backend suit les liens de classification en BDD pour cet actif.
             string symbol = Uri.EscapeDataString(Asset.Symbol);
-            var result = await GetAsync<NewsResponse>($"api/assets/{symbol}/news");
+            var result = await GetAsync<NewsResponse>($"api/assets/{symbol}/news?page={page}&page_size=10");
             if (_disposed) return;
             News = result.Items.OrderByDescending(n => n.SortDate).ToList();
-            NewsStatus = News.Count == 0 ? "No classified news linked to this asset in the database."
+            _newsPage = Math.Max(1, result.Page);
+            _newsPageCount = Math.Max(1, result.TotalPages);
+            UpdateNewsPageNumbers();
+            OnPropertyChanged(nameof(NewsPage));
+            OnPropertyChanged(nameof(NewsPageCount));
+            OnPropertyChanged(nameof(HasMultipleNewsPages));
+            OnPropertyChanged(nameof(NewsPageLabel));
+            NewsStatus = result.Count == 0 ? "No classified news linked to this asset in the database."
                 : "News linked to this asset through classifications stored in the database.";
         }
         catch (OperationCanceledException) when (_disposed) { }
@@ -601,6 +631,29 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         {
             if (!_disposed) { News = Array.Empty<NewsArticle>(); NewsStatus = "News unavailable. " + Explain(ex); }
         }
+        finally
+        {
+            _newsBusy = false;
+            RaiseNewsPageCommandState();
+        }
+    }
+
+    private Task LoadNewsPageAsync(int page) => page < 1 || page > _newsPageCount || page == _newsPage
+        ? Task.CompletedTask : LoadNewsAsync(page);
+
+    private void UpdateNewsPageNumbers()
+    {
+        const int windowSize = 5;
+        var start = Math.Clamp(_newsPage - 2, 1, Math.Max(1, _newsPageCount - windowSize + 1));
+        NewsPageNumbers.Clear();
+        for (var page = start; page < start + windowSize && page <= _newsPageCount; page++)
+            NewsPageNumbers.Add(page);
+    }
+
+    private void RaiseNewsPageCommandState()
+    {
+        foreach (var command in new[] { NewsFirstPageCommand, NewsPreviousPageCommand, NewsNextPageCommand, NewsLastPageCommand, NewsGoToPageCommand })
+            (command as RelayCommand)?.RaiseCanExecuteChanged();
     }
 
     private static string Explain(Exception ex) => ex switch

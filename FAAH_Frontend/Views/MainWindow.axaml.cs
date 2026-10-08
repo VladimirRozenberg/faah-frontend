@@ -70,8 +70,10 @@ public partial class MainWindow : Window
 
     private void UpdateMaximizeButton()
     {
-        var button = this.FindControl<Button>("MaximizeRestoreButton");
-        if (button is not null)
-            button.Content = _isMaximized ? "❐" : "□";
+        var icon = this.FindControl<Avalonia.Controls.Shapes.Path>("MaximizeRestoreIcon");
+        if (icon is not null)
+            icon.Data = Avalonia.Media.Geometry.Parse(_isMaximized
+                ? "M2.5,2.5 L2.5,0.5 L9.5,0.5 L9.5,7.5 L7.5,7.5 M0.5,2.5 L7.5,2.5 L7.5,9.5 L0.5,9.5 Z"
+                : "M0.5,0.5 L9.5,0.5 L9.5,9.5 L0.5,9.5 Z");
     }
 }

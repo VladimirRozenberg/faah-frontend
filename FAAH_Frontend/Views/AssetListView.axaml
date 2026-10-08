@@ -3,11 +3,12 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="620"
-             x:Class="FAAH_Frontend.Views.AssetListView">
+              x:Class="FAAH_Frontend.Views.AssetListView"
+              x:Name="AssetListRoot">
 
     <Grid Margin="42,26,42,20" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
 
-        <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Assets" Classes="h1"/><Button Grid.Column="1" Content="Refresh" Classes="ghost" Command="{Binding RefreshCommand}"/></Grid>
+        <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Assets" Classes="h1"/><Button Grid.Column="1" Content="Refresh" Classes="ghost refreshButton" Command="{Binding RefreshCommand}"/></Grid>
         <Border Grid.Row="1" Classes="rule" Margin="0,12,0,0"/>
 
         <StackPanel Grid.Row="2" Margin="0,12,0,0" Spacing="5">
@@ -78,7 +79,7 @@
                     Background="{StaticResource SurfaceAlt}" Padding="14" CornerRadius="8">
                 <Grid RowDefinitions="Auto,*">
                     <TextBlock Text="Filters" FontSize="16" FontWeight="SemiBold"/>
-                    <ScrollViewer x:Name="FilterScroll" Grid.Row="1" Margin="0,12,-8,0" VerticalScrollBarVisibility="Auto" MaxHeight="560">
+                    <ScrollViewer x:Name="FilterScroll" Grid.Row="1" Margin="0,12,-8,0" Padding="0" VerticalScrollBarVisibility="Auto" MaxHeight="560">
                         <StackPanel Spacing="10" Margin="0,12,22,0">
                             <TextBlock Text="Asset type" Classes="label"/>
                             <ComboBox x:Name="AssetTypeFilterBox" ItemsSource="{Binding AssetTypeOptions}" SelectedItem="{Binding AssetTypeFilter, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
@@ -117,9 +118,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Button Classes="page" Content="{Binding}"
-                                Command="{Binding $parent[ItemsControl].DataContext.GoToPageCommand}"
-                                CommandParameter="{Binding}"/>
+                        <Button Classes="page" Content="{Binding}" Click="PageNumberClick"/>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

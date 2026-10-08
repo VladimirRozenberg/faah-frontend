@@ -8,6 +8,7 @@ public sealed class NewsResponse
     [JsonPropertyName("count")] public int Count { get; set; }
     [JsonPropertyName("page")] public int Page { get; set; }
     [JsonPropertyName("page_size")] public int PageSize { get; set; }
+    [JsonPropertyName("total_pages")] public int TotalPages { get; set; }
     [JsonPropertyName("items")] public required List<NewsArticle> Items { get; set; }
 }
 public sealed class NewsArticle

@@ -5,7 +5,7 @@
         <StackPanel Margin="42,26,42,26" Spacing="18">
             <Grid ColumnDefinitions="*,Auto">
                 <Button Content="← Back to news" Classes="ghost" Command="{Binding BackCommand}" HorizontalAlignment="Left"/>
-                <Button Grid.Column="1" Content="Refresh" Classes="ghost" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
+                <Button Grid.Column="1" Content="Refresh" Classes="ghost refreshButton" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
             </Grid>
             <TextBlock Text="Loading source analysis…" IsVisible="{Binding IsBusy}" Classes="muted"/>
             <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="{StaticResource Red}" TextWrapping="Wrap"/>

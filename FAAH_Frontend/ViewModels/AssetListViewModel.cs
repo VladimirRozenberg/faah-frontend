@@ -36,6 +36,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
 
     private List<Asset> _allAssets = new();
     private int _currentPage = 1, _pageCount = 1, _totalCount;
+    private int? _queuedPage;
     private string _pageInput = "1";
     private string _searchText = "", _appliedSearch = "";
     private bool _favoritesOnly;
@@ -55,7 +56,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         NextPageCommand = new RelayCommand(_ => NextPage(), _ => !_disposed && !IsBusy && _currentPage < PageCount);
         FirstPageCommand = new RelayCommand(_ => FirstPage(), _ => !_disposed && !IsBusy && _currentPage > 1);
         LastPageCommand = new RelayCommand(_ => LastPage(), _ => !_disposed && !IsBusy && _currentPage < PageCount);
-        GoToPageCommand = new RelayCommand(GoToPage, _ => !_disposed && !IsBusy && TryGetPage(_));
+        GoToPageCommand = new RelayCommand(GoToPage);
         RefreshCommand = new RelayCommand(parameter => { _ = RefreshAsync(); }, _ => !_disposed && !IsBusy);
         SearchCommand = new RelayCommand(_ => { _ = SearchAsync(); }, _ => !_disposed);
         ToggleFavoriteCommand = new RelayCommand(ToggleFavorite, _ => !_disposed && !IsBusy && _favoritesLoaded);
@@ -371,6 +372,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     private void GoToPage(object? parameter)
     {
         if (!TryGetPage(parameter, out var page) || page < 1 || page > PageCount || page == _currentPage) return;
+        if (IsBusy) { _queuedPage = page; return; }
         _currentPage = page;
         _ = RefreshAsync(isPaging: true);
     }
@@ -420,8 +422,7 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         {
             if (!await LoadAssetsAsync(_currentPage, requestedSearch, filterQuery, requestedFilters)) return;
             if (_disposed) return;
-            await LoadFavoritesAsync();
-            if (_disposed) return;
+            _ = LoadFavoritesAsync(); // Favorites must not keep the list or pager locked.
             if (!_disposed)
                 Updated = $"Last loaded: {DateTime.Now:HH:mm:ss} · Auto-refresh: 60 s";
         }
@@ -435,6 +436,15 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
             {
                 IsBusy = false;
                 IsPaging = false;
+                if (_queuedPage is int queuedPage)
+                {
+                    _queuedPage = null;
+                    if (queuedPage >= 1 && queuedPage <= PageCount && queuedPage != _currentPage)
+                    {
+                        _currentPage = queuedPage;
+                        _ = RefreshAsync(isPaging: true);
+                    }
+                }
                 ResumePendingSearch();
             }
         }
@@ -461,7 +471,12 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
         _allAssets = catalog.Items;
         _currentPage = catalog.Page > 0 ? catalog.Page : page;
         _totalCount = catalog.Count;
-        _pageCount = Math.Max(1, (int)Math.Ceiling(catalog.Count / (double)PageSize));
+        int pageSize = catalog.PageSize > 0 ? catalog.PageSize : PageSize;
+        int computedPages = Math.Max(1, (int)Math.Ceiling(catalog.Count / (double)pageSize));
+        // If count is only the size of the current page, a full page means more may follow.
+        if (catalog.TotalPages <= 0 && catalog.Items.Count >= pageSize && computedPages <= _currentPage)
+            computedPages = _currentPage + 1;
+        _pageCount = catalog.TotalPages > 0 ? catalog.TotalPages : computedPages;
         _catalogLoaded = true;
         _favoritesLoaded = false;
         ShowPage(); // Les cours ne doivent pas retarder l'affichage de la liste.
@@ -474,15 +489,17 @@ public sealed class AssetListViewModel : ViewModelBase, IDisposable
     {
         try
         {
+            var loadedAssets = _allAssets;
             var favorites = await GetAsync<FavoriteResponse>("api/favorites");
             if (favorites.AssetIds is null) throw new JsonException();
-            if (_disposed) return;
+            if (_disposed || !ReferenceEquals(loadedAssets, _allAssets)) return;
 
             // Un HashSet permet de retrouver rapidement un identifiant.
             var favoriteIds = favorites.AssetIds.ToHashSet();
-            foreach (var asset in _allAssets)
+            foreach (var asset in loadedAssets)
                 asset.IsFavorite = favoriteIds.Contains(asset.Id);
             _favoritesLoaded = true;
+            ToggleFavoriteCommand.RaiseCanExecuteChanged();
         }
         // Une panne des favoris ne doit pas empêcher le chargement des prix.
         catch (Exception ex) when (IsRequestError(ex)) { AddError(ex, "Favorites"); }

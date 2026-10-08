@@ -42,7 +42,7 @@ window.CaptureRenderedFrame()?.Save("work/revision3/ui-checks/admin.png");
 Check(!((Control)shell.CurrentPage!).GetVisualDescendants().OfType<Button>().Any(b => b.Content?.ToString() is "Make admin" or "Deactivate"), "user list has no management buttons");
 shell.ShowUserInformation(new User { UserId=2, Username="Laura", Email="laura@example.test", Role="employe", IsActive=true }); Pump();
 var profile = (PersonalInformationViewModel)((Control)shell.CurrentPage!).DataContext!;
-Check(profile.CanManage && profile.Transactions.Count == 2 && profile.TransactionSummary.Single().TransactionCount == 2, "profile groups transaction counts per asset");
+Check(profile.CanManage && profile.Transactions.Count == 2, "profile lists paginated transactions");
 profile.ChangeRoleCommand.Execute(null); Pump(); Check(profile.User.Role == "admin", "role change on profile");
 profile.ToggleStatusCommand.Execute(null); Pump(); Check(profile.User.IsActive == false, "deactivate on profile");
 profile.ToggleStatusCommand.Execute(null); Pump();

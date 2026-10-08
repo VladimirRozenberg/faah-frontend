@@ -12,6 +12,10 @@ public class AccountSnapshot
 }
 public class AccountTransaction
 {
+    public int Id { get; set; }
+    public int? PortfolioId { get; set; }
+    public string? PortfolioName { get; set; }
+    public decimal Fees { get; set; }
     public string Name { get; set; } = "";
     public string Symbol { get; set; } = "";
     public string Type { get; set; } = "";
@@ -20,7 +24,42 @@ public class AccountTransaction
     public string Currency { get; set; } = "USD";
     public DateTimeOffset CreatedAt { get; set; }
     public string DisplayName => Type == "deposit" ? "Account top-up" : Name;
-    public string Label => $"{CreatedAt.ToLocalTime():dd.MM.yyyy HH:mm} · {Type.ToUpperInvariant()} · {Symbol} · {Quantity:0.########} units · {Amount:N2} {Currency}";
+    public decimal? Price { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore] public bool IsAlternateRow { get; set; }
+    public string QuantityDisplay => Quantity.ToString("0.########", System.Globalization.CultureInfo.InvariantCulture);
+    public string PriceDisplay => Price?.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) ?? "—";
+    public string AmountDisplay => Amount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture);
+    public string CreatedAtDisplay => CreatedAt.ToLocalTime().ToString("dd MMM yyyy · HH:mm");
+    public string TypeDisplay => Type.ToUpperInvariant();
+    public bool IsBuy => string.Equals(Type, "buy", StringComparison.OrdinalIgnoreCase);
+    public bool IsSell => string.Equals(Type, "sell", StringComparison.OrdinalIgnoreCase);
+    public bool HasPortfolio => !string.IsNullOrWhiteSpace(PortfolioName);
+    public bool HasFees => Fees > 0;
+    public string FeesDisplay => $"fees {Fees:N2} {Currency}";
+    public string Label => $"{CreatedAt.ToLocalTime():dd.MM.yyyy HH:mm} · {Type.ToUpperInvariant()} · {Symbol} · {Quantity:0.########} units · {Amount:N2} {Currency}"
+        + (Fees > 0 ? $" · fees {Fees:N2}" : "")
+        + (string.IsNullOrWhiteSpace(PortfolioName) ? "" : $" · {PortfolioName}");
+}
+public class AccountDeposit
+{
+    public int Id { get; set; }
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = "USD";
+    public DateTimeOffset CreatedAt { get; set; }
+    public string DateDisplay => CreatedAt.ToLocalTime().ToString("dd MMM yyyy · HH:mm");
+    public string? AddedBy { get; set; }
+    public bool HasAddedBy => !string.IsNullOrWhiteSpace(AddedBy);
+    public string AddedByDisplay => $"Added by {(HasAddedBy ? AddedBy : "—")}";
+    [System.Text.Json.Serialization.JsonIgnore] public bool IsAlternateRow { get; set; }
+    public string AmountDisplay => $"+{Amount:N2} {Currency}";
+}
+public class DepositPage
+{
+    public int Count { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages { get; set; }
+    public List<AccountDeposit> Deposits { get; set; } = new();
 }
 public class AssetTransactionSummary
 {
@@ -33,6 +72,10 @@ public class AssetTransactionSummary
 }
 public class TransactionPage
 {
+    public int Count { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages { get; set; }
     public List<AccountTransaction> Transactions { get; set; } = new();
     public List<AssetTransactionSummary> ByAsset { get; set; } = new();
 }

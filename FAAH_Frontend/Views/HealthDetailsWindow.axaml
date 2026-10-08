@@ -45,13 +45,16 @@
             <TextBlock Text="Internal API and external data sources" Opacity="0.7"/>
         </StackPanel>
 
-        <Border Grid.Row="1" Padding="14" CornerRadius="6"
+        <Border Grid.Row="1" Padding="16" CornerRadius="10"
                 Background="{StaticResource SurfaceAlt}"
                 BorderBrush="{StaticResource Hairline}"
                 BorderThickness="1">
             <StackPanel Spacing="6">
-                <TextBlock Text="{Binding StatusLabel}" FontWeight="Bold"
-                           Foreground="{StaticResource TextPrimary}"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Ellipse Width="12" Height="12" Classes="healthDot" Classes.healthy="{Binding IsHealthy}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding StatusLabel}" FontWeight="Bold" FontSize="16"
+                               Foreground="{StaticResource TextPrimary}"/>
+                </StackPanel>
                 <TextBlock Text="{Binding Summary}" TextWrapping="Wrap"
                            Foreground="{StaticResource TextPrimary}"/>
                 <TextBlock Text="{Binding CheckedAt}" FontSize="11"
@@ -60,7 +63,7 @@
         </Border>
 
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="12">
+            <StackPanel Spacing="14">
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBlock Text="Database"/>
                     <TextBlock Grid.Column="1" Text="{Binding DatabaseStatus}"
@@ -131,7 +134,7 @@
         </ScrollViewer>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-            <Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+            <Button Content="Refresh" Classes="ghost refreshButton" Command="{Binding RefreshCommand}"/>
             <Button Content="Close" Click="CloseClick"/>
         </StackPanel>
         </Grid>

@@ -12,8 +12,9 @@
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="18" Width="320">
 
                 <Image Source="avares://FAAH_Frontend/Assets/faah-logo.png"
-                       Width="88" Height="88" Stretch="Uniform"
-                       HorizontalAlignment="Center"/>
+                       Width="160" Height="160" Stretch="Uniform"
+                       Margin="0,0,0,-30"
+                       RenderOptions.BitmapInterpolationMode="HighQuality"/>
 
                 <TextBlock Text="FAAH" FontSize="42" FontWeight="Bold" Foreground="#FFFFFF"
                            HorizontalAlignment="Center"/>
@@ -41,13 +42,14 @@
                 <TextBox Classes="field" Text="{Binding Username}" Margin="0,0,0,16"/>
 
                 <TextBlock Text="Password" Classes="label"/>
-                <TextBox Classes="field" Text="{Binding Password}" PasswordChar="●"/>
+                <TextBox Classes="field" Text="{Binding Password}" PasswordChar="●" KeyDown="PasswordKeyDown"/>
 <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}"
                            Foreground="{StaticResource Red}" FontSize="12"
                            TextWrapping="Wrap" Margin="0,12,0,0"/>
 
                 <Button Content="Sign in" Classes="primary" Command="{Binding LoginCommand}"
-                        HorizontalAlignment="Stretch" Height="46" FontSize="20" CornerRadius="4"
+                        HorizontalAlignment="Stretch" Height="46" FontSize="16" CornerRadius="4"
+                                                Padding="0" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
                         Margin="0,22,0,0"/>
 </StackPanel>
         </Border>

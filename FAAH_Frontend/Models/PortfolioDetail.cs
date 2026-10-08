@@ -34,6 +34,7 @@ public sealed class PortfolioPosition
     public decimal? CurrentValue { get; set; }
     public decimal? ProfitLoss { get; set; }
     public decimal? ProfitLossPercent { get; set; }
+    [JsonIgnore] public bool IsAlternateRow { get; set; }
 
     public string QuantityDisplay => Quantity.ToString("0.########", CultureInfo.InvariantCulture);
     public string AveragePurchasePriceDisplay => FormatAmount(AveragePurchasePrice);
@@ -54,6 +55,9 @@ public sealed class PortfolioPosition
 public sealed class PortfolioTransactionsResponse
 {
     public int Count { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages { get; set; }
     public List<PortfolioTransaction> Transactions { get; set; } = new();
 }
 
@@ -68,6 +72,7 @@ public sealed class PortfolioTransaction
     public string Currency { get; set; } = "USD";
     public decimal? Amount { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    [JsonIgnore] public bool IsAlternateRow { get; set; }
 
     public string QuantityDisplay => Quantity.ToString("0.########", CultureInfo.InvariantCulture);
     public string PriceDisplay => FormatAmount(Price);

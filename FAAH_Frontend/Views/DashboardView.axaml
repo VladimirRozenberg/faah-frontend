@@ -1,21 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="FAAH_Frontend.Views.DashboardView">
  <Grid Margin="42,26,42,20" RowDefinitions="Auto,*">
-  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Dashboard" Classes="h1"/><Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}"/></Grid>
+  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Dashboard" Classes="h1"/><Button Grid.Column="1" Content="Refresh" Classes="ghost refreshButton" Command="{Binding RefreshCommand}"/></Grid>
   <ScrollViewer Grid.Row="1" Margin="0,20,0,0"><StackPanel Spacing="18">
    <Border Classes="rule"/>
    <Grid ColumnDefinitions="*,*,Auto"><StackPanel Spacing="8"><TextBlock Text="Available cash" Classes="label"/><TextBlock Text="{Binding Cash}" FontSize="24"/></StackPanel><StackPanel Grid.Column="1" Spacing="8"><TextBlock Text="Asset value" ToolTip.Tip="Sum of held quantities multiplied by the latest available USD prices." Classes="label"/><TextBlock Text="{Binding Assets}" FontSize="24"/></StackPanel><Button Grid.Column="2" Content="Profile and transactions" Command="{Binding ProfileCommand}"/></Grid>
    <TextBlock Text="{Binding AccountMessage}" TextWrapping="Wrap" Classes="muted"/>
    <Border Classes="rule"/>
    <TextBlock Text="Recommendations" FontSize="24" FontWeight="Bold"/>
-   <TextBlock Text="Browse recommendations across your portfolios. Use the filters to narrow by type, status, or recency." Classes="muted" TextWrapping="Wrap"/>
-   <StackPanel Orientation="Horizontal" Spacing="10">
-    <Button Content="All" Classes="chip" Command="{Binding AllCommand}"/>
-    <Button Content="Buy" Classes="chip" Command="{Binding BuyCommand}"/>
-    <Button Content="Sell" Classes="chip" Command="{Binding SellCommand}"/>
-   </StackPanel>
+   <TextBlock Text="Browse recommendations across your portfolios. Use the filters to narrow by type or recency." Classes="muted" TextWrapping="Wrap"/>
    <StackPanel Orientation="Horizontal" Spacing="12">
     <StackPanel Spacing="4"><TextBlock Text="Kind" Classes="label"/><ComboBox Width="190" ItemsSource="{Binding KindOptions}" SelectedItem="{Binding SelectedKind}"/></StackPanel>
-    <StackPanel Spacing="4"><TextBlock Text="Status" Classes="label"/><ComboBox Width="170" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding SelectedStatus}"/></StackPanel>
     <CheckBox Content="Last hour only" IsChecked="{Binding RecentOnly}" VerticalAlignment="Bottom"/>
     <StackPanel Spacing="4"><TextBlock Text="Page size" Classes="label"/><ComboBox Width="90" ItemsSource="{Binding PageSizeOptions}" SelectedItem="{Binding SelectedPageSize}"/></StackPanel>
    </StackPanel>
@@ -29,7 +23,6 @@
       <WrapPanel ItemSpacing="16" LineSpacing="6">
        <TextBlock><Run Text="Type: "/><Run Text="{Binding KindDisplay}"/></TextBlock>
        <TextBlock><Run Text="Action: "/><Run Text="{Binding Action}"/></TextBlock>
-       <TextBlock><Run Text="Status: "/><Run Text="{Binding Status}"/></TextBlock>
        <TextBlock><Run Text="Created: "/><Run Text="{Binding CreatedAtDisplay}"/></TextBlock>
        <TextBlock Text="{Binding ConfidenceDisplay}"/>
        <TextBlock IsVisible="{Binding HasSignalId}"><Run Text="Signal: "/><Run Text="{Binding SignalDisplay}"/></TextBlock>

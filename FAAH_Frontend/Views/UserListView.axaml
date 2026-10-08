@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="FAAH_Frontend.Views.UserListView">
  <Grid Margin="42,26,42,24" RowDefinitions="Auto,Auto,*,Auto">
-  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Admin Console" Classes="h1"/><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"><Button Content="Refresh" Classes="ghost" Command="{Binding RefreshCommand}"/><Button Content="New user" Classes="accent" Command="{Binding NewUserCommand}"/></StackPanel></Grid>
+  <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Admin Console" Classes="h1"/><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"><Button Content="Refresh" Classes="ghost refreshButton" Command="{Binding RefreshCommand}"/><Button Content="New user" Classes="accent" Command="{Binding NewUserCommand}"/></StackPanel></Grid>
   <StackPanel Grid.Row="1" Spacing="18"><Grid ColumnDefinitions="2*,2*,120" Margin="10,10,10,0"><TextBlock Grid.Column="0" Text="NAME" Classes="colHead"/><TextBlock Grid.Column="1" Text="EMAIL" Classes="colHead"/><TextBlock Grid.Column="2" Text="STATUS" Classes="colHead" HorizontalAlignment="Center"/></Grid><Border Classes="rule"/></StackPanel>
   <ScrollViewer Grid.Row="2"><ItemsControl ItemsSource="{Binding Users}"><ItemsControl.ItemTemplate><DataTemplate>
    <Button Classes="rowButton" Classes.zebra="{Binding IsAlternateRow}" Command="{Binding $parent[ItemsControl].DataContext.OpenUserCommand}" CommandParameter="{Binding}" Padding="10,20" HorizontalContentAlignment="Stretch">

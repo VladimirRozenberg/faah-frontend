@@ -1,18 +1,54 @@
 <UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="FAAH_Frontend.Views.PersonalInformationView">
   <Grid Margin="42,26" RowDefinitions="Auto,*,Auto">
-    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="User profile" Classes="h1"/><Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}"/></Grid>
-    <ScrollViewer Grid.Row="1" Margin="0,20" Padding="0,0,14,0"><StackPanel Spacing="16">
+    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="User profile" Classes="h1"/><Button Grid.Column="1" Content="Refresh" Classes="ghost refreshButton" Command="{Binding RefreshCommand}"/></Grid>
+    <ScrollViewer Grid.Row="1" Margin="0,20"><StackPanel Spacing="16">
       <Grid ColumnDefinitions="*,Auto"><StackPanel Spacing="6"><TextBlock Text="{Binding Username}" FontSize="22" FontWeight="Bold"/><TextBlock Text="{Binding Email}"/></StackPanel><StackPanel Grid.Column="1" Spacing="6"><TextBlock Text="{Binding User.RoleDisplay}"/></StackPanel></Grid>
       <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding CanManage}"><Button Content="{Binding User.RoleAction}" Command="{Binding ChangeRoleCommand}"/><Button Content="{Binding User.StatusAction}" Command="{Binding ToggleStatusCommand}"/></StackPanel>
       <Border Classes="rule"/>
       <Grid ColumnDefinitions="*,*"><StackPanel Spacing="8"><TextBlock Text="Available cash" Classes="label"/><TextBlock Text="{Binding Cash}" FontSize="24"/></StackPanel><StackPanel Grid.Column="1" Spacing="8"><TextBlock Text="Asset value" ToolTip.Tip="Sum of held quantities multiplied by the latest available USD prices." Classes="label"/><TextBlock Text="{Binding Assets}" FontSize="24"/></StackPanel></Grid>
       <StackPanel IsVisible="{Binding IsAdmin}" Spacing="8"><TextBlock Text="Top-up (USD) — administrator"/><StackPanel Orientation="Horizontal" Spacing="12"><TextBox Width="180" PlaceholderText="Amount, e.g. 100.00" Text="{Binding DepositAmount}"/><Button Content="Add funds" Command="{Binding DepositCommand}"/></StackPanel></StackPanel>
       <TextBlock Text="Loading…" IsVisible="{Binding IsBusy}"/><TextBlock Text="{Binding Message}" TextWrapping="Wrap"/>
-      <TextBlock Text="Transaction history" FontSize="20" FontWeight="Bold"/>
-      <TextBlock Text="Number of completed trades per asset" Classes="muted"/>
-      <ItemsControl ItemsSource="{Binding TransactionSummary}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="row" Padding="8,12"><StackPanel Spacing="4"><TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{Binding Name}" Classes="muted"/></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
-      <TextBlock Text="Individual trades" FontSize="16" FontWeight="SemiBold"/>
-      <ItemsControl ItemsSource="{Binding Transactions}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="row" Padding="8,12"><StackPanel Spacing="4"><TextBlock Text="{Binding Label}" TextWrapping="Wrap"/><TextBlock Text="{Binding DisplayName}" Classes="muted"/></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="24" IsVisible="{Binding IsOwnProfile}">
+      <StackPanel Grid.Column="0" Spacing="10">
+      <TextBlock Text="Buy / sell transactions" FontSize="20" FontWeight="Bold"/>
+      <TextBlock Text="Newest first" Classes="muted"/>
+      <ItemsControl ItemsSource="{Binding Transactions}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="row" Classes.zebra="{Binding IsAlternateRow}" Padding="10" Margin="0,0,0,6"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><Border Classes="pill" Classes.green="{Binding IsBuy}" Classes.red="{Binding IsSell}" VerticalAlignment="Top"><TextBlock Text="{Binding TypeDisplay}" FontSize="11" FontWeight="SemiBold"/></Border><StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="{Binding Symbol}" FontWeight="SemiBold"/><TextBlock Text="{Binding Name}" Classes="muted" FontSize="11" TextWrapping="Wrap"/><TextBlock Text="{Binding CreatedAtDisplay}" Classes="muted" FontSize="11"/><TextBlock Text="{Binding PortfolioName}" Classes="muted" FontSize="11" IsVisible="{Binding HasPortfolio}"/></StackPanel><StackPanel Grid.Column="2" Spacing="3" HorizontalAlignment="Right"><TextBlock Text="{Binding QuantityDisplay}" HorizontalAlignment="Right"/><TextBlock Classes="muted" FontSize="11" HorizontalAlignment="Right"><Run Text="@ "/><Run Text="{Binding PriceDisplay}"/><Run Text=" "/><Run Text="{Binding Currency}"/></TextBlock><TextBlock FontWeight="SemiBold" HorizontalAlignment="Right"><Run Text="{Binding AmountDisplay}"/><Run Text=" "/><Run Text="{Binding Currency}"/></TextBlock><TextBlock Text="{Binding FeesDisplay}" Classes="muted" FontSize="11" HorizontalAlignment="Right" IsVisible="{Binding HasFees}"/></StackPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+      <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,6,0,0" HorizontalAlignment="Center">
+        <Button Classes="page" Content="«" ToolTip.Tip="First page" Command="{Binding FirstPageCommand}"/>
+        <Button Classes="page" Content="‹" ToolTip.Tip="Previous page" Command="{Binding PreviousPageCommand}"/>
+        <ItemsControl ItemsSource="{Binding PageNumbers}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="5"/></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Classes="page" Content="{Binding}"
+                      Command="{Binding $parent[ItemsControl].DataContext.GoToPageCommand}"
+                      CommandParameter="{Binding}"/>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button Classes="page" Content="›" ToolTip.Tip="Next page" Command="{Binding NextPageCommand}"/>
+        <Button Classes="page" Content="»" ToolTip.Tip="Last page" Command="{Binding LastPageCommand}"/>
+        <TextBox Width="58" Text="{Binding PageInput, Mode=TwoWay}" KeyDown="PageInputKeyDown"
+                 PlaceholderText="Page" HorizontalContentAlignment="Center"/>
+        <TextBlock Text="{Binding PageLabel}" Classes="muted" VerticalAlignment="Center" Margin="8,0,0,0"/>
+      </StackPanel>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="10">
+        <TextBlock Text="Deposits" FontSize="20" FontWeight="Bold"/>
+        <TextBlock Text="Money added to your account, newest first" Classes="muted"/>
+        <TextBlock Text="{Binding DepositsMessage}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding HasDepositsMessage}"/>
+        <ItemsControl ItemsSource="{Binding Deposits}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="row" Classes.zebra="{Binding IsAlternateRow}" Padding="10" Margin="0,0,0,6"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><Border Classes="pill green" VerticalAlignment="Top"><TextBlock Text="DEPOSIT" FontSize="11" FontWeight="SemiBold"/></Border><StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="{Binding DateDisplay}" FontWeight="SemiBold"/><TextBlock Text="{Binding AddedByDisplay}" Classes="muted" FontSize="11"/></StackPanel><TextBlock Grid.Column="2" Text="{Binding AmountDisplay}" FontWeight="SemiBold" VerticalAlignment="Top"/></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,6,0,0" HorizontalAlignment="Center">
+          <Button Classes="page" Content="«" ToolTip.Tip="First page" Command="{Binding FirstDepositPageCommand}"/>
+          <Button Classes="page" Content="‹" ToolTip.Tip="Previous page" Command="{Binding PreviousDepositPageCommand}"/>
+          <Button Classes="page" Content="›" ToolTip.Tip="Next page" Command="{Binding NextDepositPageCommand}"/>
+          <Button Classes="page" Content="»" ToolTip.Tip="Last page" Command="{Binding LastDepositPageCommand}"/>
+          <TextBlock Text="{Binding DepositPageLabel}" Classes="muted" VerticalAlignment="Center" Margin="8,0,0,0"/>
+        </StackPanel>
+      </StackPanel>
+      </Grid>
     </StackPanel></ScrollViewer>
     <Button Grid.Row="2" Content="Back" Command="{Binding BackCommand}" Classes="ghost"/>
   </Grid>

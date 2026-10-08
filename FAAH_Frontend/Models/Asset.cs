@@ -74,6 +74,7 @@ public sealed class AssetResponse
     public int Count { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }
+    public int TotalPages { get; set; }
     public required List<Asset> Items { get; set; }
 }
 public sealed class FavoriteResponse { public required List<int> AssetIds { get; set; } }

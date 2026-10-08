@@ -18,19 +18,14 @@ public class DashboardViewModel : ViewModelBase, IDisposable
     private readonly CancellationTokenSource _lifetime = new();
     private List<RecentRecommendation> _pageItems = new();
     private bool _busy, _disposed, _failed, _recentOnly = true;
-    private int _page = 1, _pageCount = 1, _totalCount, _selectedPageSize = 20;
-    private string _action = "all", _selectedKind = "All", _selectedStatus = "All";
+    private int _page = 1, _pageCount = 1, _totalCount, _selectedPageSize = 10;
+    private string _action = "all", _selectedKind = "All";
     private string _message = "", _accountMessage = "", _cash = "—", _assets = "—";
 
     public ObservableCollection<RecentRecommendation> Recommendations { get; } = new();
     public ObservableCollection<int> PageNumbers { get; } = new();
     public string[] KindOptions { get; } = { "All", "opportunity", "holding_assessment", "targeted_conclusion" };
-    public string[] StatusOptions { get; } = { "All", "new", "viewed", "dismissed", "acted_on" };
-    public int[] PageSizeOptions { get; } = { 20, 50, 100 };
-
-    public ICommand AllCommand { get; }
-    public ICommand BuyCommand { get; }
-    public ICommand SellCommand { get; }
+    public int[] PageSizeOptions { get; } = { 10, 50, 100 };
     public ICommand RefreshCommand { get; }
     public ICommand FirstPageCommand { get; }
     public ICommand PreviousPageCommand { get; }
@@ -39,9 +34,6 @@ public class DashboardViewModel : ViewModelBase, IDisposable
     public ICommand GoToPageCommand { get; }
     public ICommand ProfileCommand => _shell.ShowProfileCommand;
 
-    public bool IsAll => _action == "all";
-    public bool IsBuy => _action == "buy";
-    public bool IsSell => _action == "sell";
     public bool IsEmpty => !IsBusy && !_failed && Recommendations.Count == 0;
     public int PageCount => _pageCount;
     public int TotalCount => _totalCount;
@@ -53,16 +45,6 @@ public class DashboardViewModel : ViewModelBase, IDisposable
         set
         {
             if (_disposed || !SetField(ref _selectedKind, value ?? "All")) return;
-            ResetPageAndLoad();
-        }
-    }
-
-    public string SelectedStatus
-    {
-        get => _selectedStatus;
-        set
-        {
-            if (_disposed || !SetField(ref _selectedStatus, value ?? "All")) return;
             ResetPageAndLoad();
         }
     }
@@ -106,9 +88,6 @@ public class DashboardViewModel : ViewModelBase, IDisposable
     public DashboardViewModel(ShellViewModel shell)
     {
         _shell = shell;
-        AllCommand = new RelayCommand(() => FilterAction("all"));
-        BuyCommand = new RelayCommand(() => FilterAction("buy"));
-        SellCommand = new RelayCommand(() => FilterAction("sell"));
         RefreshCommand = new RelayCommand(_ => { _ = LoadAsync(); }, _ => !IsBusy && !_disposed);
         FirstPageCommand = new RelayCommand(_ => GoToPage(1), _ => !IsBusy && !_disposed && _page > 1);
         PreviousPageCommand = new RelayCommand(_ => GoToPage(_page - 1), _ => !IsBusy && !_disposed && _page > 1);
@@ -131,14 +110,10 @@ public class DashboardViewModel : ViewModelBase, IDisposable
             visibleItems[index].IsAlternateRow = index % 2 == 1;
             Recommendations.Add(visibleItems[index]);
         }
-        OnPropertyChanged(nameof(IsAll));
-        OnPropertyChanged(nameof(IsBuy));
-        OnPropertyChanged(nameof(IsSell));
         OnPropertyChanged(nameof(IsEmpty));
     }
 
     public Task LoadAsync() => LoadPageAsync(refreshAccount: true);
-
     private async Task LoadPageAsync(bool refreshAccount)
     {
         if (IsBusy || _disposed) return;
@@ -158,7 +133,6 @@ public class DashboardViewModel : ViewModelBase, IDisposable
             var query = new List<string> { $"page={_page}", $"page_size={_selectedPageSize}" };
             if (RecentOnly) query.Add("within=1h");
             if (SelectedKind != "All") query.Add("kind=" + Uri.EscapeDataString(SelectedKind));
-            if (SelectedStatus != "All") query.Add("status=" + Uri.EscapeDataString(SelectedStatus));
 
             var response = await _shell.Http.GetFromJsonAsync<RecentRecommendationResponse>(
                 $"api/users/me/recommendations?{string.Join("&", query)}", ShellViewModel.JsonOptions, _lifetime.Token);

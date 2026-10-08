@@ -22,7 +22,9 @@
                         PointerPressed="TitleBarPointerPressed">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                         <Image Source="avares://FAAH_Frontend/Assets/faah-logo.png"
-                               Width="26" Height="26" Stretch="Uniform"/>
+                               Width="28" Height="28" Stretch="Uniform"
+                               VerticalAlignment="Center" Margin="0,0,0,2"
+                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
                         <TextBlock Text="FAAH" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF"
                                    VerticalAlignment="Center"/>
                         <TextBlock Text="FUTURES ARBITRAGE ASSETS HUB" FontSize="9"
@@ -31,12 +33,17 @@
                 </Border>
                 <Border Grid.Column="1" Background="Transparent" PointerPressed="TitleBarPointerPressed"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Stretch" Spacing="0">
-                    <Button Classes="windowChromeButton" Content="—" ToolTip.Tip="Minimize"
-                            Click="MinimizeClick"/>
-                    <Button x:Name="MaximizeRestoreButton" Classes="windowChromeButton" Content="□"
-                            ToolTip.Tip="Maximize or restore" Click="MaximizeRestoreClick"/>
-                    <Button Classes="windowChromeButton windowCloseButton" Content="×" ToolTip.Tip="Close"
-                            Click="CloseClick"/>
+                    <Button Classes="windowChromeButton" ToolTip.Tip="Minimize"
+                            Click="MinimizeClick">
+                        <Path Data="M0,5 L10,5" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1" Width="10" Height="10" Stretch="None"/>
+                    </Button>
+                    <Button x:Name="MaximizeRestoreButton" Classes="windowChromeButton" ToolTip.Tip="Maximize or restore" Click="MaximizeRestoreClick">
+                        <Path x:Name="MaximizeRestoreIcon" Data="M0.5,0.5 L9.5,0.5 L9.5,9.5 L0.5,9.5 Z" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1" Width="10" Height="10" Stretch="None"/>
+                    </Button>
+                    <Button Classes="windowChromeButton windowCloseButton" ToolTip.Tip="Close"
+                            Click="CloseClick">
+                        <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1" Width="10" Height="10" Stretch="None"/>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
@@ -119,19 +126,16 @@
                             <StackPanel Spacing="0" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding UserName}" FontSize="14" FontWeight="Bold"
                                            Foreground="#FFFFFF"/>
-                                <TextBlock Text="ACCOUNT" FontSize="9" FontWeight="Bold"
-                                           Foreground="#AFC0D0"/>
                             </StackPanel>
-                            <TextBlock Text="⌄" FontSize="14" Foreground="#AFC0D0" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <Button.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedRight">
                                 <MenuItem Header="Admin Console" Command="{Binding ShowUsersCommand}"
-                                          IsVisible="{Binding IsAdmin}"/>
+                                          IsVisible="{Binding IsAdmin}" Foreground="#FFFFFF"/>
                                 <MenuItem Header="My profile" Command="{Binding ShowProfileCommand}"/>
                                 <MenuItem Header="Settings" Command="{Binding ShowSettingsCommand}"/>
-                                <MenuItem Header="Log out" Command="{Binding LogoutCommand}"
+                                <MenuItem Header="Log out" Classes="logout" Command="{Binding LogoutCommand}"
                                           Foreground="{StaticResource Red}"/>
                             </MenuFlyout>
                         </Button.Flyout>

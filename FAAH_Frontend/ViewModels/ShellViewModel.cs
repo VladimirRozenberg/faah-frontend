@@ -61,7 +61,9 @@ public class ShellViewModel : ViewModelBase
         if (_expiresAt is null) { SessionTimeLeft = string.Empty; return; }
         var left = _expiresAt.Value - DateTimeOffset.UtcNow;
         if (left < TimeSpan.Zero) left = TimeSpan.Zero;
-        SessionTimeLeft = $"Session {(int)left.TotalMinutes}:{left.Seconds:00}";
+        SessionTimeLeft = left.TotalHours >= 1
+            ? $"Session {(int)left.TotalHours}h {left.Minutes:00}m"
+            : $"Session {left.Minutes}:{left.Seconds:00}";
     }
 
     // Planifie la deconnexion a l'instant d'expiration (claim "exp" du JWT).
@@ -539,14 +541,14 @@ public class ShellViewModel : ViewModelBase
 
             if (!loginResponse.IsSuccessStatusCode)
             {
-                ErrorMessage = "Nom d'utilisateur (ou email) ou mot de passe incorrect.";
+                ErrorMessage = "Incorrect username/email or password.";
                 return;
             }
 
             var login = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>(JsonOptions);
             if (login is null || string.IsNullOrWhiteSpace(login.Token))
             {
-                ErrorMessage = "L'API n'a pas renvoye de token.";
+                ErrorMessage = "The server did not return an authentication token.";
                 return;
             }
 
@@ -593,8 +595,8 @@ public class ShellViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"ERREUR LOGIN : {ex}");
-            ErrorMessage = "Impossible de contacter le serveur FAAH. Verifie qu'il est demarre.";
+            System.Diagnostics.Debug.WriteLine($"Login error: {ex}");
+            ErrorMessage = "Unable to contact the FAAH server. Check that it is running.";
         }
     }
 
@@ -631,12 +633,23 @@ public class ShellViewModel : ViewModelBase
         Portfolios.Clear();
     }
 
+    private HealthDetailsWindow? _healthWindow;
+
     private void ShowHealthDetails()
     {
+        if (_healthWindow is not null)
+        {
+            if (_healthWindow.WindowState == Avalonia.Controls.WindowState.Minimized)
+                _healthWindow.WindowState = Avalonia.Controls.WindowState.Normal;
+            _healthWindow.Activate();
+            return;
+        }
         var window = new HealthDetailsWindow
         {
             DataContext = Health
         };
+        window.Closed += (_, _) => _healthWindow = null;
+        _healthWindow = window;
         window.Show();
     }
 }

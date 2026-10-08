@@ -6,7 +6,7 @@
         <StackPanel x:Name="PageContent" Margin="42,26,42,26" Spacing="20">
             <Grid ColumnDefinitions="*,Auto">
                  <Button Content="← Back to assets" Classes="ghost" Command="{Binding BackCommand}" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Left"/>
-                 <Button Grid.Column="1" Content="Refresh" Classes="ghost" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
+                 <Button Grid.Column="1" Content="Refresh" Classes="ghost refreshButton" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
             </Grid>
             <!-- Résumé aligné sur le graphique, sans largeur maximale centrée. -->
             <Grid x:Name="OverviewGrid" ColumnDefinitions="*,360" RowDefinitions="Auto,Auto">
@@ -153,6 +153,17 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4" IsVisible="{Binding HasMultipleNewsPages}">
+                <Button Classes="page" Content="«" ToolTip.Tip="First page" Command="{Binding NewsFirstPageCommand}"/>
+                <Button Classes="page" Content="‹" ToolTip.Tip="Previous page" Command="{Binding NewsPreviousPageCommand}"/>
+                <ItemsControl ItemsSource="{Binding NewsPageNumbers}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate><DataTemplate><Button Classes="page" Content="{Binding}" Command="{Binding $parent[ItemsControl].DataContext.NewsGoToPageCommand}" CommandParameter="{Binding}"/></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Classes="page" Content="›" ToolTip.Tip="Next page" Command="{Binding NewsNextPageCommand}"/>
+                <Button Classes="page" Content="»" ToolTip.Tip="Last page" Command="{Binding NewsLastPageCommand}"/>
+                <TextBlock Text="{Binding NewsPageLabel}" Classes="muted" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"/>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
     <UserControl.Styles>

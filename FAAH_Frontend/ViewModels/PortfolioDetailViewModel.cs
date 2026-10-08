@@ -15,20 +15,24 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     private readonly ShellViewModel _shell;
     private readonly CancellationTokenSource _lifetime = new();
     private int _currentPage = 1, _pageCount = 1, _totalCount;
-    private string _selectedKind = "All", _selectedStatus = "All", _pageInput = "1";
+    private int _transactionPage = 1, _transactionPageCount = 1;
+    private string _selectedKind = "All", _pageInput = "1";
     private bool _isLoading, _isLoadingPositions, _isLoadingTransactions, _disposed;
     private string _errorMessage = "", _positionsErrorMessage = "", _transactionsErrorMessage = "";
 
-    public const int PageSize = 5;
+    public const int PageSize = 10;
+    public const int TransactionPageSize = 14;
     public Portfolio Portfolio { get; }
     public ObservableCollection<RecentRecommendation> Recommendations { get; } = new();
     public ObservableCollection<PortfolioPosition> Positions { get; } = new();
     public ObservableCollection<PortfolioTransaction> Transactions { get; } = new();
     public ObservableCollection<int> PageNumbers { get; } = new();
-    public string[] KindOptions { get; } = { "All", "opportunity", "holding_assessment", "targeted_conclusion" };
-    public string[] StatusOptions { get; } = { "All", "new", "viewed", "dismissed", "acted_on" };
+    public ObservableCollection<int> TransactionPageNumbers { get; } = new();
+    public string[] KindOptions { get; } = { "All types", "Opportunity", "Holding assessment", "Targeted conclusion" };
+    private static readonly string[] KindValues = { "All", "opportunity", "holding_assessment", "targeted_conclusion" };
 
     public RelayCommand RefreshCommand { get; }
+    public RelayCommand BackCommand { get; }
     public RelayCommand OpenAssetCommand { get; }
     public RelayCommand ToggleStatusCommand { get; }
     public RelayCommand EditPortfolioCommand { get; }
@@ -37,6 +41,11 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     public RelayCommand NextPageCommand { get; }
     public RelayCommand LastPageCommand { get; }
     public RelayCommand GoToPageCommand { get; }
+    public RelayCommand FirstTransactionPageCommand { get; }
+    public RelayCommand PreviousTransactionPageCommand { get; }
+    public RelayCommand NextTransactionPageCommand { get; }
+    public RelayCommand LastTransactionPageCommand { get; }
+    public RelayCommand GoToTransactionPageCommand { get; }
 
     public bool HasRecommendations => Recommendations.Count > 0;
     public bool IsEmpty => !IsLoading && !HasError && !HasRecommendations;
@@ -48,6 +57,8 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     public bool IsTransactionsEmpty => !IsLoadingTransactions && string.IsNullOrEmpty(TransactionsErrorMessage) && !HasTransactions;
     public bool HasTransactionsError => !string.IsNullOrEmpty(TransactionsErrorMessage);
     public int TransactionCount { get; private set; }
+    public string TransactionPageLabel => $"Page {_transactionPage} of {_transactionPageCount} · {TransactionCount} transactions";
+    public bool HasMultipleTransactionPages => _transactionPageCount > 1;
     public int CurrentPage => _currentPage;
     public int PageCount => _pageCount;
     public int TotalCount => _totalCount;
@@ -60,8 +71,23 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
         set
         {
             if (_isLoading || !SetField(ref _selectedKind, value ?? "All")) return;
+            OnPropertyChanged(nameof(SelectedKindDisplay));
             _currentPage = 1;
             _ = LoadAsync();
+        }
+    }
+
+    public string SelectedKindDisplay
+    {
+        get
+        {
+            var index = Array.IndexOf(KindValues, SelectedKind);
+            return KindOptions[index >= 0 ? index : 0];
+        }
+        set
+        {
+            var index = Array.IndexOf(KindOptions, value);
+            if (index >= 0) SelectedKind = KindValues[index];
         }
     }
 
@@ -73,6 +99,7 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
             if (!SetField(ref _isLoadingTransactions, value)) return;
             OnPropertyChanged(nameof(IsTransactionsEmpty));
             RefreshCommand.RaiseCanExecuteChanged();
+            RaiseTransactionPageCommandStates();
         }
     }
 
@@ -109,17 +136,6 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public string SelectedStatus
-    {
-        get => _selectedStatus;
-        set
-        {
-            if (_isLoading || !SetField(ref _selectedStatus, value ?? "All")) return;
-            _currentPage = 1;
-            _ = LoadAsync();
-        }
-    }
-
     public bool IsLoading
     {
         get => _isLoading;
@@ -146,6 +162,7 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     {
         _shell = shell;
         Portfolio = portfolio;
+        BackCommand = new RelayCommand(_ => _shell.ShowPortfolios(), _ => !_disposed);
         EditPortfolioCommand = new RelayCommand(_ => _shell.ShowPortfolioEdit(Portfolio));
         ToggleStatusCommand = new RelayCommand(parameter =>
         {
@@ -195,6 +212,14 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
         NextPageCommand = new RelayCommand(_ => GoToPage(_currentPage + 1), _ => !_disposed && !IsLoading && _currentPage < _pageCount);
         LastPageCommand = new RelayCommand(_ => GoToPage(_pageCount), _ => !_disposed && !IsLoading && _currentPage < _pageCount);
         GoToPageCommand = new RelayCommand(GoToPage, parameter => !_disposed && !IsLoading && TryGetPage(parameter, out var page) && page >= 1 && page <= _pageCount);
+        FirstTransactionPageCommand = new RelayCommand(_ => GoToTransactionPage(1), _ => !_disposed && !IsLoadingTransactions && _transactionPage > 1);
+        PreviousTransactionPageCommand = new RelayCommand(_ => GoToTransactionPage(_transactionPage - 1), _ => !_disposed && !IsLoadingTransactions && _transactionPage > 1);
+        NextTransactionPageCommand = new RelayCommand(_ => GoToTransactionPage(_transactionPage + 1), _ => !_disposed && !IsLoadingTransactions && _transactionPage < _transactionPageCount);
+        LastTransactionPageCommand = new RelayCommand(_ => GoToTransactionPage(_transactionPageCount), _ => !_disposed && !IsLoadingTransactions && _transactionPage < _transactionPageCount);
+        GoToTransactionPageCommand = new RelayCommand(parameter =>
+        {
+            if (TryGetPage(parameter, out var page)) GoToTransactionPage(page);
+        }, parameter => !_disposed && !IsLoadingTransactions && TryGetPage(parameter, out var page) && page >= 1 && page <= _transactionPageCount);
         _ = RefreshAllAsync();
     }
 
@@ -210,7 +235,6 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
         {
             var query = $"page={_currentPage}&page_size={PageSize}";
             if (_selectedKind != "All") query += $"&kind={Uri.EscapeDataString(_selectedKind)}";
-            if (_selectedStatus != "All") query += $"&status={Uri.EscapeDataString(_selectedStatus)}";
             var response = await _shell.Http.GetFromJsonAsync<RecentRecommendationResponse>(
                 $"api/users/me/portfolios/{Portfolio.Id}/recommendations?{query}", ShellViewModel.JsonOptions, _lifetime.Token);
 
@@ -219,7 +243,12 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
             _currentPage = response?.Page > 0 ? response.Page : _currentPage;
             _currentPage = Math.Clamp(_currentPage, 1, _pageCount);
             PageInput = _currentPage.ToString();
-            foreach (var recommendation in response?.Items ?? new()) Recommendations.Add(recommendation);
+            var recommendationIndex = 0;
+            foreach (var recommendation in response?.Items ?? new())
+            {
+                recommendation.IsAlternateRow = recommendationIndex++ % 2 == 1;
+                Recommendations.Add(recommendation);
+            }
             UpdatePageNumbers();
             NotifyPaging();
         }
@@ -249,7 +278,12 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
                 $"api/users/me/portfolios/{Portfolio.Id}", ShellViewModel.JsonOptions, _lifetime.Token);
             if (detail?.IsActive is bool isActive && !Portfolio.IsStatusUpdating)
                 Portfolio.IsActive = isActive;
-            foreach (var position in detail?.Positions ?? new()) Positions.Add(position);
+            var positionIndex = 0;
+            foreach (var position in detail?.Positions ?? new())
+            {
+                position.IsAlternateRow = positionIndex++ % 2 == 1;
+                Positions.Add(position);
+            }
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -274,10 +308,21 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
         try
         {
             var response = await _shell.Http.GetFromJsonAsync<PortfolioTransactionsResponse>(
-                $"api/users/me/portfolios/{Portfolio.Id}/transactions", ShellViewModel.JsonOptions, _lifetime.Token);
+                $"api/users/me/portfolios/{Portfolio.Id}/transactions?page={_transactionPage}&page_size={TransactionPageSize}", ShellViewModel.JsonOptions, _lifetime.Token);
             TransactionCount = response?.Count ?? 0;
+            _transactionPage = Math.Max(1, response?.Page ?? _transactionPage);
+            _transactionPageCount = Math.Max(1, response?.TotalPages ?? (int)Math.Ceiling(TransactionCount / (double)TransactionPageSize));
             OnPropertyChanged(nameof(TransactionCount));
-            foreach (var transaction in response?.Transactions ?? new()) Transactions.Add(transaction);
+            OnPropertyChanged(nameof(TransactionPageLabel));
+            OnPropertyChanged(nameof(HasMultipleTransactionPages));
+            UpdateTransactionPageNumbers();
+            var transactionIndex = 0;
+            foreach (var transaction in response?.Transactions ?? new())
+            {
+                transaction.IsAlternateRow = transactionIndex++ % 2 == 1;
+                Transactions.Add(transaction);
+            }
+            RaiseTransactionPageCommandStates();
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -291,6 +336,28 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
         {
             if (!_disposed) IsLoadingTransactions = false;
         }
+    }
+
+    private void GoToTransactionPage(int page)
+    {
+        if (IsLoadingTransactions || _disposed || page < 1 || page > _transactionPageCount || page == _transactionPage) return;
+        _transactionPage = page;
+        _ = LoadTransactionsAsync();
+    }
+
+    private void UpdateTransactionPageNumbers()
+    {
+        const int windowSize = 5;
+        var start = Math.Clamp(_transactionPage - 2, 1, Math.Max(1, _transactionPageCount - windowSize + 1));
+        TransactionPageNumbers.Clear();
+        for (var page = start; page < start + windowSize && page <= _transactionPageCount; page++)
+            TransactionPageNumbers.Add(page);
+    }
+
+    private void RaiseTransactionPageCommandStates()
+    {
+        foreach (var command in new[] { FirstTransactionPageCommand, PreviousTransactionPageCommand, NextTransactionPageCommand, LastTransactionPageCommand, GoToTransactionPageCommand })
+            command?.RaiseCanExecuteChanged();
     }
 
     private void GoToPage(object? parameter)

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using FAAH_Frontend.Controls;
 
 namespace FAAH_Frontend.Views;
 
@@ -15,6 +16,7 @@ public partial class HealthDetailsWindow : Window
     public HealthDetailsWindow()
     {
         InitializeComponent();
+        MiddleButtonAutoScroll.Attach(this);
         UpdateMaximizeButton();
     }
 
