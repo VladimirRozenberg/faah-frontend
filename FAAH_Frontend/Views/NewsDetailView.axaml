@@ -31,6 +31,22 @@
                     </StackPanel>
                 </Border>
 
+                <StackPanel IsVisible="{Binding HasRelatedAssets}" Spacing="8">
+                    <TextBlock Text="Related assets" Classes="h2"/>
+                    <ItemsControl ItemsSource="{Binding RelatedAssets}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel ItemSpacing="6" LineSpacing="4"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Classes="ghost compact" Content="{Binding Symbol}"
+                                        Command="{Binding $parent[UserControl].DataContext.OpenAssetCommand}"
+                                        CommandParameter="{Binding Symbol}" ToolTip.Tip="Open asset details"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
                 <Border Classes="rule"/>
                 <TextBlock Text="Classification" Classes="h2"/>
                 <ItemsControl ItemsSource="{Binding Detail.Classifications}">

@@ -92,8 +92,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     public string OrderRateDate => $"Reference rate · {_orderRateDate}";
     private DateTimeOffset _quoteAt, _orderAt;
     private Dictionary<string, List<string>> _historyOptions = new();
-    // Afficher cinq jours par défaut pour avoir plus de bougies à l'ouverture.
-    private string _selectedPeriod = "5d", _selectedInterval = "5m";
+    private string _selectedPeriod = "1d", _selectedInterval = "5m";
     private int _chartRequest;
     private bool _changingPeriod;
     private IReadOnlyList<TradePortfolioResponse> _portfolios = Array.Empty<TradePortfolioResponse>();
@@ -320,7 +319,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         try
         {
             // Le meme client HTTP conserve le token du compte connecte. Aucun nouvel essai automatique.
-            using var response = await _http.PostAsJsonAsync($"api/users/{_userId}/portfolios/{portfolioId}/assets/{action}", data, Json, _lifetime.Token);
+            using var response = await _http.PostAsJsonAsync($"api/users/me/portfolios/{portfolioId}/assets/{action}", data, Json, _lifetime.Token);
             if (!response.IsSuccessStatusCode)
             {
                 if ((int)response.StatusCode >= 500) throw new HttpRequestException();
@@ -424,7 +423,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
         try
         {
             if (_userId <= 0) { PortfolioStatus = "Sign in to load your portfolios."; return; }
-            var result = await GetAsync<TradePortfolioListResponse>($"api/users/{_userId}/portfolios");
+            var result = await GetAsync<TradePortfolioListResponse>("api/users/me/portfolios");
             if (_disposed) return;
             if (result.Items is null || result.Items.Any(p => p is null || p.PortfolioId <= 0
                 || p.Status is null || p.BaseCurrency is null)) throw new JsonException();
@@ -434,7 +433,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
             var details = new List<TradePortfolioResponse>();
             foreach (var summary in result.Items.Where(p => p.Status == "active" && p.BaseCurrency == "USD"))
             {
-                var portfolio = await GetAsync<TradePortfolioResponse>($"api/users/{_userId}/portfolios/{summary.PortfolioId}");
+                var portfolio = await GetAsync<TradePortfolioResponse>($"api/users/me/portfolios/{summary.PortfolioId}");
                 if (_disposed) return;
                 if (portfolio.Id != summary.PortfolioId || portfolio.UserId != _userId
                     || portfolio.Positions is null || portfolio.PreferredAssetTypes is null) throw new JsonException();

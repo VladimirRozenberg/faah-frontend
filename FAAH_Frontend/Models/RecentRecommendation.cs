@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace FAAH_Frontend.Models;
 
@@ -19,6 +20,7 @@ public sealed class RecentRecommendation
     public string Status { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+    [JsonIgnore] public bool IsAlternateRow { get; set; }
 
     public string PortfolioDisplay => string.IsNullOrWhiteSpace(PortfolioName) ? $"Portfolio #{PortfolioId}" : PortfolioName;
     public string AssetSymbolDisplay => string.IsNullOrWhiteSpace(AssetSymbol) ? "General recommendation" : AssetSymbol;

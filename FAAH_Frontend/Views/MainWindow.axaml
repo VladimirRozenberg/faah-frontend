@@ -90,20 +90,24 @@
 
                 <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal"
                             VerticalAlignment="Center" Spacing="10">
-                    <Button Classes="healthButton topbarHealth" Command="{Binding ShowHealthCommand}"
-                            ToolTip.Tip="Open API health details">
-                        <Border CornerRadius="13" Background="#1AFFFFFF" Padding="14,6" MinWidth="112">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
-                                        VerticalAlignment="Center" Spacing="8">
-                                <Ellipse Width="11" Height="11" Classes="healthDot"
-                                         Classes.healthy="{Binding Health.IsHealthy}"/>
-                                <TextBlock FontSize="12" FontWeight="Bold" Foreground="#FFFFFF"
-                                           VerticalAlignment="Center">
-                                    <Run Text="API "/><Run Text="{Binding Health.StatusLabel}"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </Border>
-                    </Button>
+                    <StackPanel Spacing="3" VerticalAlignment="Center">
+                        <Button Classes="healthButton topbarHealth" Command="{Binding ShowHealthCommand}"
+                                ToolTip.Tip="Open API health details">
+                            <Border CornerRadius="13" Background="#1AFFFFFF" Padding="14,6" MinWidth="112">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                            VerticalAlignment="Center" Spacing="8">
+                                    <Ellipse Width="11" Height="11" Classes="healthDot"
+                                             Classes.healthy="{Binding Health.IsHealthy}"/>
+                                    <TextBlock FontSize="12" FontWeight="Bold" Foreground="#FFFFFF"
+                                               VerticalAlignment="Center">
+                                        <Run Text="API "/><Run Text="{Binding Health.StatusLabel}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </Button>
+                        <TextBlock Text="{Binding SessionTimeLeft}" FontSize="10" FontWeight="Bold"
+                                   Foreground="#AFC0D0" HorizontalAlignment="Center"/>
+                    </StackPanel>
 
                     <Button Classes="userChip topbarUser">
                         <StackPanel Orientation="Horizontal" Spacing="8">

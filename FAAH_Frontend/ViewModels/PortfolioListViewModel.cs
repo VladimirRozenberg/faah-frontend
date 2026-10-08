@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using FAAH_Frontend.Models;
@@ -9,6 +10,8 @@ public class PortfolioListViewModel : ViewModelBase
     public PortfolioListViewModel(ShellViewModel shell)
     {
         Portfolios = shell.Portfolios;
+        Portfolios.CollectionChanged += OnPortfoliosChanged;
+        UpdateAlternateRows();
         CreateCommand = new RelayCommand(shell.ShowPortfolioCreate);
         ToggleStatusCommand = new RelayCommand(p =>
         {
@@ -26,4 +29,12 @@ public class PortfolioListViewModel : ViewModelBase
     public ICommand ToggleStatusCommand { get; }
 
     public ObservableCollection<Portfolio> Portfolios { get; }
+
+    private void OnPortfoliosChanged(object? sender, NotifyCollectionChangedEventArgs e) => UpdateAlternateRows();
+
+    private void UpdateAlternateRows()
+    {
+        for (var index = 0; index < Portfolios.Count; index++)
+            Portfolios[index].IsAlternateRow = index % 2 == 1;
+    }
 }

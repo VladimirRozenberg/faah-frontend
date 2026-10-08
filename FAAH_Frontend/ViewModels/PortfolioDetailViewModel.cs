@@ -203,12 +203,6 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     public async Task LoadAsync()
     {
         if (_disposed || IsLoading) return;
-        if (!int.TryParse(_shell.ProfileUserId, out var userId))
-        {
-            ErrorMessage = "Unable to identify the signed-in user.";
-            return;
-        }
-
         IsLoading = true;
         ErrorMessage = "";
         Recommendations.Clear();
@@ -218,7 +212,7 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
             if (_selectedKind != "All") query += $"&kind={Uri.EscapeDataString(_selectedKind)}";
             if (_selectedStatus != "All") query += $"&status={Uri.EscapeDataString(_selectedStatus)}";
             var response = await _shell.Http.GetFromJsonAsync<RecentRecommendationResponse>(
-                $"api/users/{userId}/portfolios/{Portfolio.Id}/recommendations?{query}", ShellViewModel.JsonOptions, _lifetime.Token);
+                $"api/users/me/portfolios/{Portfolio.Id}/recommendations?{query}", ShellViewModel.JsonOptions, _lifetime.Token);
 
             _totalCount = response?.Count ?? 0;
             _pageCount = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)PageSize));
@@ -246,19 +240,13 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     private async Task LoadPortfolioDetailsAsync()
     {
         if (_disposed || IsLoadingPositions) return;
-        if (!int.TryParse(_shell.ProfileUserId, out var userId))
-        {
-            PositionsErrorMessage = "Unable to identify the signed-in user.";
-            return;
-        }
-
         IsLoadingPositions = true;
         PositionsErrorMessage = "";
         Positions.Clear();
         try
         {
             var detail = await _shell.Http.GetFromJsonAsync<PortfolioDetail>(
-                $"api/users/{userId}/portfolios/{Portfolio.Id}", ShellViewModel.JsonOptions, _lifetime.Token);
+                $"api/users/me/portfolios/{Portfolio.Id}", ShellViewModel.JsonOptions, _lifetime.Token);
             if (detail?.IsActive is bool isActive && !Portfolio.IsStatusUpdating)
                 Portfolio.IsActive = isActive;
             foreach (var position in detail?.Positions ?? new()) Positions.Add(position);
@@ -280,19 +268,13 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     private async Task LoadTransactionsAsync()
     {
         if (_disposed || IsLoadingTransactions) return;
-        if (!int.TryParse(_shell.ProfileUserId, out var userId))
-        {
-            TransactionsErrorMessage = "Unable to identify the signed-in user.";
-            return;
-        }
-
         IsLoadingTransactions = true;
         TransactionsErrorMessage = "";
         Transactions.Clear();
         try
         {
             var response = await _shell.Http.GetFromJsonAsync<PortfolioTransactionsResponse>(
-                $"api/users/{userId}/portfolios/{Portfolio.Id}/transactions", ShellViewModel.JsonOptions, _lifetime.Token);
+                $"api/users/me/portfolios/{Portfolio.Id}/transactions", ShellViewModel.JsonOptions, _lifetime.Token);
             TransactionCount = response?.Count ?? 0;
             OnPropertyChanged(nameof(TransactionCount));
             foreach (var transaction in response?.Transactions ?? new()) Transactions.Add(transaction);

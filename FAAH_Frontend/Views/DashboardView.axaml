@@ -22,7 +22,7 @@
    <TextBlock Text="Loading…" IsVisible="{Binding IsBusy}"/><TextBlock Text="{Binding Message}" TextWrapping="Wrap"/>
    <TextBlock Text="No recommendations for this selection." IsVisible="{Binding IsEmpty}" Classes="muted"/>
    <ItemsControl ItemsSource="{Binding Recommendations}"><ItemsControl.ItemTemplate><DataTemplate>
-    <Border Classes="row" Padding="16">
+    <Border Classes="row" Classes.zebra="{Binding IsAlternateRow}" Padding="16">
      <StackPanel Spacing="8">
       <TextBlock Text="{Binding Label}" FontSize="18" FontWeight="Bold" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding PortfolioDisplay}" Classes="muted" TextWrapping="Wrap"/>

@@ -26,23 +26,40 @@
     <Grid Grid.Row="3" ColumnDefinitions="*,270" ColumnSpacing="16">
       <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
         <ItemsControl ItemsSource="{Binding Articles}"><ItemsControl.ItemTemplate><DataTemplate>
-          <Button Classes="rowButton" Classes.zebra="{Binding IsAlternateRow}" Margin="0,0,22,8" Padding="10" HorizontalContentAlignment="Stretch" ToolTip.Tip="Read article"
-                  Command="{Binding $parent[ItemsControl].DataContext.OpenArticleCommand}" CommandParameter="{Binding Id}"><Grid ColumnDefinitions="*,Auto">
-            <StackPanel Spacing="6" Margin="0,0,22,0">
-              <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap"/>
-              <TextBlock Text="{Binding Summary}" FontSize="12" TextWrapping="Wrap"/>
-              <TextBlock Text="{Binding Source}" FontSize="12" Classes="muted"/>
+          <StackPanel Margin="0,0,22,8" Spacing="4">
+            <Button Classes="rowButton" Classes.zebra="{Binding IsAlternateRow}" Padding="10" HorizontalContentAlignment="Stretch" ToolTip.Tip="Read article"
+                    Command="{Binding $parent[ItemsControl].DataContext.OpenArticleCommand}" CommandParameter="{Binding Id}"><Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="6" Margin="0,0,22,0">
+                <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Summary}" FontSize="12" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Source}" FontSize="12" Classes="muted"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding DateLabel}" Classes="muted" FontSize="11"/><TextBlock Text="{Binding DateDisplay}" Classes="muted" FontSize="12"/></StackPanel>
+            </Grid></Button>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="10,0,0,0" IsVisible="{Binding HasAssetTags}">
+              <TextBlock Text="Assets:" Classes="muted" VerticalAlignment="Center"/>
+              <ItemsControl ItemsSource="{Binding AssetTags}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><WrapPanel ItemSpacing="5" LineSpacing="4"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button Classes="ghost compact" Content="{Binding}"
+                            Command="{Binding $parent[UserControl].DataContext.OpenAssetCommand}"
+                            CommandParameter="{Binding}" ToolTip.Tip="Open asset details"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </StackPanel>
-            <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding DateLabel}" Classes="muted" FontSize="11"/><TextBlock Text="{Binding DateDisplay}" Classes="muted" FontSize="12"/></StackPanel>
-          </Grid></Button>
+          </StackPanel>
         </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
       </ScrollViewer>
       <!-- Même présentation que les filtres Assets ; les bindings restent inchangés. -->
       <Border Grid.Column="1" Background="{StaticResource SurfaceAlt}" Padding="14" CornerRadius="8">
         <Grid RowDefinitions="Auto,*">
           <TextBlock Text="Filters" FontSize="16" FontWeight="SemiBold"/>
-          <ScrollViewer Grid.Row="1" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto">
-          <StackPanel Spacing="10" Margin="0,12,0,0">
+          <ScrollViewer Grid.Row="1" Margin="0,12,-8,0" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="10" Margin="0,12,22,0">
             <TextBlock Text="Search" Classes="label"/>
             <TextBox PlaceholderText="Title, content or URL" Text="{Binding SearchQuery, Mode=TwoWay}"/>
             <TextBlock Text="Processing status" Classes="label"/>

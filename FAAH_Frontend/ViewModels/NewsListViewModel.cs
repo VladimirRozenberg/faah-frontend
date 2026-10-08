@@ -17,6 +17,7 @@ public sealed class NewsListViewModel : ViewModelBase, IDisposable
 {
     private readonly HttpClient _http;
     private readonly Action<int>? _openArticle;
+    private readonly Action<string>? _openAsset;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(60) };
     private List<NewsArticle> _snapshot = new();
@@ -28,12 +29,14 @@ public sealed class NewsListViewModel : ViewModelBase, IDisposable
     private DateTimeOffset? _publishedFromDate, _publishedToDate;
     private CancellationTokenSource _filterDebounce = new();
     public const int PageSize = 20;
-    public NewsListViewModel(HttpClient http, Action<int>? openArticle = null)
+    public NewsListViewModel(HttpClient http, Action<int>? openArticle = null, Action<string>? openAsset = null)
     {
         _http = http;
         _openArticle = openArticle;
+        _openAsset = openAsset;
         RefreshCommand = new RelayCommand(parameter => { _ = RefreshAsync(); }, parameter => !IsBusy && !_disposed);
         OpenArticleCommand = new RelayCommand(OpenArticle, parameter => !_disposed && _openArticle is not null);
+        OpenAssetCommand = new RelayCommand(OpenAsset, parameter => !_disposed && _openAsset is not null);
         FirstPageCommand = new RelayCommand(_ => GoToPage(1), _ => !_disposed && !IsBusy && HasPreviousPage);
         PreviousPageCommand = new RelayCommand(_ => GoToPage(CurrentPage - 1), _ => !_disposed && !IsBusy && HasPreviousPage);
         NextPageCommand = new RelayCommand(_ => GoToPage(CurrentPage + 1), _ => !_disposed && !IsBusy && HasNextPage);
@@ -45,6 +48,7 @@ public sealed class NewsListViewModel : ViewModelBase, IDisposable
     public ObservableCollection<int> PageNumbers { get; } = new();
     public ICommand RefreshCommand { get; }
     public ICommand OpenArticleCommand { get; }
+    public ICommand OpenAssetCommand { get; }
     public ICommand FirstPageCommand { get; }
     public ICommand PreviousPageCommand { get; }
     public ICommand NextPageCommand { get; }
@@ -88,6 +92,10 @@ public sealed class NewsListViewModel : ViewModelBase, IDisposable
     private void OpenArticle(object? parameter)
     {
         if (parameter is int id) _openArticle?.Invoke(id);
+    }
+    private void OpenAsset(object? parameter)
+    {
+        if (parameter is string symbol && !string.IsNullOrWhiteSpace(symbol)) _openAsset?.Invoke(symbol.Trim());
     }
     private void DebounceFilterReload()
     {

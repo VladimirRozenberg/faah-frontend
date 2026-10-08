@@ -14,6 +14,7 @@ public class Portfolio : INotifyPropertyChanged
 {
     private string _statusText = string.Empty;
     private bool _isStatusUpdating;
+    private bool _isAlternateRow;
     private string? _statusErrorMessage;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -82,6 +83,18 @@ public class Portfolio : INotifyPropertyChanged
 
     [JsonIgnore]
     public bool CanToggleStatus => !IsStatusUpdating;
+
+    [JsonIgnore]
+    public bool IsAlternateRow
+    {
+        get => _isAlternateRow;
+        set
+        {
+            if (_isAlternateRow == value) return;
+            _isAlternateRow = value;
+            OnPropertyChanged(nameof(IsAlternateRow));
+        }
+    }
 
     [JsonIgnore]
     public string? StatusErrorMessage

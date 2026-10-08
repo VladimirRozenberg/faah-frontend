@@ -56,14 +56,14 @@ public class PersonalInformationViewModel : ViewModelBase, IDisposable
     }
     private async Task ReadAccountAsync()
     {
-        var path = $"api/users/{UserId}/portfolio";
+        var path = "api/users/me/portfolio";
         // Cash is account-level (not multiplied by portfolios).
-        using var cashResponse = await _shell.Http.GetAsync($"api/users/{UserId}/available-cash", _lifetime.Token);
+        using var cashResponse = await _shell.Http.GetAsync("api/users/me/available-cash", _lifetime.Token);
         await EnsureAsync(cashResponse);
         var cash = await cashResponse.Content.ReadFromJsonAsync<AvailableCashResponse>(ShellViewModel.JsonOptions, _lifetime.Token);
         _supportsTopUp = cash?.AvailableCash.HasValue == true;
         Cash = cash?.AvailableCash.HasValue == true ? $"{cash.AvailableCash:N2} {cash.Currency}" : "Unavailable";
-        using var valueResponse = await _shell.Http.GetAsync($"api/users/{UserId}/asset-value", _lifetime.Token);
+        using var valueResponse = await _shell.Http.GetAsync("api/users/me/asset-value", _lifetime.Token);
         await EnsureAsync(valueResponse);
         var value = await valueResponse.Content.ReadFromJsonAsync<AssetValueResponse>(ShellViewModel.JsonOptions, _lifetime.Token);
         Assets = value?.TotalCurrentValue.HasValue == true ? $"{value.TotalCurrentValue:N2} {value.Currency}" : "Prices unavailable";

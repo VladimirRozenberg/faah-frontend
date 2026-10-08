@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -14,18 +16,21 @@ public sealed class NewsDetailViewModel : ViewModelBase, IDisposable
 {
     private readonly HttpClient _http;
     private readonly Action _goBack;
+    private readonly Action<string>? _openAsset;
     private readonly CancellationTokenSource _lifetime = new();
     private bool _busy, _disposed;
     private string _error = "";
     private NewsSourceDetailResponse? _detail;
 
-    public NewsDetailViewModel(HttpClient http, int articleId, Action goBack)
+    public NewsDetailViewModel(HttpClient http, int articleId, Action goBack, Action<string>? openAsset = null)
     {
         _http = http;
         ArticleId = articleId;
         _goBack = goBack;
+        _openAsset = openAsset;
         BackCommand = new RelayCommand(_ => _goBack(), _ => !_disposed);
         RefreshCommand = new RelayCommand(_ => { _ = LoadAsync(); }, _ => !_disposed && !IsBusy);
+        OpenAssetCommand = new RelayCommand(OpenAsset, _ => !_disposed && _openAsset is not null);
     }
 
     public int ArticleId { get; }
@@ -37,10 +42,13 @@ public sealed class NewsDetailViewModel : ViewModelBase, IDisposable
             if (!SetField(ref _detail, value)) return;
             OnPropertyChanged(nameof(ContentPreview));
             OnPropertyChanged(nameof(PublishedDisplay));
+            OnPropertyChanged(nameof(RelatedAssets));
+            OnPropertyChanged(nameof(HasRelatedAssets));
         }
     }
     public ICommand BackCommand { get; }
     public ICommand RefreshCommand { get; }
+    public ICommand OpenAssetCommand { get; }
     public bool IsBusy
     {
         get => _busy;
@@ -72,6 +80,25 @@ public sealed class NewsDetailViewModel : ViewModelBase, IDisposable
         }
     }
     public string PublishedDisplay => Detail?.Source.PublishedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Date unavailable";
+    public IReadOnlyList<ClassificationAsset> RelatedAssets
+    {
+        get
+        {
+            if (Detail is null) return Array.Empty<ClassificationAsset>();
+            return Detail.Classifications
+                .Where(classification => classification.Assets is not null)
+                .SelectMany(classification => classification.Assets)
+                .Where(asset => !string.IsNullOrWhiteSpace(asset.Symbol))
+                .DistinctBy(asset => asset.Symbol, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+    }
+    public bool HasRelatedAssets => RelatedAssets.Count > 0;
+
+    private void OpenAsset(object? parameter)
+    {
+        if (parameter is string symbol && !string.IsNullOrWhiteSpace(symbol)) _openAsset?.Invoke(symbol.Trim());
+    }
 
     public void Start() => _ = LoadAsync();
 

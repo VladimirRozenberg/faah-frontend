@@ -124,9 +124,13 @@ public class DashboardViewModel : ViewModelBase, IDisposable
         if (_disposed) return;
         _action = action;
         Recommendations.Clear();
-        foreach (var item in _pageItems.Where(item => action == "all"
-            || string.Equals(item.Action, action, StringComparison.OrdinalIgnoreCase)))
-            Recommendations.Add(item);
+        var visibleItems = _pageItems.Where(item => action == "all"
+            || string.Equals(item.Action, action, StringComparison.OrdinalIgnoreCase)).ToList();
+        for (var index = 0; index < visibleItems.Count; index++)
+        {
+            visibleItems[index].IsAlternateRow = index % 2 == 1;
+            Recommendations.Add(visibleItems[index]);
+        }
         OnPropertyChanged(nameof(IsAll));
         OnPropertyChanged(nameof(IsBuy));
         OnPropertyChanged(nameof(IsSell));
@@ -157,7 +161,7 @@ public class DashboardViewModel : ViewModelBase, IDisposable
             if (SelectedStatus != "All") query.Add("status=" + Uri.EscapeDataString(SelectedStatus));
 
             var response = await _shell.Http.GetFromJsonAsync<RecentRecommendationResponse>(
-                $"api/users/{userId}/recommendations?{string.Join("&", query)}", ShellViewModel.JsonOptions, _lifetime.Token);
+                $"api/users/me/recommendations?{string.Join("&", query)}", ShellViewModel.JsonOptions, _lifetime.Token);
             if (_disposed) return;
 
             _pageItems = response?.Items ?? new List<RecentRecommendation>();
@@ -192,7 +196,7 @@ public class DashboardViewModel : ViewModelBase, IDisposable
         try
         {
             var cash = await _shell.Http.GetFromJsonAsync<AvailableCashResponse>(
-                $"api/users/{_shell.ProfileUserId}/available-cash", ShellViewModel.JsonOptions, _lifetime.Token);
+                "api/users/me/available-cash", ShellViewModel.JsonOptions, _lifetime.Token);
             if (!_disposed) Cash = cash?.AvailableCash.HasValue == true ? $"{cash.AvailableCash:N2} {cash.Currency}" : "Unavailable";
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
@@ -203,7 +207,7 @@ public class DashboardViewModel : ViewModelBase, IDisposable
         try
         {
             var value = await _shell.Http.GetFromJsonAsync<AssetValueResponse>(
-                $"api/users/{_shell.ProfileUserId}/asset-value", ShellViewModel.JsonOptions, _lifetime.Token);
+                "api/users/me/asset-value", ShellViewModel.JsonOptions, _lifetime.Token);
             if (!_disposed && value is not null)
             {
                 Assets = value.TotalCurrentValue.HasValue ? $"{value.TotalCurrentValue:N2} {value.Currency}" : "Prices unavailable";

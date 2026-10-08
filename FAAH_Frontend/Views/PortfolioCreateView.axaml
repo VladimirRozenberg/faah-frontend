@@ -88,7 +88,7 @@
       <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Foreground="{StaticResource Red}"/>
     </StackPanel>
     <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="26">
-      <Button Classes="primary" Content="{Binding SubmitButtonText}" Width="145" IsEnabled="{Binding CanSubmit}" Command="{Binding SubmitCommand}"/>
+      <Button Classes="primary" Classes.submitting="{Binding IsSubmitting}" Content="{Binding SubmitButtonText}" Width="145" IsEnabled="{Binding CanSubmit}" Command="{Binding SubmitCommand}"/>
       <Button Classes="ghost" Content="Cancel" Width="110" Command="{Binding CancelCommand}"/>
     </StackPanel>
   </Grid>

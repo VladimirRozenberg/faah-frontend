@@ -153,6 +153,10 @@
     <Style Selector="Button.primary /template/ ContentPresenter">
         <Setter Property="Background" Value="{StaticResource Navy}"/>
     </Style>
+    <Style Selector="Button.primary.submitting /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource GreySolid}"/>
+        <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
     <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="{StaticResource NavyHover}"/>
         <Setter Property="Foreground" Value="#FFFFFF"/>

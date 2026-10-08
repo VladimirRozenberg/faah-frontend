@@ -131,9 +131,8 @@ public class PortfolioCreateViewModel : ViewModelBase
             {
                 // La liste contient seulement un résumé : relire le détail avant d'éditer.
                 var detail = await _shell.Http.GetFromJsonAsync<PortfolioUpdateResponse>(
-                    $"api/users/{_shell.ProfileUserId}/portfolios/{_portfolio.Id}", ShellViewModel.JsonOptions);
+                    $"api/users/me/portfolios/{_portfolio.Id}", ShellViewModel.JsonOptions);
                 if (detail is null || detail.Id != _portfolio.Id ||
-                    detail.UserId.ToString(CultureInfo.InvariantCulture) != _shell.ProfileUserId ||
                     detail.PreferredAssetTypes is null || detail.PreferredNicheIds is null)
                     throw new JsonException("Incomplete portfolio settings.");
                 _shell.ApplyPortfolioUpdate(_portfolio, detail);
@@ -180,13 +179,6 @@ public class PortfolioCreateViewModel : ViewModelBase
         if (!CanSubmit) return;
         ClearErrors();
         if (!Validate()) return;
-        if (!int.TryParse(_shell.ProfileUserId, NumberStyles.None, CultureInfo.InvariantCulture, out var userId) || userId <= 0)
-        {
-            ErrorMessage = "The logged-in user ID is unavailable. Please sign in again.";
-            OnPropertyChanged(nameof(HasError));
-            return;
-        }
-
         IsSubmitting = true;
         try
         {
@@ -200,7 +192,7 @@ public class PortfolioCreateViewModel : ViewModelBase
                 }
 
                 using var updateResponse = await _shell.Http.PatchAsJsonAsync(
-                    $"api/users/{userId}/portfolios/{_portfolio.Id}", patch, ShellViewModel.JsonOptions);
+                    $"api/users/me/portfolios/{_portfolio.Id}", patch, ShellViewModel.JsonOptions);
                 if (!updateResponse.IsSuccessStatusCode)
                 {
                     await SetBackendErrorsAsync(updateResponse);
@@ -208,7 +200,7 @@ public class PortfolioCreateViewModel : ViewModelBase
                 }
 
                 var updatedPortfolio = await updateResponse.Content.ReadFromJsonAsync<PortfolioUpdateResponse>(ShellViewModel.JsonOptions);
-                if (updatedPortfolio is null || updatedPortfolio.Id != _portfolio.Id || updatedPortfolio.UserId != userId)
+                if (updatedPortfolio is null || updatedPortfolio.Id != _portfolio.Id)
                 {
                     ErrorMessage = "The server returned an invalid portfolio response.";
                     OnPropertyChanged(nameof(HasError));
@@ -233,12 +225,12 @@ public class PortfolioCreateViewModel : ViewModelBase
             };
 
             using var response = await _shell.Http.PostAsJsonAsync(
-                $"api/users/{userId}/portfolio/create", request, ShellViewModel.JsonOptions);
+                "api/users/me/portfolio/create", request, ShellViewModel.JsonOptions);
 
             if (response.StatusCode == HttpStatusCode.Created)
             {
                 var created = await response.Content.ReadFromJsonAsync<PortfolioUpdateResponse>(ShellViewModel.JsonOptions);
-                if (created is null || created.Id <= 0 || created.UserId != userId)
+                if (created is null || created.Id <= 0)
                 {
                     ErrorMessage = "The server returned an empty portfolio.";
                     OnPropertyChanged(nameof(HasError));

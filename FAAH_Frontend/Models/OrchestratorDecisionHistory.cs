@@ -17,6 +17,7 @@ public sealed class OrchestratorDecisionHistoryResponse
 public sealed class OrchestratorDecisionCycle : INotifyPropertyChanged
 {
     private bool _isExpanded;
+    private bool _isAlternateRow;
 
     public event PropertyChangedEventHandler? PropertyChanged;
     [JsonPropertyName("cycle_id")] public long CycleId { get; set; }
@@ -41,6 +42,16 @@ public sealed class OrchestratorDecisionCycle : INotifyPropertyChanged
             if (_isExpanded == value) return;
             _isExpanded = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
+        }
+    }
+    [JsonIgnore] public bool IsAlternateRow
+    {
+        get => _isAlternateRow;
+        set
+        {
+            if (_isAlternateRow == value) return;
+            _isAlternateRow = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsAlternateRow)));
         }
     }
     [JsonIgnore] public string StartedAtDisplay => StartedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss zzz") ?? "Unavailable";

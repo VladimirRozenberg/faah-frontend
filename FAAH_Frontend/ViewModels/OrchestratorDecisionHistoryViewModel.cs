@@ -157,7 +157,11 @@ public sealed class OrchestratorDecisionHistoryViewModel : ViewModelBase, IDispo
             }
             PageCount = Math.Max(1, (int)Math.Ceiling(Count / (double)SelectedPageSize));
             CurrentPage = Math.Clamp(data.Page > 0 ? data.Page : page, 1, PageCount);
-            foreach (var cycle in data.Items) Cycles.Add(cycle);
+            for (var index = 0; index < data.Items.Count; index++)
+            {
+                data.Items[index].IsAlternateRow = index % 2 == 1;
+                Cycles.Add(data.Items[index]);
+            }
             _loaded = true;
             OnPropertyChanged(nameof(IsEmpty));
         }

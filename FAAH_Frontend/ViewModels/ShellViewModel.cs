@@ -21,11 +21,88 @@ namespace FAAH_Frontend.ViewModels;
 public class ShellViewModel : ViewModelBase
 {
     // Adresse HTTPS du serveur qui heberge le backend FastAPI.
-    private readonly HttpClient _http = new()
+    private readonly SessionHandler _sessionHandler = new(new HttpClientHandler());
+
+    // Detecte un token expire/invalide (401) sur les appels authentifies.
+    private sealed class SessionHandler : DelegatingHandler
+    {
+        public Action? OnUnauthorized { get; set; }
+
+        public SessionHandler(HttpMessageHandler inner) : base(inner) { }
+
+        protected override async System.Threading.Tasks.Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
+        {
+            var response = await base.SendAsync(request, cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized
+                && request.Headers.Authorization is not null)
+                OnUnauthorized?.Invoke();
+            return response;
+        }
+    }
+
+    private readonly HttpClient _http;
+
+    private static HttpClient CreateClient(HttpMessageHandler handler) => new(handler)
     {
         BaseAddress = new Uri((Environment.GetEnvironmentVariable("FAAH_API_URL") ?? "https://footballhero.ch").TrimEnd('/') + "/"),
         Timeout = TimeSpan.FromSeconds(30)
     };
+
+    private readonly DispatcherTimer _expiryTimer = new();
+    private readonly DispatcherTimer _countdownTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private DateTimeOffset? _expiresAt;
+    private string _sessionTimeLeft = string.Empty;
+
+    public string SessionTimeLeft { get => _sessionTimeLeft; private set => SetField(ref _sessionTimeLeft, value); }
+
+    private void UpdateCountdown()
+    {
+        if (_expiresAt is null) { SessionTimeLeft = string.Empty; return; }
+        var left = _expiresAt.Value - DateTimeOffset.UtcNow;
+        if (left < TimeSpan.Zero) left = TimeSpan.Zero;
+        SessionTimeLeft = $"Session {(int)left.TotalMinutes}:{left.Seconds:00}";
+    }
+
+    // Planifie la deconnexion a l'instant d'expiration (claim "exp" du JWT).
+    private void ScheduleExpiry(string token)
+    {
+        _expiryTimer.Stop();
+        _countdownTimer.Stop();
+        _expiresAt = null;
+        UpdateCountdown();
+        try
+        {
+            var parts = token.Split('.');
+            if (parts.Length < 2) return;
+            var payload = parts[1].Replace('-', '+').Replace('_', '/');
+            payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+            using var doc = JsonDocument.Parse(Convert.FromBase64String(payload));
+            if (!doc.RootElement.TryGetProperty("exp", out var exp) || !exp.TryGetInt64(out var seconds)) return;
+
+            var delay = DateTimeOffset.FromUnixTimeSeconds(seconds) - DateTimeOffset.UtcNow;
+            if (delay < TimeSpan.FromMilliseconds(100)) delay = TimeSpan.FromMilliseconds(100);
+            _expiryTimer.Interval = delay;
+            _expiryTimer.Start();
+            _expiresAt = DateTimeOffset.FromUnixTimeSeconds(seconds);
+            UpdateCountdown();
+            _countdownTimer.Start();
+        }
+        catch (Exception ex) when (ex is FormatException or JsonException or ArgumentException)
+        {
+            System.Diagnostics.Debug.WriteLine($"Token exp illisible : {ex.Message}");
+        }
+    }
+
+    private void HandleSessionExpired()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!IsLoggedIn) return;
+            Logout();
+            ErrorMessage = "Session expired. Please sign in again.";
+        });
+    }
 
     // internal (pas private) : UserListViewModel s'en sert pour appeler /admin/utilisateurs
     // avec la meme connexion, deja authentifiee.
@@ -85,7 +162,10 @@ public class ShellViewModel : ViewModelBase
     // Permet aux tests de remplacer l'API par des réponses locales, sans toucher au cloud.
     public ShellViewModel(HttpClient? http)
     {
-        if (http is not null) _http = http;
+        _http = http ?? CreateClient(_sessionHandler);
+        _sessionHandler.OnUnauthorized = HandleSessionExpired;
+        _expiryTimer.Tick += (_, _) => { _expiryTimer.Stop(); HandleSessionExpired(); };
+        _countdownTimer.Tick += (_, _) => UpdateCountdown();
         _logos = new AssetLogoService(_http);
         Health = new HealthDetailsViewModel(_http);
         ShowHealthCommand = new RelayCommand(ShowHealthDetails);
@@ -121,19 +201,12 @@ public class ShellViewModel : ViewModelBase
     {
         if (portfolio.IsStatusUpdating) return;
 
-        if (!int.TryParse(ProfileUserId, out var userId))
-        {
-            portfolio.IsActive = previousState;
-            portfolio.StatusErrorMessage = "Unable to identify the signed-in user.";
-            return;
-        }
-
         portfolio.IsStatusUpdating = true;
         portfolio.StatusErrorMessage = null;
         try
         {
             using var response = await _http.PatchAsJsonAsync(
-                $"api/users/{userId}/portfolios/{portfolio.Id}", new { is_active = isActive }, JsonOptions);
+                $"api/users/me/portfolios/{portfolio.Id}", new { is_active = isActive }, JsonOptions);
             if (!response.IsSuccessStatusCode)
                 throw new HttpRequestException($"Portfolio status update failed (HTTP {(int)response.StatusCode}).");
 
@@ -303,10 +376,9 @@ public class ShellViewModel : ViewModelBase
 
     private async System.Threading.Tasks.Task LoadPortfoliosAsync()
     {
-        if (!int.TryParse(ProfileUserId, out var userId)) return;
         try
         {
-            var page = await _http.GetFromJsonAsync<PortfolioListResponse>($"api/users/{userId}/portfolios", JsonOptions);
+            var page = await _http.GetFromJsonAsync<PortfolioListResponse>("api/users/me/portfolios", JsonOptions);
             Portfolios.Clear();
             foreach (var p in page?.Items ?? new()) Portfolios.Add(p);
         }
@@ -396,17 +468,24 @@ public class ShellViewModel : ViewModelBase
         Section = "NEWS";
         CurrentPage = GetOrCreateSectionPage("NEWS", () =>
         {
-            var news = new NewsListViewModel(_http, ShowNewsDetail);
+            var news = new NewsListViewModel(_http, ShowNewsDetail, ShowAssetFromNews);
             var page = new NewsListView { DataContext = news };
             news.Start();
             return page;
         });
     }
 
+    private void ShowAssetFromNews(string symbol) => ShowAssetDetail(new Asset
+    {
+        Id = 0,
+        Symbol = symbol,
+        LogoUrl = $"/api/assets/{Uri.EscapeDataString(symbol)}/logo"
+    });
+
     public void ShowNewsDetail(int articleId)
     {
         Section = "NEWS";
-        var detail = new NewsDetailViewModel(_http, articleId, ShowNews);
+        var detail = new NewsDetailViewModel(_http, articleId, ShowNews, ShowAssetFromNews);
         CurrentPage = new NewsDetailView { DataContext = detail };
         detail.Start();
     }
@@ -474,6 +553,7 @@ public class ShellViewModel : ViewModelBase
             // Le token sert pour tous les appels suivants.
             _http.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", login.Token);
+            ScheduleExpiry(login.Token);
 
             // Le nom affiche est celui que tu as tape pour te connecter.
             UserName = Username;
@@ -533,6 +613,10 @@ public class ShellViewModel : ViewModelBase
         Section = "PORTFOLIO";
 
         _http.DefaultRequestHeaders.Authorization = null;
+        _expiryTimer.Stop();
+        _countdownTimer.Stop();
+        _expiresAt = null;
+        SessionTimeLeft = string.Empty;
         _healthTimer.Stop();
 
         ShowLogin();
