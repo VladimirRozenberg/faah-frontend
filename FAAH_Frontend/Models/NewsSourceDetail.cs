@@ -11,6 +11,7 @@ public sealed class NewsSourceDetailResponse
     [JsonPropertyName("overview")] public NewsSourceOverview Overview { get; set; } = new();
     [JsonPropertyName("classifications")] public List<NewsClassification> Classifications { get; set; } = new();
     [JsonPropertyName("analyses")] public List<NewsAnalysis> Analyses { get; set; } = new();
+    [JsonPropertyName("signals")] public List<NewsSignal>? Signals { get; set; } = new();
 }
 
 public sealed class NewsSourceDetail
@@ -83,6 +84,7 @@ public sealed class NewsAnalysis
     [JsonPropertyName("anl_created_at")] public DateTime? CreatedAt { get; set; }
     [JsonPropertyName("relationships")] public List<string> Relationships { get; set; } = new();
     [JsonPropertyName("assets")] public List<AnalysisAsset> Assets { get; set; } = new();
+    [JsonPropertyName("signals")] public List<NewsSignal>? Signals { get; set; } = new();
     [JsonPropertyName("supporting_sources")] public List<NewsSourceDetail> SupportingSources { get; set; } = new();
     public string DirectionDisplay => NewsDisplay.Capitalize(Direction);
     public string MarketSentimentDisplay => NewsDisplay.Capitalize(MarketSentiment);
@@ -105,6 +107,21 @@ public sealed class AnalysisAsset
     [JsonPropertyName("aas_timeframe")] public string? Timeframe { get; set; }
     [JsonPropertyName("aas_reason")] public string? Reason { get; set; }
     [JsonPropertyName("aas_price_context")] public JsonElement? PriceContext { get; set; }
+}
+
+public sealed class NewsSignal
+{
+    [JsonPropertyName("sig_id")] public int Id { get; set; }
+    [JsonPropertyName("sig_ast_id")] public int AssetId { get; set; }
+    [JsonPropertyName("asset_symbol")] public string? AssetSymbol { get; set; }
+    [JsonPropertyName("asset_name")] public string? AssetName { get; set; }
+    [JsonPropertyName("sig_action")] public string? Action { get; set; }
+    [JsonPropertyName("sig_confidence")] public decimal? Confidence { get; set; }
+    public string ActionDisplay => NewsDisplay.Capitalize(Action?.Trim());
+    public bool HasConfidence => Confidence.HasValue;
+    public string ConfidenceDisplay => Confidence.HasValue ? $"Confidence {Confidence.Value:0.#}%" : "";
+    public bool IsBuy => string.Equals(Action, "buy", StringComparison.OrdinalIgnoreCase);
+    public bool IsSell => string.Equals(Action, "sell", StringComparison.OrdinalIgnoreCase);
 }
 
 internal static class NewsDisplay

@@ -485,6 +485,8 @@ public class ShellViewModel : ViewModelBase
         LogoUrl = $"/api/assets/{Uri.EscapeDataString(symbol)}/logo"
     });
 
+    private void ShowAssetFromNews(Asset asset) => ShowAssetDetail(asset);
+
     public void ShowNewsDetail(int articleId)
     {
         Section = "NEWS";
