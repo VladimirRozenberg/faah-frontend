@@ -615,5 +615,11 @@
     <Style Selector="Border.portfolioPositionRow.zebra">
         <Setter Property="Background" Value="#E9EDF2"/>
     </Style>
+    <Style Selector="Grid.portfolioPositionContainer:pointerover Border.portfolioPositionRow">
+        <Setter Property="Background" Value="{StaticResource SurfaceAlt}"/>
+    </Style>
+    <Style Selector="Button.rowButton.portfolioPositionAction:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
 
 </Styles>

@@ -66,13 +66,13 @@
             <ItemsControl ItemsSource="{Binding Positions}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Grid ColumnDefinitions="*,72" ColumnSpacing="8" Margin="0,0,0,4">
+                  <Grid Classes="portfolioPositionContainer" ColumnDefinitions="*,72" ColumnSpacing="8" Margin="0,0,0,4">
                     <Border Grid.ColumnSpan="2" Classes="portfolioPositionRow" Classes.zebra="{Binding IsAlternateRow}"/>
-                    <Button Grid.Column="1" Content="{Binding StarGlyph}" Classes="rowButton" Padding="0"
+                    <Button Grid.Column="1" Content="{Binding StarGlyph}" Classes="rowButton portfolioPositionAction" Padding="0"
                             Foreground="{StaticResource Amber}" FontSize="18" HorizontalContentAlignment="Center"
                             Command="{Binding $parent[UserControl].DataContext.ToggleFavoriteCommand}"
                             CommandParameter="{Binding}" ToolTip.Tip="Toggle favorite"/>
-                    <Button Classes="rowButton" Padding="8,10"
+                    <Button Classes="rowButton portfolioPositionAction" Padding="8,10"
                             Command="{Binding $parent[UserControl].DataContext.OpenAssetCommand}" CommandParameter="{Binding}">
                       <Grid ColumnDefinitions="1.5*,*,*,*,*" ColumnSpacing="8">
                         <StackPanel Spacing="2">
