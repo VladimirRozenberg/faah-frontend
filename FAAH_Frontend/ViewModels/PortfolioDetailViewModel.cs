@@ -55,6 +55,20 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     public bool IsEmpty => !IsLoading && !HasError && !HasRecommendations;
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
     public bool HasPositions => Positions.Count > 0;
+    public string TotalPositionValueDisplay
+    {
+        get
+        {
+            if (Positions.Count == 0) return "—";
+            decimal total = 0;
+            foreach (var position in Positions)
+            {
+                if (position.CurrentValue is not decimal value) return "Value unavailable";
+                total += value;
+            }
+            return $"{total:N2} {Portfolio.BaseCurrency}";
+        }
+    }
     public bool IsPositionsEmpty => !IsLoadingPositions && string.IsNullOrEmpty(PositionsErrorMessage) && !HasPositions;
     public bool HasPositionsError => !string.IsNullOrEmpty(PositionsErrorMessage);
     public string FavoritesErrorMessage
@@ -218,6 +232,7 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
         Positions.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HasPositions));
+            OnPropertyChanged(nameof(TotalPositionValueDisplay));
             OnPropertyChanged(nameof(IsPositionsEmpty));
         };
         Transactions.CollectionChanged += (_, _) =>

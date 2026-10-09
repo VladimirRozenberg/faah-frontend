@@ -92,6 +92,10 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0" IsVisible="{Binding HasPositions}">
+              <TextBlock Text="TOTAL VALUE" Classes="colHead" FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="1" Text="{Binding TotalPositionValueDisplay}" FontWeight="SemiBold"/>
+            </Grid>
             <Border Classes="rule" Margin="0,8,0,4"/>
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Text="Transactions" Classes="h2"/>
