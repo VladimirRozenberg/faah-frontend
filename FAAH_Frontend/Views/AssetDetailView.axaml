@@ -5,7 +5,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel x:Name="PageContent" Margin="42,26,42,26" Spacing="20">
             <Grid ColumnDefinitions="*,Auto">
-                 <Button Content="← Back to assets" Classes="ghost" Command="{Binding BackCommand}" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Left"/>
+                 <Button Content="{Binding BackButtonText}" Classes="ghost" Command="{Binding BackCommand}" IsEnabled="{Binding !IsSubmitting}" HorizontalAlignment="Left"/>
                  <Button Grid.Column="1" Content="Refresh" Classes="ghost refreshButton" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsBusy}"/>
             </Grid>
             <!-- Résumé aligné sur le graphique, sans largeur maximale centrée. -->

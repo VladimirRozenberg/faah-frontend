@@ -196,6 +196,7 @@ public sealed class AssetDetailViewModel : ViewModelBase, IDisposable
     private readonly Action<int>? _openArticle;
     public Asset Asset { get; }
     public string Title => string.IsNullOrWhiteSpace(Asset.Name) ? Asset.Symbol : $"{Asset.Name} · {Asset.Symbol}";
+    public string BackButtonText => _preferredPortfolioId.HasValue ? "← Back to portfolio" : "← Back to assets";
     public string Details => string.Join(" · ", new[] { Asset.Type, Asset.Exchange, Asset.Country, Asset.Sector, Asset.Industry }.Where(s => !string.IsNullOrWhiteSpace(s)));
     public ICommand BackCommand { get; }
     public ICommand RefreshCommand { get; }

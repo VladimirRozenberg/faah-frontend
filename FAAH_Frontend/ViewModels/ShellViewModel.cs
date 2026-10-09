@@ -460,7 +460,8 @@ public class ShellViewModel : ViewModelBase
         _ = _logos.LoadAsync(asset, System.Threading.CancellationToken.None);
         Section = "ASSETS";
         int.TryParse(ProfileUserId, out int userId);
-        var detail = new AssetDetailViewModel(_http, asset, ShowAssets, userId, ShowNewsDetail, preferredPortfolio?.Id, _logos);
+        Action goBack = preferredPortfolio is null ? ShowAssets : () => ShowPortfolio(preferredPortfolio);
+        var detail = new AssetDetailViewModel(_http, asset, goBack, userId, ShowNewsDetail, preferredPortfolio?.Id, _logos);
         CurrentPage = new AssetDetailView { DataContext = detail };
         detail.Start();
     }
@@ -591,7 +592,7 @@ public class ShellViewModel : ViewModelBase
             IsLoggedIn = true;
             _healthTimer.Start();
             _ = Health.RefreshAsync();
-            ShowPortfolios();
+            ShowDashboard();
         }
         catch (Exception ex)
         {
