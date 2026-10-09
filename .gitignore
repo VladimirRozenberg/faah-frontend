@@ -9,3 +9,5 @@ bin/
 obj/
 
 publish/
+
+FAAH_Frontend/.codex-build/

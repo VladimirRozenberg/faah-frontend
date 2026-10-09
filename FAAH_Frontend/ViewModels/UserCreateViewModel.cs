@@ -1,7 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
 
 namespace FAAH_Frontend.ViewModels;
@@ -72,6 +75,22 @@ public class UserCreateViewModel : ViewModelBase
             return;
         }
 
+        if (!Regex.IsMatch(
+                Email.Trim(),
+                @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+        {
+            ErrorMessage = "Enter a valid email address.";
+            return;
+        }
+
+        if (TemporaryPassword.Length < 8 ||
+            !TemporaryPassword.Any(char.IsDigit) ||
+            Encoding.UTF8.GetByteCount(TemporaryPassword) > 72)
+        {
+            ErrorMessage = "Password must be at least 8 characters, include one digit, and use no more than 72 UTF-8 bytes.";
+            return;
+        }
+
         try
         {
             IsBusy = true;
@@ -80,7 +99,13 @@ public class UserCreateViewModel : ViewModelBase
             // Reserve aux admins cote backend (meme regle que la liste des utilisateurs).
             var response = await _shell.Http.PostAsJsonAsync(
                 "/admin/utilisateurs",
-                new { username = Username, email = Email, password = TemporaryPassword, role = Role == "Administrator" ? "admin" : "employe" },
+                new
+                {
+                    username = Username.Trim(),
+                    email = Email.Trim(),
+                    password = TemporaryPassword,
+                    role = Role == "Administrator" ? "admin" : "employe"
+                },
                 ShellViewModel.JsonOptions);
 
             if (!response.IsSuccessStatusCode)

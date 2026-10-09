@@ -35,7 +35,7 @@ public partial class SettingsView : UserControl
         var password = NewPassword.Text;
         if (password.Length < 8 || !password.Any(char.IsDigit) || Encoding.UTF8.GetByteCount(password) > 72)
         {
-            SetSaveStatus("Password must be at least 8 characters, include at least one digit (0–9), and be no more than 72 UTF-8 bytes.", Avalonia.Media.Brushes.Red);
+            SetSaveStatus("Password must be at least 8 characters, include one digit, and use no more than 72 UTF-8 bytes.", Avalonia.Media.Brushes.Red);
             return;
         }
 
@@ -136,7 +136,7 @@ public partial class SettingsView : UserControl
             if (!response.IsSuccessStatusCode)
             {
                 SetSaveStatus(response.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity
-                    ? "The password was rejected. Use at least 8 characters, include a digit (0–9), and stay within 72 UTF-8 bytes."
+                    ? "Password must be at least 8 characters, include one digit, and use no more than 72 UTF-8 bytes."
                     : $"Password update failed (HTTP {(int)response.StatusCode}).", Avalonia.Media.Brushes.Red);
                 return;
             }
