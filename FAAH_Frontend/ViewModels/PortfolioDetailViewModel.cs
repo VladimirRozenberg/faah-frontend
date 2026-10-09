@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Net;
 using System.Net.Http;
@@ -18,7 +19,9 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     private int _transactionPage = 1, _transactionPageCount = 1;
     private string _selectedKind = "All", _pageInput = "1";
     private bool _isLoading, _isLoadingPositions, _isLoadingTransactions, _disposed;
-    private string _errorMessage = "", _positionsErrorMessage = "", _transactionsErrorMessage = "";
+    private bool _favoritesLoaded;
+    private readonly HashSet<int> _favoriteUpdates = new();
+    private string _errorMessage = "", _positionsErrorMessage = "", _transactionsErrorMessage = "", _favoritesErrorMessage = "";
 
     public const int PageSize = 10;
     public const int TransactionPageSize = 14;
@@ -34,6 +37,7 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     public RelayCommand RefreshCommand { get; }
     public RelayCommand BackCommand { get; }
     public RelayCommand OpenAssetCommand { get; }
+    public RelayCommand ToggleFavoriteCommand { get; }
     public RelayCommand ToggleStatusCommand { get; }
     public RelayCommand EditPortfolioCommand { get; }
     public RelayCommand FirstPageCommand { get; }
@@ -53,6 +57,16 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
     public bool HasPositions => Positions.Count > 0;
     public bool IsPositionsEmpty => !IsLoadingPositions && string.IsNullOrEmpty(PositionsErrorMessage) && !HasPositions;
     public bool HasPositionsError => !string.IsNullOrEmpty(PositionsErrorMessage);
+    public string FavoritesErrorMessage
+    {
+        get => _favoritesErrorMessage;
+        private set
+        {
+            if (!SetField(ref _favoritesErrorMessage, value)) return;
+            OnPropertyChanged(nameof(HasFavoritesError));
+        }
+    }
+    public bool HasFavoritesError => !string.IsNullOrEmpty(FavoritesErrorMessage);
     public bool HasTransactions => Transactions.Count > 0;
     public bool IsTransactionsEmpty => !IsLoadingTransactions && string.IsNullOrEmpty(TransactionsErrorMessage) && !HasTransactions;
     public bool HasTransactionsError => !string.IsNullOrEmpty(TransactionsErrorMessage);
@@ -191,6 +205,11 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
                 }, Portfolio);
         }, parameter => !_disposed && (parameter is PortfolioPosition
             || parameter is RecentRecommendation { AssetSymbol: not null and not "" }));
+        ToggleFavoriteCommand = new RelayCommand(parameter =>
+        {
+            if (parameter is PortfolioPosition position) _ = ToggleFavoriteAsync(position);
+        }, parameter => !_disposed && _favoritesLoaded && parameter is PortfolioPosition position
+            && !_favoriteUpdates.Contains(position.AssetId));
         Recommendations.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HasRecommendations));
@@ -272,6 +291,9 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
         IsLoadingPositions = true;
         PositionsErrorMessage = "";
         Positions.Clear();
+        _favoritesLoaded = false;
+        FavoritesErrorMessage = "";
+        ToggleFavoriteCommand.RaiseCanExecuteChanged();
         try
         {
             var detail = await _shell.Http.GetFromJsonAsync<PortfolioDetail>(
@@ -284,6 +306,7 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
                 position.IsAlternateRow = positionIndex++ % 2 == 1;
                 Positions.Add(position);
             }
+            await LoadFavoritesAsync();
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -296,6 +319,53 @@ public sealed class PortfolioDetailViewModel : ViewModelBase, IDisposable
         finally
         {
             if (!_disposed) IsLoadingPositions = false;
+        }
+    }
+
+    private async Task LoadFavoritesAsync()
+    {
+        try
+        {
+            var favorites = await _shell.Http.GetFromJsonAsync<FavoriteResponse>(
+                "api/favorites", ShellViewModel.JsonOptions, _lifetime.Token)
+                ?? throw new System.Text.Json.JsonException();
+            if (_disposed) return;
+            var favoriteIds = new HashSet<int>(favorites.AssetIds);
+            foreach (var position in Positions)
+                position.IsFavorite = favoriteIds.Contains(position.AssetId);
+            _favoritesLoaded = true;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
+        {
+            if (!_disposed) FavoritesErrorMessage = "Could not load favorites. Try refreshing.";
+        }
+        finally
+        {
+            if (!_disposed) ToggleFavoriteCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    private async Task ToggleFavoriteAsync(PortfolioPosition position)
+    {
+        if (_disposed || !_favoritesLoaded || !_favoriteUpdates.Add(position.AssetId)) return;
+        ToggleFavoriteCommand.RaiseCanExecuteChanged();
+        FavoritesErrorMessage = "";
+        try
+        {
+            var add = !position.IsFavorite;
+            using var request = new HttpRequestMessage(add ? HttpMethod.Put : HttpMethod.Delete, $"api/favorites/{position.AssetId}");
+            using var response = await _shell.Http.SendAsync(request, _lifetime.Token);
+            response.EnsureSuccessStatusCode();
+            if (!_disposed) position.IsFavorite = add;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
+        {
+            if (!_disposed) FavoritesErrorMessage = "Could not update favorite. Try again.";
+        }
+        finally
+        {
+            _favoriteUpdates.Remove(position.AssetId);
+            if (!_disposed) ToggleFavoriteCommand.RaiseCanExecuteChanged();
         }
     }
 

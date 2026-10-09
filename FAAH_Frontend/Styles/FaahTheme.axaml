@@ -608,4 +608,12 @@
         <Setter Property="Background" Value="{StaticResource SurfaceAlt}"/>
     </Style>
 
+    <Style Selector="Border.portfolioPositionRow">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    <Style Selector="Border.portfolioPositionRow.zebra">
+        <Setter Property="Background" Value="#E9EDF2"/>
+    </Style>
+
 </Styles>

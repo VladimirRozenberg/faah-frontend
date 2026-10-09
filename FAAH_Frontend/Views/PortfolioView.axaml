@@ -53,33 +53,42 @@
             <TextBlock Text="Assets / positions" Classes="h2"/>
             <TextBlock Text="Loading portfolio positions…" Classes="muted" IsVisible="{Binding IsLoadingPositions}"/>
             <TextBlock Text="{Binding PositionsErrorMessage}" Foreground="{StaticResource Red}" TextWrapping="Wrap" IsVisible="{Binding HasPositionsError}"/>
+            <TextBlock Text="{Binding FavoritesErrorMessage}" Foreground="{StaticResource Red}" TextWrapping="Wrap" IsVisible="{Binding HasFavoritesError}"/>
             <TextBlock Text="No positions in this portfolio." Classes="muted" IsVisible="{Binding IsPositionsEmpty}"/>
-            <Grid ColumnDefinitions="1.5*,*,*,*,*" ColumnSpacing="8">
+            <Grid ColumnDefinitions="1.5*,*,*,*,*,72" ColumnSpacing="8">
               <TextBlock Classes="colHead" Text="ASSET"/>
               <TextBlock Grid.Column="1" Classes="colHead" Text="QUANTITY" HorizontalAlignment="Right"/>
               <TextBlock Grid.Column="2" Classes="colHead" Text="AVG. COST" HorizontalAlignment="Right"/>
               <TextBlock Grid.Column="3" Classes="colHead" Text="PRICE" HorizontalAlignment="Right"/>
               <TextBlock Grid.Column="4" Classes="colHead" Text="VALUE" HorizontalAlignment="Right"/>
+              <TextBlock Grid.Column="5" Classes="colHead" Text="FAVORITE" HorizontalAlignment="Center"/>
             </Grid>
             <ItemsControl ItemsSource="{Binding Positions}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Button Classes="rowButton" Classes.zebra="{Binding IsAlternateRow}" Padding="8,10" Margin="0,0,0,4"
-                          Command="{Binding $parent[UserControl].DataContext.OpenAssetCommand}" CommandParameter="{Binding}">
-                    <Grid ColumnDefinitions="1.5*,*,*,*,*" ColumnSpacing="8">
-                      <StackPanel Spacing="2">
-                        <TextBlock Text="{Binding Symbol}" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding Name}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
-                      </StackPanel>
-                      <TextBlock Grid.Column="1" Text="{Binding QuantityDisplay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                      <TextBlock Grid.Column="2" Text="{Binding AveragePurchasePriceDisplay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                      <TextBlock Grid.Column="3" Text="{Binding CurrentPriceDisplay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                      <StackPanel Grid.Column="4" Spacing="2" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding CurrentValueDisplay}" HorizontalAlignment="Right"/>
-                        <TextBlock Text="{Binding ProfitLossDisplay}" Classes.up="{Binding IsProfit}" Classes.down="{Binding IsLoss}" FontSize="11" HorizontalAlignment="Right"/>
-                      </StackPanel>
-                    </Grid>
-                  </Button>
+                  <Grid ColumnDefinitions="*,72" ColumnSpacing="8" Margin="0,0,0,4">
+                    <Border Grid.ColumnSpan="2" Classes="portfolioPositionRow" Classes.zebra="{Binding IsAlternateRow}"/>
+                    <Button Grid.Column="1" Content="{Binding StarGlyph}" Classes="rowButton" Padding="0"
+                            Foreground="{StaticResource Amber}" FontSize="18" HorizontalContentAlignment="Center"
+                            Command="{Binding $parent[UserControl].DataContext.ToggleFavoriteCommand}"
+                            CommandParameter="{Binding}" ToolTip.Tip="Toggle favorite"/>
+                    <Button Classes="rowButton" Padding="8,10"
+                            Command="{Binding $parent[UserControl].DataContext.OpenAssetCommand}" CommandParameter="{Binding}">
+                      <Grid ColumnDefinitions="1.5*,*,*,*,*" ColumnSpacing="8">
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="{Binding Symbol}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding Name}" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding QuantityDisplay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{Binding AveragePurchasePriceDisplay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="{Binding CurrentPriceDisplay}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="4" Spacing="2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding CurrentValueDisplay}" HorizontalAlignment="Right"/>
+                          <TextBlock Text="{Binding ProfitLossDisplay}" Classes.up="{Binding IsProfit}" Classes.down="{Binding IsLoss}" FontSize="11" HorizontalAlignment="Right"/>
+                        </StackPanel>
+                      </Grid>
+                    </Button>
+                  </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

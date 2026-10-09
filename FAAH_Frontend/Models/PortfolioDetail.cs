@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json.Serialization;
+using FAAH_Frontend.ViewModels;
 
 namespace FAAH_Frontend.Models;
 
@@ -21,8 +22,10 @@ public sealed class PortfolioDetail
     public List<PortfolioPosition> Positions { get; set; } = new();
 }
 
-public sealed class PortfolioPosition
+public sealed class PortfolioPosition : ViewModelBase
 {
+    private bool _isFavorite;
+
     public int AssetId { get; set; }
     public string Symbol { get; set; } = "";
     public string Name { get; set; } = "";
@@ -35,6 +38,16 @@ public sealed class PortfolioPosition
     public decimal? ProfitLoss { get; set; }
     public decimal? ProfitLossPercent { get; set; }
     [JsonIgnore] public bool IsAlternateRow { get; set; }
+    [JsonIgnore]
+    public bool IsFavorite
+    {
+        get => _isFavorite;
+        set
+        {
+            if (SetField(ref _isFavorite, value)) OnPropertyChanged(nameof(StarGlyph));
+        }
+    }
+    [JsonIgnore] public string StarGlyph => IsFavorite ? "★" : "☆";
 
     public string QuantityDisplay => Quantity.ToString("0.########", CultureInfo.InvariantCulture);
     public string AveragePurchasePriceDisplay => FormatAmount(AveragePurchasePrice);
