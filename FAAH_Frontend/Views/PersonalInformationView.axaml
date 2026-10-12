@@ -8,7 +8,7 @@
       <Grid ColumnDefinitions="*,*"><StackPanel Spacing="8"><TextBlock Text="Available cash" Classes="label"/><TextBlock Text="{Binding Cash}" FontSize="24"/></StackPanel><StackPanel Grid.Column="1" Spacing="8"><TextBlock Text="Asset value" ToolTip.Tip="Sum of held quantities multiplied by the latest available USD prices." Classes="label"/><TextBlock Text="{Binding Assets}" FontSize="24"/></StackPanel></Grid>
       <StackPanel IsVisible="{Binding IsAdmin}" Spacing="8"><TextBlock Text="Top-up (USD) — administrator"/><StackPanel Orientation="Horizontal" Spacing="12"><TextBox Width="180" PlaceholderText="Amount, e.g. 100.00" Text="{Binding DepositAmount}"/><Button Content="Add funds" Command="{Binding DepositCommand}"/></StackPanel></StackPanel>
       <TextBlock Text="Loading…" IsVisible="{Binding IsBusy}"/><TextBlock Text="{Binding Message}" TextWrapping="Wrap"/>
-      <Grid ColumnDefinitions="*,*" ColumnSpacing="24" IsVisible="{Binding IsOwnProfile}">
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="24" IsVisible="{Binding CanViewAccountData}">
       <StackPanel Grid.Column="0" Spacing="10">
       <TextBlock Text="Buy / sell transactions" FontSize="20" FontWeight="Bold"/>
       <TextBlock Text="Newest first" Classes="muted"/>

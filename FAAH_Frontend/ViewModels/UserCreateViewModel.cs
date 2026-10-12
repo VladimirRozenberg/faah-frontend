@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Windows.Input;
@@ -69,6 +70,12 @@ public class UserCreateViewModel : ViewModelBase
             string.IsNullOrWhiteSpace(Role))
         {
             ErrorMessage = "Enter a username, email, password and role.";
+            return;
+        }
+
+        if (TemporaryPassword.Length < 8 || !TemporaryPassword.Any(char.IsDigit))
+        {
+            ErrorMessage = "Temporary password must be at least 8 characters and include at least one number.";
             return;
         }
 

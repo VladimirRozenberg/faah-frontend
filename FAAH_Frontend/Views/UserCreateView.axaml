@@ -34,6 +34,7 @@
                         <Run Text="Temporary password"/><Run Text="*" Foreground="{StaticResource Amber}"/>
                     </TextBlock>
                     <TextBox Classes="field" Text="{Binding TemporaryPassword}" PasswordChar="●"/>
+                    <TextBlock Text="At least 8 characters, including at least 1 number." Classes="muted" FontSize="11"/>
                 </StackPanel>
 
                 <StackPanel>

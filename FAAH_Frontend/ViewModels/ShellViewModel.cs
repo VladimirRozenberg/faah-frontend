@@ -452,15 +452,18 @@ public class ShellViewModel : ViewModelBase
     }
 
     // Le detail remplace la liste dans la fenetre existante (pas de nouvelle fenetre).
-    public void ShowAssetDetail(Asset asset) => ShowAssetDetail(asset, null);
+    public void ShowAssetDetail(Asset asset) => ShowAssetDetail(asset, null, null);
 
     public void ShowAssetDetail(Asset asset, Portfolio? preferredPortfolio)
+        => ShowAssetDetail(asset, preferredPortfolio, null);
+
+    private void ShowAssetDetail(Asset asset, Portfolio? preferredPortfolio, Action? backAction)
     {
         // Réutiliser le cache si le détail est ouvert avant la fin du téléchargement.
         _ = _logos.LoadAsync(asset, System.Threading.CancellationToken.None);
         Section = "ASSETS";
         int.TryParse(ProfileUserId, out int userId);
-        Action goBack = preferredPortfolio is null ? ShowAssets : () => ShowPortfolio(preferredPortfolio);
+        Action goBack = backAction ?? (preferredPortfolio is null ? ShowAssets : () => ShowPortfolio(preferredPortfolio));
         var detail = new AssetDetailViewModel(_http, asset, goBack, userId, ShowNewsDetail, preferredPortfolio?.Id, _logos);
         CurrentPage = new AssetDetailView { DataContext = detail };
         detail.Start();
@@ -485,12 +488,14 @@ public class ShellViewModel : ViewModelBase
         LogoUrl = $"/api/assets/{Uri.EscapeDataString(symbol)}/logo"
     });
 
-    private void ShowAssetFromNews(Asset asset) => ShowAssetDetail(asset);
+    private void ShowAssetFromNews(Asset asset, int articleId) =>
+        ShowAssetDetail(asset, null, () => ShowNewsDetail(articleId));
 
     public void ShowNewsDetail(int articleId)
     {
         Section = "NEWS";
-        var detail = new NewsDetailViewModel(_http, articleId, ShowNews, ShowAssetFromNews);
+        var detail = new NewsDetailViewModel(_http, articleId, ShowNews,
+            asset => ShowAssetFromNews(asset, articleId));
         CurrentPage = new NewsDetailView { DataContext = detail };
         detail.Start();
     }

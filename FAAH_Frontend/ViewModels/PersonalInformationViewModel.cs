@@ -25,6 +25,7 @@ public class PersonalInformationViewModel : ViewModelBase, IDisposable
     public int UserId => User.UserId;
     public bool CanManage => IsAdmin && _shell.ProfileUserId != UserId.ToString();
     public bool IsOwnProfile => _shell.ProfileUserId == UserId.ToString();
+    public bool CanViewAccountData => IsOwnProfile || IsAdmin;
     public string Cash { get => _cash; private set => SetField(ref _cash, value); }
     public string Assets { get => _assets; private set => SetField(ref _assets, value); }
     public string Message { get => _message; private set => SetField(ref _message, value); }
@@ -84,30 +85,33 @@ public class PersonalInformationViewModel : ViewModelBase, IDisposable
     }
     private async Task ReadAccountAsync()
     {
-        if (!IsOwnProfile)
+        if (!IsOwnProfile && !IsAdmin)
         {
             Cash = "Not available"; Assets = "Not available";
             Transactions.Clear(); Deposits.Clear();
             return;
         }
         // Cash is account-level (not multiplied by portfolios).
-        using var cashResponse = await _shell.Http.GetAsync("api/users/me/available-cash", _lifetime.Token);
+        using var cashResponse = await _shell.Http.GetAsync(AccountDataPath("available-cash"), _lifetime.Token);
         await EnsureAsync(cashResponse);
         var cash = await cashResponse.Content.ReadFromJsonAsync<AvailableCashResponse>(ShellViewModel.JsonOptions, _lifetime.Token);
         _supportsTopUp = cash?.AvailableCash.HasValue == true;
         Cash = cash?.AvailableCash.HasValue == true ? $"{cash.AvailableCash:N2} {cash.Currency}" : "Unavailable";
-        using var valueResponse = await _shell.Http.GetAsync("api/users/me/asset-value", _lifetime.Token);
+        using var valueResponse = await _shell.Http.GetAsync(AccountDataPath("asset-value"), _lifetime.Token);
         await EnsureAsync(valueResponse);
         var value = await valueResponse.Content.ReadFromJsonAsync<AssetValueResponse>(ShellViewModel.JsonOptions, _lifetime.Token);
         Assets = value?.TotalCurrentValue.HasValue == true ? $"{value.TotalCurrentValue:N2} {value.Currency}" : "Prices unavailable";
         await ReadTransactionsAsync(_currentPage);
         await ReadDepositsAsync(_depositPage);
     }
+    private string AccountDataPath(string endpoint) => IsOwnProfile
+        ? $"api/users/me/{endpoint}"
+        : $"admin/users/{UserId}/{endpoint}";
     private async Task ReadDepositsAsync(int page)
     {
         try
         {
-            using var response = await _shell.Http.GetAsync($"api/users/me/deposits?page={page}", _lifetime.Token);
+            using var response = await _shell.Http.GetAsync($"{AccountDataPath("deposits")}?page={page}", _lifetime.Token);
             await EnsureAsync(response);
             var result = await response.Content.ReadFromJsonAsync<DepositPage>(ShellViewModel.JsonOptions, _lifetime.Token);
             Deposits.Clear();
@@ -139,7 +143,7 @@ public class PersonalInformationViewModel : ViewModelBase, IDisposable
     }
     private async Task ReadTransactionsAsync(int page)
     {
-        using var historyResponse = await _shell.Http.GetAsync($"api/users/me/transactions?page={page}", _lifetime.Token);
+        using var historyResponse = await _shell.Http.GetAsync($"{AccountDataPath("transactions")}?page={page}", _lifetime.Token);
         await EnsureAsync(historyResponse);
         var history = await historyResponse.Content.ReadFromJsonAsync<TransactionPage>(ShellViewModel.JsonOptions, _lifetime.Token);
         Transactions.Clear();
@@ -181,7 +185,7 @@ public class PersonalInformationViewModel : ViewModelBase, IDisposable
     {
         if (IsBusy || _disposed) return;
         IsBusy = true; Message = "";
-        try { await ReadAccountAsync(); Message = !IsOwnProfile ? "Balance, transactions and deposits are only available for your own profile." : !_supportsTopUp ? "Cash balances and top-ups are not available from the account service yet." : Transactions.Count == 0 ? "No transactions yet." : ""; }
+        try { await ReadAccountAsync(); Message = !IsOwnProfile && !IsAdmin ? "Balance, transactions and deposits are only available for your own profile." : !_supportsTopUp ? "Cash balances and top-ups are not available from the account service yet." : Transactions.Count == 0 ? "No transactions yet." : ""; }
         catch (Exception ex) { if (!_disposed) Message = "Unable to load account: " + FriendlyError(ex); }
         finally { IsBusy = false; RaisePageCommandState(); }
     }
