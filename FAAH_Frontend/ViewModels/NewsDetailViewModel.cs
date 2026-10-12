@@ -16,13 +16,13 @@ public sealed class NewsDetailViewModel : ViewModelBase, IDisposable
 {
     private readonly HttpClient _http;
     private readonly Action _goBack;
-    private readonly Action<string>? _openAsset;
+    private readonly Action<Asset>? _openAsset;
     private readonly CancellationTokenSource _lifetime = new();
     private bool _busy, _disposed;
     private string _error = "";
     private NewsSourceDetailResponse? _detail;
 
-    public NewsDetailViewModel(HttpClient http, int articleId, Action goBack, Action<string>? openAsset = null)
+    public NewsDetailViewModel(HttpClient http, int articleId, Action goBack, Action<Asset>? openAsset = null)
     {
         _http = http;
         ArticleId = articleId;
@@ -30,7 +30,7 @@ public sealed class NewsDetailViewModel : ViewModelBase, IDisposable
         _openAsset = openAsset;
         BackCommand = new RelayCommand(_ => _goBack(), _ => !_disposed);
         RefreshCommand = new RelayCommand(_ => { _ = LoadAsync(); }, _ => !_disposed && !IsBusy);
-        OpenAssetCommand = new RelayCommand(OpenAsset, _ => !_disposed && _openAsset is not null);
+        OpenAssetCommand = new RelayCommand(OpenAsset, CanOpenAsset);
     }
 
     public int ArticleId { get; }
@@ -44,6 +44,8 @@ public sealed class NewsDetailViewModel : ViewModelBase, IDisposable
             OnPropertyChanged(nameof(PublishedDisplay));
             OnPropertyChanged(nameof(RelatedAssets));
             OnPropertyChanged(nameof(HasRelatedAssets));
+            OnPropertyChanged(nameof(Signals));
+            OnPropertyChanged(nameof(HasSignals));
         }
     }
     public ICommand BackCommand { get; }
@@ -94,11 +96,60 @@ public sealed class NewsDetailViewModel : ViewModelBase, IDisposable
         }
     }
     public bool HasRelatedAssets => RelatedAssets.Count > 0;
+    public IReadOnlyList<NewsSignal> Signals
+    {
+        get
+        {
+            if (Detail is null) return Array.Empty<NewsSignal>();
+            return (Detail.Signals ?? new List<NewsSignal>())
+                .Concat(Detail.Analyses
+                    .Where(analysis => analysis.Signals is not null)
+                    .SelectMany(analysis => analysis.Signals!))
+                .Where(signal => signal is not null && signal.Id > 0)
+                .DistinctBy(signal => signal.Id)
+                .ToList();
+        }
+    }
+    public bool HasSignals => Signals.Count > 0;
 
     private void OpenAsset(object? parameter)
     {
-        if (parameter is string symbol && !string.IsNullOrWhiteSpace(symbol)) _openAsset?.Invoke(symbol.Trim());
+        int assetId;
+        string? symbol;
+        string? name;
+        switch (parameter)
+        {
+            case NewsSignal signal:
+                assetId = signal.AssetId;
+                symbol = signal.AssetSymbol;
+                name = signal.AssetName;
+                break;
+            case ClassificationAsset asset:
+                assetId = asset.Id;
+                symbol = asset.Symbol;
+                name = asset.Name;
+                break;
+            default:
+                return;
+        }
+
+        if (string.IsNullOrWhiteSpace(symbol)) return;
+        symbol = symbol.Trim();
+        _openAsset?.Invoke(new Asset
+        {
+            Id = assetId,
+            Symbol = symbol,
+            Name = name,
+            LogoUrl = $"/api/assets/{Uri.EscapeDataString(symbol)}/logo"
+        });
     }
+
+    private bool CanOpenAsset(object? parameter) => !_disposed && _openAsset is not null && (parameter switch
+    {
+        NewsSignal signal => signal.AssetId > 0 && !string.IsNullOrWhiteSpace(signal.AssetSymbol),
+        ClassificationAsset asset => !string.IsNullOrWhiteSpace(asset.Symbol),
+        _ => false
+    });
 
     public void Start() => _ = LoadAsync();
 
